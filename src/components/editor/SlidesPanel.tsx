@@ -63,8 +63,12 @@ function SlideThumb({
           </button>
         </div>
 
-        <button
+        {/* div, not button: slide thumbs can contain interactive elements */}
+        <div
+          role="button"
+          tabIndex={0}
           onClick={onSelect}
+          onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onSelect()}
           className={`flex-1 min-w-0 rounded-lg overflow-hidden border-2 transition-all cursor-pointer ${
             selected ? "border-accent shadow-lg shadow-accent/10" : "border-border hover:border-border-strong"
           }`}
@@ -72,7 +76,7 @@ function SlideThumb({
           <div className="pointer-events-none">
             <SlideRenderer slide={slide} theme={theme} mode="thumb" />
           </div>
-        </button>
+        </div>
       </div>
 
       {/* Hover actions */}

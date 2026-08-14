@@ -7,7 +7,7 @@ import { SlideRenderer, SLIDE_W } from "@/components/renderer/SlideRenderer";
 import type { SlideElement } from "@/lib/schema";
 import { extractFile } from "@/lib/api";
 import { InsertBar, createDefaultElement } from "./InsertBar";
-import { Loader2 } from "lucide-react";
+import { Loader2, Minus, Plus, Maximize } from "lucide-react";
 
 type DragState =
   | { kind: "move"; elementId: string; startX: number; startY: number; origX: number; origY: number; moved: boolean }
@@ -45,6 +45,30 @@ export function Canvas() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [dropHover, setDropHover] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+
+  // ----------------------------------------------- contained fit + zoom
+  // The slide frame is sized from measurements, never from raw CSS, so the
+  // presentation can never overflow or take over the app layout.
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const [fitWidth, setFitWidth] = useState(960);
+  const [zoom, setZoom] = useState(1); // 1 = fit to viewport
+
+  useEffect(() => {
+    const vp = viewportRef.current;
+    if (!vp) return;
+    const measure = () => {
+      const rect = vp.getBoundingClientRect();
+      const w = Math.min(rect.width - 56, ((rect.height - 56) * 16) / 9);
+      setFitWidth(Math.max(280, Math.floor(w)));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(vp);
+    return () => ro.disconnect();
+  }, []);
+
+  const frameWidth = Math.round(fitWidth * zoom);
+  const zoomPct = Math.round((frameWidth / SLIDE_W) * 100);
 
   const slideId = slide?.id;
 
@@ -193,7 +217,7 @@ export function Canvas() {
   const editingElement = editingId ? slide.elements.find((e) => e.id === editingId) : null;
 
   return (
-    <div className="flex-1 min-w-0 flex flex-col bg-bg">
+    <div className="relative flex-1 min-w-0 flex flex-col bg-bg">
       <InsertBar
         onInsert={(type) => {
           if (!slideId) return;
@@ -203,30 +227,31 @@ export function Canvas() {
       />
 
       <div
-        className="flex-1 min-h-0 flex items-center justify-center p-8 overflow-hidden"
+        ref={viewportRef}
+        className="relative flex-1 min-h-0 overflow-auto"
         onClick={() => {
           selectElement(null);
           setEditingId(null);
         }}
       >
-        <div
-          className={`relative w-full max-w-[1100px] transition-shadow ${
-            dropHover ? "ring-2 ring-accent rounded-lg" : ""
-          }`}
-          style={{ maxHeight: "100%", aspectRatio: "16/9" }}
-          onClick={(e) => e.stopPropagation()}
-          onDragOver={(e) => {
-            e.preventDefault();
-            setDropHover(true);
-          }}
-          onDragLeave={() => setDropHover(false)}
-          onDrop={(e) => void handleDrop(e)}
-        >
+        {/* Grid wrapper centers the frame when it fits and scrolls when zoomed in */}
+        <div className="min-w-full min-h-full grid place-items-center p-7">
           <div
-            ref={frameRef}
-            className="relative w-full rounded-lg shadow-2xl shadow-black/50 ring-1 ring-border"
-            style={{ aspectRatio: "16/9" }}
+            className={`relative flex-shrink-0 ${dropHover ? "ring-2 ring-accent rounded-lg" : ""}`}
+            style={{ width: frameWidth, aspectRatio: "16/9" }}
+            onClick={(e) => e.stopPropagation()}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDropHover(true);
+            }}
+            onDragLeave={() => setDropHover(false)}
+            onDrop={(e) => void handleDrop(e)}
           >
+            <div
+              ref={frameRef}
+              className="relative w-full h-full rounded-lg ring-1 ring-border"
+              style={{ boxShadow: "0 12px 40px var(--shadow-color)" }}
+            >
             <SlideRenderer
               slide={slide}
               theme={theme}
@@ -332,23 +357,56 @@ export function Canvas() {
 
             {uploadingImage && (
               <div className="absolute inset-0 bg-black/40 rounded-lg flex items-center justify-center z-50">
-                <div className="flex items-center gap-2.5 bg-surface-2 border border-border-strong rounded-xl px-4 py-3 text-[13px]">
+                <div className="flex items-center gap-2.5 bg-surface border border-border-strong rounded-xl px-4 py-3 text-[13px]">
                   <Loader2 size={15} className="animate-spin text-accent" />
                   Uploading image...
                 </div>
               </div>
             )}
+            </div>
           </div>
         </div>
       </div>
 
+      {/* Zoom controls */}
+      <div
+        className="absolute bottom-11 right-4 z-30 flex items-center gap-0.5 bg-surface border border-border rounded-lg p-0.5"
+        style={{ boxShadow: "0 4px 16px var(--shadow-color)" }}
+      >
+        <button
+          onClick={() => setZoom((z) => Math.max(0.5, Math.round((z - 0.25) * 100) / 100))}
+          className="p-1.5 rounded-md text-text-secondary hover:text-text hover:bg-surface-2 transition-colors cursor-pointer"
+          aria-label="Zoom out"
+        >
+          <Minus size={13} />
+        </button>
+        <span className="text-[11px] text-text-secondary tabular-nums w-10 text-center select-none">
+          {zoomPct}%
+        </span>
+        <button
+          onClick={() => setZoom((z) => Math.min(3, Math.round((z + 0.25) * 100) / 100))}
+          className="p-1.5 rounded-md text-text-secondary hover:text-text hover:bg-surface-2 transition-colors cursor-pointer"
+          aria-label="Zoom in"
+        >
+          <Plus size={13} />
+        </button>
+        <button
+          onClick={() => setZoom(1)}
+          className="p-1.5 rounded-md text-text-secondary hover:text-text hover:bg-surface-2 transition-colors cursor-pointer"
+          aria-label="Fit to screen"
+          title="Fit to screen"
+        >
+          <Maximize size={12} />
+        </button>
+      </div>
+
       {/* Hint bar */}
-      <div className="h-8 flex items-center justify-center gap-5 text-[11px] text-text-tertiary border-t border-border flex-shrink-0">
+      <div className="h-8 flex items-center justify-center gap-5 text-[11px] text-text-tertiary border-t border-border flex-shrink-0 overflow-hidden whitespace-nowrap px-3">
         <span>Double-click text to edit</span>
-        <span>⌘D duplicate</span>
-        <span>⌫ delete</span>
-        <span>Arrows nudge</span>
-        <span>Drag files onto the slide</span>
+        <span className="hidden md:inline">⌘D duplicate</span>
+        <span className="hidden md:inline">⌫ delete</span>
+        <span className="hidden lg:inline">Arrows nudge</span>
+        <span className="hidden lg:inline">Drag files onto the slide</span>
       </div>
     </div>
   );

@@ -11,8 +11,8 @@ import { RightPanel } from "./RightPanel";
 import { Player } from "@/components/present/Player";
 import { ShareModal } from "@/components/share/ShareModal";
 import {
-  Sun, Undo2, Redo2, Play, Eye, PencilRuler, Share2,
-  Check, Loader2, AlertTriangle, ChevronLeft,
+  Undo2, Redo2, Play, Eye, PencilRuler, Share2,
+  Check, Loader2, AlertTriangle, ArrowLeft,
 } from "lucide-react";
 
 type EditorMode = "edit" | "preview" | "present";
@@ -167,15 +167,14 @@ export function EditorShell({ initial }: { initial: Presentation }) {
   return (
     <div className="h-screen flex flex-col bg-bg overflow-hidden">
       {/* ------------------------------------------------------- top bar */}
-      <header className="h-[52px] flex items-center gap-3 px-3 border-b border-border bg-surface/60 flex-shrink-0 z-30">
+      <header className="h-[52px] flex items-center gap-2 px-3 border-b border-border bg-bg flex-shrink-0 z-30">
         <Link
           href="/dashboard"
-          className="flex items-center gap-1.5 text-text-secondary hover:text-text transition-colors px-2 py-1.5 rounded-lg hover:bg-surface-2"
+          className="p-2 rounded-lg text-text-secondary hover:text-text hover:bg-surface-2 transition-colors"
+          aria-label="Back to dashboard"
+          title="Back to dashboard"
         >
-          <ChevronLeft size={16} />
-          <div className="w-6 h-6 rounded-md bg-accent flex items-center justify-center">
-            <Sun size={13} className="text-accent-text" strokeWidth={2.5} />
-          </div>
+          <ArrowLeft size={16} />
         </Link>
 
         <div className="flex items-center gap-3 min-w-0">

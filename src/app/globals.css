@@ -1,52 +1,97 @@
 @import "tailwindcss";
 
-@theme {
-  --color-bg: #0b0c0e;
-  --color-surface: #121316;
-  --color-surface-2: #191b1f;
-  --color-surface-3: #212429;
-  --color-border: #26292f;
-  --color-border-strong: #33373f;
-  --color-text: #f2f3f5;
-  --color-text-secondary: #a6acb8;
-  --color-text-tertiary: #6c7280;
-  --color-accent: #f5a623;
-  --color-accent-hover: #ffb840;
-  --color-accent-text: #17130a;
-  --color-danger: #f0554d;
-  --color-success: #43c98a;
+/* ------------------------------------------------------------------ */
+/* Design tokens — ChatGPT-style restrained palette, light + dark      */
+/* ------------------------------------------------------------------ */
+
+:root {
+  /* light */
+  --bg: #ffffff;
+  --sidebar: #f9f9f9;
+  --surface: #ffffff;
+  --surface-2: #f1f1f2;
+  --surface-3: #e8e8e9;
+  --border: rgba(0, 0, 0, 0.09);
+  --border-strong: rgba(0, 0, 0, 0.18);
+  --text: #1a1a1a;
+  --text-secondary: #5d5d5d;
+  --text-tertiary: #9b9b9b;
+  --accent: #e8940e;
+  --accent-hover: #d6870a;
+  --accent-text: #ffffff;
+  --danger: #d93a32;
+  --success: #189662;
+  --shadow-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="dark"] {
+  --bg: #212121;
+  --sidebar: #171717;
+  --surface: #2b2b2b;
+  --surface-2: #343434;
+  --surface-3: #3f3f3f;
+  --border: rgba(255, 255, 255, 0.09);
+  --border-strong: rgba(255, 255, 255, 0.19);
+  --text: #ededed;
+  --text-secondary: #b0b0b0;
+  --text-tertiary: #808080;
+  --accent: #f5a623;
+  --accent-hover: #ffb840;
+  --accent-text: #231804;
+  --danger: #f0554d;
+  --success: #43c98a;
+  --shadow-color: rgba(0, 0, 0, 0.35);
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-sidebar: var(--sidebar);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-text: var(--text);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-text: var(--accent-text);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
 
   --radius-lg: 12px;
   --radius-xl: 16px;
 
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
 
 html,
 body {
   height: 100%;
-  background: var(--color-bg);
-  color: var(--color-text);
+  background: var(--bg);
+  color: var(--text);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 ::selection {
-  background: color-mix(in srgb, var(--color-accent) 35%, transparent);
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
 }
 
 /* Thin scrollbars everywhere */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #33373f transparent;
+  scrollbar-color: var(--border-strong) transparent;
 }
 *::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 *::-webkit-scrollbar-thumb {
-  background: #33373f;
+  background: var(--border-strong);
   border-radius: 3px;
 }
 *::-webkit-scrollbar-track {
@@ -95,7 +140,7 @@ body {
   to { opacity: 1; transform: scale(1); }
 }
 
-/* Generation overlay shimmer */
+/* Generation shimmer */
 @keyframes shimmer {
   0% { background-position: -400px 0; }
   100% { background-position: 400px 0; }
@@ -110,15 +155,21 @@ body {
   to { transform: rotate(360deg); }
 }
 
-.animate-in-fade { animation: slide-in-fade 0.35s ease both; }
+.animate-in-fade { animation: slide-in-fade 0.3s ease both; }
+
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-rise { animation: rise-in 0.28s cubic-bezier(0.21, 1, 0.36, 1) both; }
 
 /* Editor canvas selection */
 .el-selected {
-  outline: 1.5px solid var(--color-accent) !important;
+  outline: 1.5px solid var(--accent) !important;
   outline-offset: 1px;
 }
 .el-hover:hover {
-  outline: 1px solid color-mix(in srgb, var(--color-accent) 55%, transparent);
+  outline: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
   outline-offset: 1px;
 }
 

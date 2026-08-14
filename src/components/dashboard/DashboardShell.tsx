@@ -9,10 +9,11 @@ import { ThemeSchema } from "@/lib/schema";
 import { TEMPLATES } from "@/lib/templates";
 import { Sidebar, type DashboardView } from "./Sidebar";
 import { Composer } from "./Composer";
-import { PresentationCard } from "./PresentationCard";
+import { PresentationItem } from "./PresentationItem";
 import { SlideRenderer } from "@/components/renderer/SlideRenderer";
+import { useTheme } from "@/components/theme/useTheme";
 import {
-  Search, ArrowDownUp, Plus, Layers, LogOut, Loader2, LayoutTemplate, Presentation,
+  Search, Plus, Layers, LogOut, Loader2, LayoutTemplate, Presentation, Moon, SunMedium,
 } from "lucide-react";
 
 type SortKey = "updated" | "created" | "title";
@@ -23,7 +24,8 @@ export function DashboardShell({
   user: { name: string; email: string; avatarUrl: string | null };
 }) {
   const router = useRouter();
-  const [view, setView] = useState<DashboardView>("create");
+  const { theme, setTheme } = useTheme();
+  const [view, setView] = useState<DashboardView>("home");
   const [metas, setMetas] = useState<PresentationMeta[] | null>(null);
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortKey>("updated");
@@ -127,150 +129,141 @@ export function DashboardShell({
     router.refresh();
   }
 
-  const recent = metas?.slice(0, 6) ?? null;
+  const recent = metas?.slice(0, 5) ?? null;
+  const firstName = user.name.split(" ")[0];
 
   return (
     <div className="flex min-h-screen bg-bg">
-      <Sidebar view={view} onNavigate={setView} user={user} />
+      <Sidebar
+        view={view}
+        onNavigate={setView}
+        onNew={handleNewBlank}
+        recents={metas}
+        user={user}
+        onSignOut={() => void signOut()}
+      />
 
-      <main className="flex-1 min-w-0">
-        {/* ------------------------------------------------ create view */}
-        {view === "create" && (
-          <div className="relative flex flex-col items-center px-8 pt-[12vh] pb-16 min-h-screen">
-            {/* Ambient glow */}
-            <div
-              className="pointer-events-none absolute inset-x-0 top-0 h-[420px]"
-              style={{
-                background:
-                  "radial-gradient(560px 280px at 50% 0%, rgba(245,166,35,0.09), transparent 70%)",
-              }}
-            />
-            <div className="relative text-center animate-in-fade">
-              <div className="inline-flex items-center gap-2 text-[11.5px] text-text-secondary border border-border rounded-full px-3 py-1 mb-5 bg-surface/70">
-                <span className="w-1.5 h-1.5 rounded-full bg-success" />
-                Hey {user.name.split(" ")[0]} — DeepSeek is ready
-              </div>
-              <h1 className="text-[34px] font-semibold tracking-tight mb-2">
-                What do you want to present?
+      <main className="flex-1 min-w-0 flex flex-col">
+        {/* -------------------------------------------------- home view */}
+        {view === "home" && (
+          <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
+            <div className="w-full max-w-[680px]">
+              <h1 className="text-[26px] font-semibold tracking-tight text-center mb-7 animate-rise">
+                What do you want to create{firstName ? `, ${firstName}` : ""}?
               </h1>
-              <p className="text-text-secondary text-[15px] mb-9">
-                Describe it, drop in your files, and present@karm will build it.
-              </p>
-            </div>
-            <Composer />
+              <Composer />
 
-            {/* Recent strip */}
-            {recent && recent.length > 0 && (
-              <div className="w-full max-w-4xl mt-16">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-[13px] font-medium text-text-secondary uppercase tracking-wider">
-                    Recent
-                  </h2>
-                  <button
-                    onClick={() => setView("my")}
-                    className="text-[13px] text-text-secondary hover:text-text transition-colors cursor-pointer"
-                  >
-                    View all →
-                  </button>
+              {/* Compact recents */}
+              {recent && recent.length > 0 && (
+                <div className="mt-12 animate-rise">
+                  <div className="flex items-center justify-between px-3 mb-1.5">
+                    <h2 className="text-[12px] font-medium text-text-tertiary">Recent</h2>
+                    <button
+                      onClick={() => setView("presentations")}
+                      className="text-[12px] text-text-tertiary hover:text-text transition-colors cursor-pointer"
+                    >
+                      View all
+                    </button>
+                  </div>
+                  <div className="flex flex-col">
+                    {recent.map((m) => (
+                      <PresentationItem
+                        key={m.id}
+                        meta={m}
+                        onRename={handleRename}
+                        onDuplicate={handleDuplicate}
+                        onDelete={handleDelete}
+                      />
+                    ))}
+                  </div>
                 </div>
-                <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-                  {recent.map((m) => (
-                    <PresentationCard
-                      key={m.id}
-                      meta={m}
-                      onRename={handleRename}
-                      onDuplicate={handleDuplicate}
-                      onDelete={handleDelete}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         )}
 
-        {/* ------------------------------------------- my / recent view */}
-        {(view === "my" || view === "recent") && (
-          <div className="px-8 py-8 max-w-6xl mx-auto">
-            <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
-              <h1 className="text-xl font-semibold tracking-tight">
-                {view === "my" ? "My Presentations" : "Recent"}
-              </h1>
-              <div className="flex items-center gap-2.5">
+        {/* ----------------------------------------- presentations view */}
+        {view === "presentations" && (
+          <div className="w-full max-w-3xl mx-auto px-6 py-10">
+            <div className="flex items-center justify-between mb-5 gap-3 flex-wrap">
+              <h1 className="text-[17px] font-semibold tracking-tight">Presentations</h1>
+              <div className="flex items-center gap-2">
                 <div className="relative">
-                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary" />
+                  <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary" />
                   <input
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Search presentations..."
-                    className="bg-surface border border-border rounded-lg pl-9 pr-3.5 py-2 text-[13px] w-60 outline-none focus:border-border-strong transition-colors placeholder:text-text-tertiary"
+                    placeholder="Search"
+                    className="bg-surface border border-border rounded-lg pl-9 pr-3 py-1.5 text-[13px] w-52 outline-none focus:border-border-strong transition-colors placeholder:text-text-tertiary"
                   />
                 </div>
-                <button
-                  onClick={() =>
-                    setSort((s) => (s === "updated" ? "created" : s === "created" ? "title" : "updated"))
-                  }
-                  className="flex items-center gap-2 text-[13px] text-text-secondary border border-border rounded-lg px-3.5 py-2 hover:border-border-strong transition-colors cursor-pointer bg-surface"
+                <select
+                  value={sort}
+                  onChange={(e) => setSort(e.target.value as SortKey)}
+                  className="bg-surface border border-border rounded-lg px-2.5 py-1.5 text-[13px] text-text-secondary outline-none cursor-pointer focus:border-border-strong"
+                  aria-label="Sort"
                 >
-                  <ArrowDownUp size={13} />
-                  {sort === "updated" ? "Last edited" : sort === "created" ? "Newest" : "A–Z"}
-                </button>
+                  <option value="updated">Last edited</option>
+                  <option value="created">Newest</option>
+                  <option value="title">A–Z</option>
+                </select>
                 <button
                   onClick={handleNewBlank}
                   disabled={busy === "new"}
-                  className="flex items-center gap-2 text-[13px] font-medium bg-accent text-accent-text rounded-lg px-3.5 py-2 hover:bg-accent-hover transition-colors cursor-pointer disabled:opacity-60"
+                  className="flex items-center gap-1.5 text-[13px] font-medium bg-accent text-accent-text rounded-lg px-3 py-1.5 hover:bg-accent-hover transition-colors cursor-pointer disabled:opacity-60"
                 >
-                  {busy === "new" ? <Loader2 size={13} className="animate-spin" /> : <Plus size={14} />}
+                  {busy === "new" ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
                   New
                 </button>
               </div>
             </div>
 
             {filtered === null ? (
-              <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <div key={i} className="rounded-xl border border-border overflow-hidden">
+              <div className="flex flex-col gap-1">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-3.5 px-3 py-2.5">
                     <div
-                      className="aspect-video bg-surface"
+                      className="w-[88px] aspect-video rounded-md bg-surface-2"
                       style={{
-                        backgroundImage: "linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent)",
+                        backgroundImage:
+                          "linear-gradient(90deg, transparent, var(--surface-3), transparent)",
                         backgroundSize: "400px 100%",
                         animation: "shimmer 1.4s infinite linear",
                       }}
                     />
-                    <div className="p-3.5">
-                      <div className="h-3.5 w-2/3 rounded bg-surface-3 mb-2" />
-                      <div className="h-2.5 w-1/3 rounded bg-surface-2" />
+                    <div className="flex-1">
+                      <div className="h-3.5 w-48 rounded bg-surface-2 mb-2" />
+                      <div className="h-2.5 w-24 rounded bg-surface-2" />
                     </div>
                   </div>
                 ))}
               </div>
             ) : filtered.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-28 text-center">
-                <div className="w-14 h-14 rounded-2xl bg-surface border border-border flex items-center justify-center mb-4">
-                  <Presentation size={22} className="text-text-tertiary" />
+              <div className="flex flex-col items-center justify-center py-24 text-center">
+                <div className="w-12 h-12 rounded-2xl bg-surface-2 flex items-center justify-center mb-4">
+                  <Presentation size={20} className="text-text-tertiary" />
                 </div>
-                <div className="font-medium text-[15px] mb-1">
+                <div className="font-medium text-[14.5px] mb-1">
                   {query ? "No presentations match your search" : "No presentations yet"}
                 </div>
-                <div className="text-[13.5px] text-text-secondary mb-6 max-w-xs">
+                <div className="text-[13px] text-text-secondary mb-5 max-w-xs">
                   {query
                     ? "Try a different search term."
-                    : "Create your first presentation with AI, from a template, or from scratch."}
+                    : "Create your first interactive presentation."}
                 </div>
                 {!query && (
                   <button
-                    onClick={() => setView("create")}
-                    className="flex items-center gap-2 text-[13px] font-medium bg-accent text-accent-text rounded-lg px-4 py-2.5 hover:bg-accent-hover transition-colors cursor-pointer"
+                    onClick={() => setView("home")}
+                    className="flex items-center gap-1.5 text-[13px] font-medium bg-accent text-accent-text rounded-lg px-3.5 py-2 hover:bg-accent-hover transition-colors cursor-pointer"
                   >
-                    <Plus size={14} /> Create with AI
+                    <Plus size={13} /> Create presentation
                   </button>
                 )}
               </div>
             ) : (
-              <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-                {(view === "recent" ? filtered.slice(0, 9) : filtered).map((m) => (
-                  <PresentationCard
+              <div className="flex flex-col">
+                {filtered.map((m) => (
+                  <PresentationItem
                     key={m.id}
                     meta={m}
                     onRename={handleRename}
@@ -285,37 +278,47 @@ export function DashboardShell({
 
         {/* -------------------------------------------- templates view */}
         {view === "templates" && (
-          <div className="px-8 py-8 max-w-6xl mx-auto">
-            <h1 className="text-xl font-semibold tracking-tight mb-1">Templates</h1>
-            <p className="text-[13.5px] text-text-secondary mb-6">
+          <div className="w-full max-w-3xl mx-auto px-6 py-10">
+            <h1 className="text-[17px] font-semibold tracking-tight mb-1">Templates</h1>
+            <p className="text-[13px] text-text-secondary mb-6">
               Start from a structure, then let AI fill it with your content.
             </p>
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {TEMPLATES.map((t) => {
-                const theme = ThemeSchema.parse(t.doc.theme);
+                const slideTheme = ThemeSchema.parse(t.doc.theme);
                 return (
-                  <button
+                  <div
                     key={t.key}
-                    onClick={() => void handleTemplate(t.key)}
-                    disabled={busy !== null}
-                    className="group text-left bg-surface border border-border rounded-xl overflow-hidden hover:border-border-strong transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/20 cursor-pointer disabled:opacity-60"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => busy === null && void handleTemplate(t.key)}
+                    onKeyDown={(e) =>
+                      (e.key === "Enter" || e.key === " ") && busy === null && void handleTemplate(t.key)
+                    }
+                    className={`group text-left border border-border rounded-xl overflow-hidden hover:border-border-strong transition-colors cursor-pointer bg-surface ${
+                      busy !== null ? "opacity-60 pointer-events-none" : ""
+                    }`}
                   >
                     <div className="relative pointer-events-none">
-                      <SlideRenderer slide={t.doc.slides[0]} theme={theme} mode="thumb" />
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/35 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                        <span className="text-[12.5px] font-medium bg-white text-black rounded-lg px-3.5 py-2 shadow-lg flex items-center gap-1.5">
-                          {busy === t.key ? <Loader2 size={12} className="animate-spin" /> : <LayoutTemplate size={12} />}
+                      <SlideRenderer slide={t.doc.slides[0]} theme={slideTheme} mode="thumb" />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                        <span className="text-[12px] font-medium bg-white text-black rounded-lg px-3 py-1.5 shadow-md flex items-center gap-1.5">
+                          {busy === t.key ? (
+                            <Loader2 size={11} className="animate-spin" />
+                          ) : (
+                            <LayoutTemplate size={11} />
+                          )}
                           Use template
                         </span>
                       </div>
                     </div>
-                    <div className="px-3.5 py-3">
-                      <div className="text-[13.5px] font-medium">{t.name}</div>
-                      <div className="text-[12px] text-text-secondary mt-0.5 leading-relaxed">
+                    <div className="px-3 py-2.5">
+                      <div className="text-[13px] font-medium">{t.name}</div>
+                      <div className="text-[11.5px] text-text-tertiary mt-0.5 leading-relaxed">
                         {t.description}
                       </div>
                     </div>
-                  </button>
+                  </div>
                 );
               })}
             </div>
@@ -324,50 +327,68 @@ export function DashboardShell({
 
         {/* --------------------------------------------- settings view */}
         {view === "settings" && (
-          <div className="px-8 py-8 max-w-2xl mx-auto">
-            <h1 className="text-xl font-semibold tracking-tight mb-6">Settings</h1>
+          <div className="w-full max-w-xl mx-auto px-6 py-10">
+            <h1 className="text-[17px] font-semibold tracking-tight mb-6">Settings</h1>
 
-            <section className="bg-surface border border-border rounded-xl p-5 mb-4">
-              <h2 className="text-[13px] font-medium text-text-secondary uppercase tracking-wider mb-4">
-                Account
-              </h2>
-              <div className="flex items-center gap-3.5">
+            <section className="border border-border rounded-xl divide-y divide-border bg-surface mb-4">
+              <div className="flex items-center gap-3.5 px-4 py-3.5">
                 {user.avatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={user.avatarUrl} alt="" className="w-11 h-11 rounded-full" referrerPolicy="no-referrer" />
+                  <img src={user.avatarUrl} alt="" className="w-9 h-9 rounded-full" referrerPolicy="no-referrer" />
                 ) : (
-                  <div className="w-11 h-11 rounded-full bg-surface-3 flex items-center justify-center text-[15px] font-semibold text-text-secondary">
+                  <div className="w-9 h-9 rounded-full bg-surface-3 flex items-center justify-center text-[13px] font-semibold text-text-secondary">
                     {user.name.slice(0, 1).toUpperCase()}
                   </div>
                 )}
-                <div>
-                  <div className="text-[14.5px] font-medium">{user.name}</div>
-                  <div className="text-[13px] text-text-secondary">{user.email}</div>
-                  <div className="text-[11.5px] text-text-tertiary mt-0.5">Signed in with Google</div>
+                <div className="min-w-0">
+                  <div className="text-[13.5px] font-medium truncate">{user.name}</div>
+                  <div className="text-[12.5px] text-text-secondary truncate">{user.email}</div>
                 </div>
               </div>
-            </section>
 
-            <section className="bg-surface border border-border rounded-xl p-5 mb-4">
-              <h2 className="text-[13px] font-medium text-text-secondary uppercase tracking-wider mb-3">
-                Workspace
-              </h2>
-              <div className="flex items-center justify-between py-1.5">
+              <div className="flex items-center justify-between px-4 py-3.5">
                 <div>
-                  <div className="text-[13.5px] font-medium">Presentations</div>
-                  <div className="text-[12.5px] text-text-secondary">Stored privately in your Supabase workspace</div>
+                  <div className="text-[13px] font-medium">Appearance</div>
+                  <div className="text-[12px] text-text-tertiary">Theme for the app interface</div>
+                </div>
+                <div className="flex items-center bg-surface-2 border border-border rounded-lg p-0.5">
+                  {(
+                    [
+                      { key: "light", icon: SunMedium, label: "Light" },
+                      { key: "dark", icon: Moon, label: "Dark" },
+                    ] as const
+                  ).map((o) => (
+                    <button
+                      key={o.key}
+                      onClick={() => setTheme(o.key)}
+                      className={`flex items-center gap-1.5 text-[12px] px-2.5 py-1 rounded-[6px] transition-colors cursor-pointer ${
+                        theme === o.key ? "bg-surface text-text font-medium shadow-sm" : "text-text-secondary"
+                      }`}
+                    >
+                      <o.icon size={12} />
+                      {o.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between px-4 py-3.5">
+                <div>
+                  <div className="text-[13px] font-medium">Presentations</div>
+                  <div className="text-[12px] text-text-tertiary">Stored privately in your workspace</div>
                 </div>
                 <div className="flex items-center gap-1.5 text-[13px] text-text-secondary">
-                  <Layers size={14} />
+                  <Layers size={13} />
                   {metas?.length ?? "—"}
                 </div>
               </div>
-              <div className="flex items-center justify-between py-1.5">
+
+              <div className="flex items-center justify-between px-4 py-3.5">
                 <div>
-                  <div className="text-[13.5px] font-medium">AI model</div>
-                  <div className="text-[12.5px] text-text-secondary">DeepSeek — used for generation and editing</div>
+                  <div className="text-[13px] font-medium">AI model</div>
+                  <div className="text-[12px] text-text-tertiary">DeepSeek — generation and editing</div>
                 </div>
-                <span className="text-[11.5px] font-medium bg-success/15 text-success rounded-full px-2.5 py-1">
+                <span className="text-[11px] font-medium bg-success/12 text-success rounded-full px-2.5 py-1">
                   Connected
                 </span>
               </div>
@@ -375,9 +396,9 @@ export function DashboardShell({
 
             <button
               onClick={() => void signOut()}
-              className="flex items-center gap-2 text-[13px] text-danger border border-danger/30 rounded-lg px-4 py-2.5 hover:bg-danger/10 transition-colors cursor-pointer"
+              className="flex items-center gap-2 text-[13px] text-danger border border-danger/30 rounded-lg px-3.5 py-2 hover:bg-danger/10 transition-colors cursor-pointer"
             >
-              <LogOut size={14} />
+              <LogOut size={13} />
               Sign out
             </button>
           </div>
@@ -386,7 +407,10 @@ export function DashboardShell({
 
       {/* Toast */}
       {toast && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-surface-2 border border-border-strong rounded-xl px-4.5 py-3 text-[13px] shadow-xl shadow-black/40 animate-in-fade px-5">
+        <div
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-surface border border-border rounded-xl px-4 py-2.5 text-[13px] animate-rise"
+          style={{ boxShadow: "0 8px 24px var(--shadow-color)" }}
+        >
           {toast}
         </div>
       )}

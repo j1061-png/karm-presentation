@@ -4,10 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowUp, FileText, FileSpreadsheet, Presentation as PresIcon, ImageIcon,
-  File as FileIcon, X, UploadCloud, AlertCircle, Check,
+  File as FileIcon, X, Plus, UploadCloud, AlertCircle, Check, Loader2, Sparkles,
 } from "lucide-react";
 import { extractFile, type UploadedSource } from "@/lib/api";
-import { GenerationOverlay, type GenProgress } from "./GenerationOverlay";
 
 interface PendingFile {
   id: string;
@@ -20,11 +19,27 @@ interface PendingFile {
   previewUrl?: string;
 }
 
+interface GenProgress {
+  stage: string;
+  detail?: string;
+  done?: number;
+  total?: number;
+  error?: string;
+}
+
+const GEN_STAGES: { key: string; label: string }[] = [
+  { key: "analysing", label: "Analysing your request" },
+  { key: "planning", label: "Planning your presentation" },
+  { key: "designing", label: "Designing slides" },
+  { key: "interactive", label: "Adding interactions" },
+  { key: "finalising", label: "Finalising" },
+];
+
 const SUGGESTIONS = [
-  "KarmSolar company overview for new investors",
-  "Q3 solar farm performance review with charts",
-  "Timeline of KarmSolar's projects across Egypt",
-  "Training deck on solar microgrid safety",
+  "KarmSolar company overview",
+  "Q3 solar farm performance",
+  "Project timeline across Egypt",
+  "Microgrid safety training",
 ];
 
 function kindIcon(name: string) {
@@ -48,7 +63,6 @@ export function Composer() {
   const [files, setFiles] = useState<PendingFile[]>([]);
   const [dragging, setDragging] = useState(false);
   const [generating, setGenerating] = useState<GenProgress | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -86,7 +100,7 @@ export function Composer() {
     }
   }, []);
 
-  // Whole-window drag detection for a polished full-surface drop experience.
+  // Whole-window drag detection.
   useEffect(() => {
     const onDragEnter = (e: DragEvent) => {
       if (!e.dataTransfer?.types.includes("Files")) return;
@@ -116,13 +130,21 @@ export function Composer() {
     };
   }, [addFiles]);
 
+  // Auto-grow the textarea like ChatGPT's composer.
+  function autoGrow() {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
+  }
+
   const readySources = files.filter((f) => f.status === "done" && f.source).map((f) => f.source!);
   const uploading = files.some((f) => f.status === "uploading");
-  const canGenerate = (prompt.trim().length > 0 || readySources.length > 0) && !uploading;
+  const canGenerate =
+    (prompt.trim().length > 0 || readySources.length > 0) && !uploading && !generating;
 
   async function generate() {
     if (!canGenerate) return;
-    setError(null);
     setGenerating({ stage: "analysing" });
     const controller = new AbortController();
     abortRef.current = controller;
@@ -181,63 +203,43 @@ export function Composer() {
     }
   }
 
-  return (
-    <div className="w-full max-w-2xl mx-auto">
-      {generating && (
-        <GenerationOverlay
-          progress={generating}
-          onCancel={() => {
-            abortRef.current?.abort();
-            setGenerating(null);
-          }}
-        />
-      )}
+  const failed = generating?.stage === "error";
+  const activeStageIdx = generating
+    ? Math.max(0, GEN_STAGES.findIndex((s) => s.key === generating.stage))
+    : -1;
 
+  return (
+    <div className="w-full max-w-[680px] mx-auto">
       {/* Full-window drop veil */}
       {dragging && (
-        <div className="fixed inset-0 z-40 bg-bg/80 backdrop-blur-sm flex items-center justify-center pointer-events-none animate-in-fade">
-          <div className="border-2 border-dashed border-accent rounded-2xl px-16 py-12 bg-surface/80 flex flex-col items-center gap-3">
-            <UploadCloud size={36} className="text-accent" />
-            <div className="font-medium text-[15px]">Drop files to add them</div>
-            <div className="text-[13px] text-text-secondary">PDF, PowerPoint, Word, CSV, images, text</div>
+        <div className="fixed inset-0 z-40 bg-bg/85 backdrop-blur-sm flex items-center justify-center pointer-events-none animate-in-fade">
+          <div className="border-2 border-dashed border-accent rounded-2xl px-14 py-10 bg-surface flex flex-col items-center gap-3">
+            <UploadCloud size={32} className="text-accent" />
+            <div className="font-medium text-[14.5px]">Drop files to attach them</div>
+            <div className="text-[12.5px] text-text-secondary">PDF, PowerPoint, Word, CSV, images, text</div>
           </div>
         </div>
       )}
 
-      {/* Prompt card */}
+      {/* Composer */}
       <div
-        className={`bg-surface border rounded-2xl transition-all duration-200 shadow-xl shadow-black/20 ${
+        className={`bg-surface border rounded-[26px] transition-colors ${
           dragging ? "border-accent" : "border-border focus-within:border-border-strong"
         }`}
+        style={{ boxShadow: "0 2px 12px var(--shadow-color)" }}
       >
-        <textarea
-          ref={textareaRef}
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              void generate();
-            }
-          }}
-          placeholder="Describe the presentation you want... e.g. “An investor pitch for our new 50MW solar farm in Aswan, with financials and a project timeline”"
-          rows={3}
-          className="w-full bg-transparent resize-none outline-none px-5 pt-5 pb-2 text-[15px] leading-relaxed placeholder:text-text-tertiary"
-        />
-
         {/* File chips */}
         {files.length > 0 && (
-          <div className="px-4 pb-1 flex flex-wrap gap-2">
+          <div className="px-4 pt-3.5 flex flex-wrap gap-2">
             {files.map((f) => {
               const Icon = kindIcon(f.name);
               return (
                 <div
                   key={f.id}
-                  className={`group relative flex items-center gap-2.5 rounded-xl border pl-2.5 pr-8 py-2 text-[13px] overflow-hidden transition-colors ${
+                  className={`group relative flex items-center gap-2 rounded-xl border pl-2 pr-7 py-1.5 text-[12.5px] overflow-hidden ${
                     f.status === "error" ? "border-danger/50 bg-danger/5" : "border-border bg-surface-2"
                   }`}
                 >
-                  {/* progress fill */}
                   {f.status === "uploading" && (
                     <div
                       className="absolute inset-y-0 left-0 bg-accent/10 transition-all duration-200"
@@ -246,34 +248,34 @@ export function Composer() {
                   )}
                   {f.previewUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={f.previewUrl} alt="" className="w-8 h-8 rounded-lg object-cover relative" />
+                    <img src={f.previewUrl} alt="" className="w-7 h-7 rounded-md object-cover relative" />
                   ) : (
-                    <div className="w-8 h-8 rounded-lg bg-surface-3 flex items-center justify-center relative">
-                      <Icon size={15} className="text-text-secondary" />
+                    <div className="w-7 h-7 rounded-md bg-surface-3 flex items-center justify-center relative">
+                      <Icon size={13} className="text-text-secondary" />
                     </div>
                   )}
                   <div className="relative min-w-0">
-                    <div className="font-medium truncate max-w-[180px]">{f.name}</div>
-                    <div className="text-[11px] text-text-tertiary flex items-center gap-1">
+                    <div className="font-medium truncate max-w-[160px]">{f.name}</div>
+                    <div className="text-[10.5px] text-text-tertiary flex items-center gap-1">
                       {f.status === "uploading" && `Uploading ${f.progress}%`}
                       {f.status === "done" && (
                         <>
-                          <Check size={11} className="text-success" /> {formatSize(f.size)}
+                          <Check size={10} className="text-success" /> {formatSize(f.size)}
                         </>
                       )}
                       {f.status === "error" && (
                         <span className="text-danger flex items-center gap-1">
-                          <AlertCircle size={11} /> {f.error}
+                          <AlertCircle size={10} /> {f.error}
                         </span>
                       )}
                     </div>
                   </div>
                   <button
                     onClick={() => setFiles((prev) => prev.filter((x) => x.id !== f.id))}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-md text-text-tertiary hover:text-text hover:bg-surface-3 transition-colors cursor-pointer"
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 rounded-md text-text-tertiary hover:text-text hover:bg-surface-3 transition-colors cursor-pointer"
                     aria-label={`Remove ${f.name}`}
                   >
-                    <X size={13} />
+                    <X size={12} />
                   </button>
                 </div>
               );
@@ -281,15 +283,36 @@ export function Composer() {
           </div>
         )}
 
-        {/* Bottom bar */}
-        <div className="flex items-center justify-between px-3.5 pb-3.5 pt-1">
+        <textarea
+          ref={textareaRef}
+          value={prompt}
+          disabled={!!generating && !failed}
+          onChange={(e) => {
+            setPrompt(e.target.value);
+            autoGrow();
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              void generate();
+            }
+          }}
+          placeholder="Describe the presentation you want to create..."
+          rows={1}
+          className="w-full bg-transparent resize-none outline-none px-5 pt-4 pb-1 text-[15px] leading-relaxed placeholder:text-text-tertiary disabled:opacity-60"
+          style={{ minHeight: 52 }}
+        />
+
+        {/* Bottom controls */}
+        <div className="flex items-center justify-between pl-3 pr-3 pb-3 pt-1">
           <button
             onClick={() => inputRef.current?.click()}
-            className="flex items-center gap-2 text-[13px] text-text-secondary hover:text-text px-2.5 py-1.5 rounded-lg hover:bg-surface-2 transition-colors cursor-pointer"
+            disabled={!!generating && !failed}
+            className="w-8 h-8 rounded-full border border-border text-text-secondary hover:text-text hover:bg-surface-2 transition-colors cursor-pointer flex items-center justify-center disabled:opacity-50"
+            title="Attach files"
+            aria-label="Attach files"
           >
-            <UploadCloud size={15} />
-            Add files
-            <span className="text-text-tertiary hidden sm:inline">or drag & drop</span>
+            <Plus size={16} />
           </button>
           <input
             ref={inputRef}
@@ -302,38 +325,132 @@ export function Composer() {
               e.target.value = "";
             }}
           />
-          <button
-            onClick={() => void generate()}
-            disabled={!canGenerate}
-            className="w-9 h-9 rounded-xl bg-accent text-accent-text flex items-center justify-center transition-all hover:bg-accent-hover disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
-            aria-label="Generate presentation"
-          >
-            <ArrowUp size={17} strokeWidth={2.5} />
-          </button>
+
+          <div className="flex items-center gap-3">
+            <span className="hidden sm:flex items-center gap-1.5 text-[11.5px] text-text-tertiary">
+              <Sparkles size={11} />
+              DeepSeek
+            </span>
+            <button
+              onClick={() => void generate()}
+              disabled={!canGenerate}
+              className="w-8 h-8 rounded-full bg-text text-bg flex items-center justify-center transition-opacity hover:opacity-85 disabled:opacity-25 disabled:cursor-not-allowed cursor-pointer"
+              aria-label="Generate presentation"
+              title="Generate (Enter)"
+            >
+              {generating && !failed ? (
+                <Loader2 size={15} className="animate-spin" />
+              ) : (
+                <ArrowUp size={16} strokeWidth={2.5} />
+              )}
+            </button>
+          </div>
         </div>
       </div>
 
-      {error && (
-        <div className="mt-3 text-[13px] text-danger flex items-center gap-2">
-          <AlertCircle size={14} /> {error}
+      {/* Inline generation state — composer stays visible */}
+      {generating && (
+        <div
+          className="mt-4 bg-surface border border-border rounded-2xl px-5 py-4 animate-rise"
+          style={{ boxShadow: "0 2px 12px var(--shadow-color)" }}
+        >
+          {failed ? (
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 text-[13px] text-danger min-w-0">
+                <AlertCircle size={15} className="flex-shrink-0" />
+                <span className="truncate">{generating.error}</span>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <button
+                  onClick={() => void generate()}
+                  className="text-[12.5px] font-medium bg-accent text-accent-text rounded-lg px-3 py-1.5 hover:bg-accent-hover transition-colors cursor-pointer"
+                >
+                  Retry
+                </button>
+                <button
+                  onClick={() => setGenerating(null)}
+                  className="text-[12.5px] text-text-secondary hover:text-text transition-colors cursor-pointer px-2 py-1.5"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="flex flex-col gap-2">
+                {GEN_STAGES.map((stage, i) => {
+                  const isDone = i < activeStageIdx;
+                  const isActive = i === activeStageIdx;
+                  return (
+                    <div
+                      key={stage.key}
+                      className="flex items-center gap-2.5 transition-opacity duration-300"
+                      style={{ opacity: isDone || isActive ? 1 : 0.35 }}
+                    >
+                      {isDone ? (
+                        <Check size={13} className="text-success flex-shrink-0" strokeWidth={3} />
+                      ) : isActive ? (
+                        <Loader2 size={13} className="animate-spin text-accent flex-shrink-0" />
+                      ) : (
+                        <span className="w-[13px] h-[13px] rounded-full border border-border-strong flex-shrink-0" />
+                      )}
+                      <span className={`text-[13px] ${isActive ? "font-medium" : "text-text-secondary"}`}>
+                        {stage.label}
+                        {isActive && generating.detail ? (
+                          <span className="text-text-tertiary font-normal"> — {generating.detail}</span>
+                        ) : null}
+                      </span>
+                      {isActive && generating.total ? (
+                        <span className="ml-auto text-[11.5px] text-text-tertiary tabular-nums">
+                          {Math.min(generating.done ?? 0, generating.total)}/{generating.total}
+                        </span>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+              {generating.stage === "designing" && generating.total ? (
+                <div className="mt-3 h-1 rounded-full bg-surface-3 overflow-hidden">
+                  <div
+                    className="h-full bg-accent rounded-full transition-all duration-500"
+                    style={{
+                      width: `${Math.min(100, ((generating.done ?? 0) / generating.total) * 100)}%`,
+                    }}
+                  />
+                </div>
+              ) : null}
+              <button
+                onClick={() => {
+                  abortRef.current?.abort();
+                  setGenerating(null);
+                }}
+                className="mt-3 text-[12px] text-text-tertiary hover:text-text transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+            </>
+          )}
         </div>
       )}
 
       {/* Suggestions */}
-      <div className="flex flex-wrap justify-center gap-2 mt-5">
-        {SUGGESTIONS.map((s) => (
-          <button
-            key={s}
-            onClick={() => {
-              setPrompt(s);
-              textareaRef.current?.focus();
-            }}
-            className="text-[12.5px] text-text-secondary border border-border rounded-full px-3.5 py-1.5 hover:border-border-strong hover:text-text transition-colors cursor-pointer bg-surface/50"
-          >
-            {s}
-          </button>
-        ))}
-      </div>
+      {!generating && prompt.length === 0 && files.length === 0 && (
+        <div className="flex flex-wrap justify-center gap-2 mt-4">
+          {SUGGESTIONS.map((s) => (
+            <button
+              key={s}
+              onClick={() => {
+                setPrompt(s);
+                textareaRef.current?.focus();
+                requestAnimationFrame(autoGrow);
+              }}
+              className="text-[12.5px] text-text-secondary border border-border rounded-full px-3 py-1.5 hover:bg-surface-2 hover:text-text transition-colors cursor-pointer"
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
