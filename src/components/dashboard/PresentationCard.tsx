@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import type { PresentationMeta } from "@/lib/schema";
 import { ThemeSchema } from "@/lib/schema";
 import { SlideRenderer } from "@/components/renderer/SlideRenderer";
+import { ShareModal } from "@/components/share/ShareModal";
 import {
-  MoreHorizontal, Pencil, Copy, Trash2, Play, ExternalLink, Layers,
+  MoreHorizontal, Pencil, Copy, Trash2, Play, Share2, Layers,
 } from "lucide-react";
 
 function timeAgo(iso: string): string {
@@ -31,6 +32,7 @@ export function PresentationCard({
 }) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [title, setTitle] = useState(meta.title);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -80,6 +82,13 @@ export function PresentationCard({
             <div className="aspect-video flex items-center justify-center">
               <Layers size={24} className="text-text-tertiary" />
             </div>
+          )}
+          {/* Live badge */}
+          {meta.publishedAt && (
+            <span className="absolute top-2 left-2 inline-flex items-center gap-1.5 text-[10.5px] font-semibold bg-black/60 text-white backdrop-blur-sm border border-white/15 rounded-full px-2 py-0.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-success" />
+              Live
+            </span>
           )}
           {/* Hover actions */}
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/35 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
@@ -140,11 +149,12 @@ export function PresentationCard({
           {menuOpen && (
             <div className="absolute right-0 top-8 z-20 w-44 bg-surface-2 border border-border-strong rounded-xl shadow-xl shadow-black/40 py-1.5 animate-in-fade">
               {[
+                { label: "Share", icon: Share2, fn: () => setShareOpen(true) },
                 { label: "Rename", icon: Pencil, fn: () => setRenaming(true) },
                 { label: "Duplicate", icon: Copy, fn: () => onDuplicate(meta.id) },
                 {
-                  label: "Open standalone",
-                  icon: ExternalLink,
+                  label: "Present",
+                  icon: Play,
                   fn: () => window.open(`/presentations/${meta.id}`, "_blank"),
                 },
               ].map((item) => (
@@ -175,6 +185,10 @@ export function PresentationCard({
           )}
         </div>
       </div>
+
+      {shareOpen && (
+        <ShareModal presentationId={meta.id} title={meta.title} onClose={() => setShareOpen(false)} />
+      )}
     </div>
   );
 }

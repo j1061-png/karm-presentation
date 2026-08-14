@@ -9,8 +9,9 @@ import { SlidesPanel } from "./SlidesPanel";
 import { Canvas } from "./Canvas";
 import { RightPanel } from "./RightPanel";
 import { Player } from "@/components/present/Player";
+import { ShareModal } from "@/components/share/ShareModal";
 import {
-  Sun, Undo2, Redo2, Play, Eye, PencilRuler, ExternalLink,
+  Sun, Undo2, Redo2, Play, Eye, PencilRuler, Share2,
   Check, Loader2, AlertTriangle, ChevronLeft,
 } from "lucide-react";
 
@@ -21,6 +22,7 @@ export function EditorShell({ initial }: { initial: Presentation }) {
   const presentation = useEditorStore((s) => s.presentation);
   const setTitle = useEditorStore((s) => s.setTitle);
   const [mode, setMode] = useState<EditorMode>("edit");
+  const [shareOpen, setShareOpen] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("saved");
   const [titleDraft, setTitleDraft] = useState(initial.title);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -118,7 +120,21 @@ export function EditorShell({ initial }: { initial: Presentation }) {
   if (mode === "present") {
     return (
       <div className="fixed inset-0 z-50">
-        <Player presentation={presentation} onExit={() => setMode("edit")} />
+        <Player
+          presentation={presentation}
+          onExit={() => setMode("edit")}
+          onShare={() => {
+            setMode("edit");
+            setShareOpen(true);
+          }}
+        />
+        {shareOpen && (
+          <ShareModal
+            presentationId={presentation.id}
+            title={presentation.title}
+            onClose={() => setShareOpen(false)}
+          />
+        )}
       </div>
     );
   }
@@ -221,15 +237,13 @@ export function EditorShell({ initial }: { initial: Presentation }) {
           ))}
         </div>
 
-        <a
-          href={`/presentations/${presentation.id}`}
-          target="_blank"
-          rel="noreferrer"
-          className="p-2 rounded-lg text-text-secondary hover:text-text hover:bg-surface-2 transition-colors"
-          title="Open as standalone website"
+        <button
+          onClick={() => setShareOpen(true)}
+          className="flex items-center gap-1.5 text-[12.5px] font-medium bg-surface-2 border border-border rounded-lg px-3.5 py-2 hover:border-border-strong hover:bg-surface-3 transition-colors cursor-pointer"
         >
-          <ExternalLink size={15} />
-        </a>
+          <Share2 size={13} className="text-accent" />
+          Share
+        </button>
 
         <button
           onClick={() => setMode("present")}
@@ -239,6 +253,14 @@ export function EditorShell({ initial }: { initial: Presentation }) {
           Present
         </button>
       </header>
+
+      {shareOpen && (
+        <ShareModal
+          presentationId={presentation.id}
+          title={presentation.title}
+          onClose={() => setShareOpen(false)}
+        />
+      )}
 
       {/* --------------------------------------------------- main layout */}
       {mode === "preview" ? (

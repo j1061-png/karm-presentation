@@ -79,7 +79,12 @@ async function writeIndex(userId: string, metas: PresentationMeta[]): Promise<vo
 
 async function upsertIndexEntry(userId: string, meta: PresentationMeta): Promise<void> {
   const metas = await listPresentations(userId);
-  const next = [meta, ...metas.filter((m) => m.id !== meta.id)];
+  const existing = metas.find((m) => m.id === meta.id);
+  // Preserve publish state across draft saves.
+  const merged: PresentationMeta = existing
+    ? { ...meta, publishedAt: existing.publishedAt, visibility: existing.visibility }
+    : meta;
+  const next = [merged, ...metas.filter((m) => m.id !== meta.id)];
   await writeIndex(userId, next);
 }
 
@@ -100,7 +105,10 @@ export async function savePresentation(userId: string, p: Presentation): Promise
 
 export async function deletePresentation(userId: string, id: string): Promise<void> {
   const supabase = createAdminClient();
-  await supabase.storage.from(PRESENTATIONS_BUCKET).remove([docPath(userId, id)]);
+  // Remove the draft and any published snapshot so deleted decks go offline.
+  await supabase.storage
+    .from(PRESENTATIONS_BUCKET)
+    .remove([docPath(userId, id), `public/${id}.json`]);
   const metas = await listPresentations(userId);
   await writeIndex(userId, metas.filter((m) => m.id !== id));
 }
@@ -134,6 +142,116 @@ export async function duplicatePresentation(
   };
   await savePresentation(userId, copy);
   return copy;
+}
+
+/* ------------------------------------------------------------------ */
+/* Publishing                                                          */
+/*                                                                     */
+/* Publishing writes an immutable snapshot of the presentation to      */
+/*   presentations/public/{presentationId}.json                        */
+/* served by the public /p/[id] route. Draft edits never touch the     */
+/* published snapshot until the user publishes again.                  */
+/* ------------------------------------------------------------------ */
+
+export type Visibility = "private" | "link" | "public";
+
+export interface PublishedDoc {
+  ownerId: string;
+  visibility: Visibility;
+  publishedAt: string;
+  presentation: Presentation;
+}
+
+function publicPath(id: string) {
+  if (!/^[\w-]+$/.test(id)) throw new Error("Invalid presentation id");
+  return `public/${id}.json`;
+}
+
+export async function getPublished(id: string): Promise<PublishedDoc | null> {
+  let doc: unknown;
+  try {
+    doc = await download(publicPath(id));
+  } catch {
+    return null;
+  }
+  if (!doc || typeof doc !== "object") return null;
+  const record = doc as PublishedDoc;
+  const parsed = PresentationSchema.safeParse(record.presentation);
+  if (!parsed.success || typeof record.ownerId !== "string") return null;
+  return {
+    ownerId: record.ownerId,
+    visibility: record.visibility === "public" || record.visibility === "private" ? record.visibility : "link",
+    publishedAt: typeof record.publishedAt === "string" ? record.publishedAt : new Date().toISOString(),
+    presentation: parsed.data,
+  };
+}
+
+async function updateIndexPublishState(
+  userId: string,
+  id: string,
+  publish: { publishedAt: string; visibility: Visibility } | null
+): Promise<void> {
+  const metas = await listPresentations(userId);
+  await writeIndex(
+    userId,
+    metas.map((m) =>
+      m.id === id
+        ? {
+            ...m,
+            publishedAt: publish?.publishedAt,
+            visibility: publish?.visibility,
+          }
+        : m
+    )
+  );
+}
+
+/** Publish (or re-publish) the current draft. Returns the published doc. */
+export async function publishPresentation(
+  userId: string,
+  id: string,
+  visibility: Visibility
+): Promise<PublishedDoc | null> {
+  const presentation = await getPresentation(userId, id);
+  if (!presentation) return null;
+  const published: PublishedDoc = {
+    ownerId: userId,
+    visibility,
+    publishedAt: new Date().toISOString(),
+    presentation,
+  };
+  await upload(publicPath(id), published);
+  await updateIndexPublishState(userId, id, {
+    publishedAt: published.publishedAt,
+    visibility,
+  });
+  return published;
+}
+
+/** Change visibility without republishing content. */
+export async function setVisibility(
+  userId: string,
+  id: string,
+  visibility: Visibility
+): Promise<PublishedDoc | null> {
+  const existing = await getPublished(id);
+  if (!existing || existing.ownerId !== userId) return null;
+  const updated = { ...existing, visibility };
+  await upload(publicPath(id), updated);
+  await updateIndexPublishState(userId, id, {
+    publishedAt: existing.publishedAt,
+    visibility,
+  });
+  return updated;
+}
+
+export async function unpublishPresentation(userId: string, id: string): Promise<boolean> {
+  const existing = await getPublished(id);
+  if (!existing || existing.ownerId !== userId) return false;
+  const supabase = createAdminClient();
+  await supabase.storage.from(PRESENTATIONS_BUCKET).remove([publicPath(id)]);
+  await updateIndexPublishState(userId, id, null);
+  return true;
 }
 
 /** Upload a user image to the public uploads bucket; returns its public URL. */

@@ -104,6 +104,45 @@ export async function extractFile(
   });
 }
 
+export type Visibility = "private" | "link" | "public";
+
+export interface PublishStatus {
+  published: boolean;
+  publishedAt?: string;
+  visibility?: Visibility;
+  hasUnpublishedChanges?: boolean;
+}
+
+export async function getPublishStatus(id: string): Promise<PublishStatus> {
+  return json<PublishStatus>(await fetch(`/api/presentations/${id}/publish`));
+}
+
+export async function publishPresentation(id: string, visibility: Visibility): Promise<PublishStatus> {
+  return json<PublishStatus>(
+    await fetch(`/api/presentations/${id}/publish`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ visibility }),
+    })
+  );
+}
+
+export async function setPublishVisibility(id: string, visibility: Visibility): Promise<PublishStatus> {
+  return json<PublishStatus>(
+    await fetch(`/api/presentations/${id}/publish`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ visibility }),
+    })
+  );
+}
+
+export async function unpublishPresentation(id: string): Promise<PublishStatus> {
+  return json<PublishStatus>(
+    await fetch(`/api/presentations/${id}/publish`, { method: "DELETE" })
+  );
+}
+
 export interface AIEditResult {
   summary: string;
   presentation: Presentation;

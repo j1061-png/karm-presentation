@@ -136,13 +136,27 @@ export function DashboardShell({
       <main className="flex-1 min-w-0">
         {/* ------------------------------------------------ create view */}
         {view === "create" && (
-          <div className="flex flex-col items-center px-8 pt-[13vh] pb-16">
-            <h1 className="text-[32px] font-semibold tracking-tight mb-2 text-center">
-              What do you want to present?
-            </h1>
-            <p className="text-text-secondary text-[15px] mb-9 text-center">
-              Describe it, drop in your files, and present@karm will build it.
-            </p>
+          <div className="relative flex flex-col items-center px-8 pt-[12vh] pb-16 min-h-screen">
+            {/* Ambient glow */}
+            <div
+              className="pointer-events-none absolute inset-x-0 top-0 h-[420px]"
+              style={{
+                background:
+                  "radial-gradient(560px 280px at 50% 0%, rgba(245,166,35,0.09), transparent 70%)",
+              }}
+            />
+            <div className="relative text-center animate-in-fade">
+              <div className="inline-flex items-center gap-2 text-[11.5px] text-text-secondary border border-border rounded-full px-3 py-1 mb-5 bg-surface/70">
+                <span className="w-1.5 h-1.5 rounded-full bg-success" />
+                Hey {user.name.split(" ")[0]} — DeepSeek is ready
+              </div>
+              <h1 className="text-[34px] font-semibold tracking-tight mb-2">
+                What do you want to present?
+              </h1>
+              <p className="text-text-secondary text-[15px] mb-9">
+                Describe it, drop in your files, and present@karm will build it.
+              </p>
+            </div>
             <Composer />
 
             {/* Recent strip */}

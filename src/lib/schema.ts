@@ -358,6 +358,9 @@ export interface PresentationMeta {
   updatedAt: string;
   themeColors: { background: string; accent: string; text: string; surface: string };
   preview: Slide | null;
+  /** Set when the presentation has a live published version. */
+  publishedAt?: string;
+  visibility?: "private" | "link" | "public";
 }
 
 // ---------------------------------------------------------------------------

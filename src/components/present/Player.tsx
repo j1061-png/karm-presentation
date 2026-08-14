@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Presentation } from "@/lib/schema";
 import { SlideRenderer } from "@/components/renderer/SlideRenderer";
-import { ChevronLeft, ChevronRight, X, Maximize, Minimize } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, Maximize, Minimize, Share2 } from "lucide-react";
 
 /**
  * Fullscreen interactive presentation player.
@@ -12,10 +12,12 @@ import { ChevronLeft, ChevronRight, X, Maximize, Minimize } from "lucide-react";
 export function Player({
   presentation,
   onExit,
+  onShare,
   embedded = false,
 }: {
   presentation: Presentation;
   onExit?: () => void;
+  onShare?: () => void;
   embedded?: boolean;
 }) {
   const [index, setIndex] = useState(0);
@@ -158,6 +160,15 @@ export function Player({
         >
           {isFullscreen ? <Minimize size={15} /> : <Maximize size={15} />}
         </button>
+        {onShare && (
+          <button
+            className="p-2 rounded-full hover:bg-white/10 transition-colors text-white/80 cursor-pointer"
+            onClick={onShare}
+            aria-label="Share presentation"
+          >
+            <Share2 size={15} />
+          </button>
+        )}
         {onExit && !embedded && (
           <button
             className="p-2 rounded-full hover:bg-white/10 transition-colors text-white/80 cursor-pointer"
