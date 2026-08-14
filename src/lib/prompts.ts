@@ -23,6 +23,7 @@ props per type:
 - "tabs": { "tabs": [{"label", "title", "content"}] }
 - "accordion": { "items": [{"title", "content"}] }
 - "quiz": { "question", "options": [string], "correctIndex": int, "explanation" }
+- "flipcards": { "cards": [{"front": short label, "back": the reveal text, "icon": stat icon name}] }  (2-4 clickable cards that flip over to reveal details — great for key facts, values, team, FAQs)
 - "progress": { "label", "value": 0-100, "suffix": "%", "showValue": true }
 - "button": { "label", "action": "next-slide|prev-slide|goto-slide|link", "targetSlide": int, "href": "https://...", "variant": "primary|secondary|ghost" }
 - "shape": { "shape": "rect|circle|line", "fill": "#hex" }  (decorative; put behind content with lower z)
@@ -34,12 +35,25 @@ SLIDE: { "id": string, "name": string, "transition": "fade|slide|zoom|none", "ba
 `;
 
 export const DESIGN_RULES = `
+INTERACTIVITY MANDATE (the single most important rule):
+This is a premium INTERACTIVE experience, like a polished product website — NOT a PowerPoint. Static heading+text slides are a FAILURE.
+- EVERY content slide MUST contain at least one interactive or animated component: chart, stat(s) with countUp, timeline, tabs, accordion, quiz, flipcards, comparison, progress, or map. Only the title slide and a closing slide may skip this.
+- A slide that is only heading + text/list is FORBIDDEN. Convert prose into interactive structures instead:
+  * numbers/KPIs → "stat" cards with countUp + trend, or "progress" bars
+  * any quantitative comparison, trend or breakdown → "chart" (hover tooltips are automatic)
+  * history, phases, roadmap, process steps → "timeline" (viewers click/hover through steps)
+  * dense info, multiple aspects → "tabs" or "accordion" (viewers click through)
+  * options, plans, before/after → "comparison" cards
+  * key facts, definitions, team, FAQs → "flipcards" (click to flip and reveal)
+  * places, sites, regions → "map"
+  * training/knowledge content → "quiz"
+- Target for a typical deck: 2+ charts, 4+ slides with stats, at least one timeline OR tabs OR flipcards OR quiz. If the source material has ANY numbers, they must appear as stats or charts — never as plain text.
+- EVERY element MUST have an entrance "animation": stagger fade-up across the slide (delays 0, 0.15, 0.3, 0.45...; duration 0.5-0.7). Slides without animations look dead.
+- Mix animation types for rhythm: "fade-up" for text, "zoom" for stats/icons, "slide-left"/"slide-right" for images and cards.
+
 DESIGN RULES:
-- This is a premium interactive presentation, like an interactive website — NOT a PowerPoint.
-- Use interactivity where it genuinely helps: charts for numbers, timelines for history/roadmaps, maps for geography, comparisons for options, tabs/accordions for dense info, quizzes for training content, stats with countUp for KPIs. Do not scatter random animations.
 - Typical slide: one heading, a small accent shape or line, then 1-3 content elements. 2-6 elements per slide. Never crowd a slide.
 - Use consistent left margin (usually x=6). Title usually at y=8-12.
-- Entrance animations: subtle "fade-up" with staggered delays (0, 0.15, 0.3...). Duration 0.5-0.7.
 - Use the theme colors. Accent sparingly — for highlights, key stats, active states.
 - Real, specific content. Never "Lorem ipsum" or "[placeholder]". If source material was provided, ground every fact in it.
 - Numbers in charts must be plausible and consistent with any provided data.
@@ -60,7 +74,8 @@ Respond with ONLY a JSON object:
 }
 
 Plan 6-10 slides for a typical request (fewer for simple asks, up to 14 for deep content). Structure: strong opening slide, logical narrative, memorable closing.
-For each slide, choose components intelligently from: heading, text, list, quote, image, stat, chart, table, comparison, timeline, tabs, accordion, quiz, progress, button, shape, video, map, icon.
+For each slide, choose components intelligently from: heading, text, list, quote, image, stat, chart, table, comparison, timeline, tabs, accordion, quiz, flipcards, progress, button, shape, video, map, icon.
+In "suggestedComponents", name the interactive components each slide will use — every content slide needs at least one interactive component (chart, stat, timeline, tabs, accordion, quiz, flipcards, comparison, progress, map).
 ${DESIGN_RULES}`;
 }
 

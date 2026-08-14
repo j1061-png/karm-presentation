@@ -187,6 +187,28 @@ function coerceElement(input: unknown): unknown {
   return el;
 }
 
+/**
+ * Guarantee every element animates in. If the model omitted animations,
+ * inject a staggered fade-up so slides never feel static.
+ */
+function ensureAnimations(elements: SlideElement[]): SlideElement[] {
+  let stagger = 0;
+  return elements.map((el) => {
+    if (el.animation && el.animation.type !== "none") return el;
+    if (el.type === "shape") return el; // decorative backgrounds stay put
+    const animated = {
+      ...el,
+      animation: {
+        type: el.type === "stat" || el.type === "icon" ? ("zoom" as const) : ("fade-up" as const),
+        delay: Math.round(stagger * 100) / 100,
+        duration: 0.6,
+      },
+    };
+    stagger += 0.15;
+    return animated;
+  });
+}
+
 export function repairSlide(input: unknown, index: number): Slide | null {
   if (typeof input !== "object" || input === null) return null;
   const raw = { ...(input as Record<string, unknown>) };
@@ -194,9 +216,9 @@ export function repairSlide(input: unknown, index: number): Slide | null {
   if (!raw.name || typeof raw.name !== "string") raw.name = `Slide ${index + 1}`;
 
   const rawElements = Array.isArray(raw.elements) ? raw.elements : [];
-  const elements = rawElements
-    .map((e) => repairElement(e))
-    .filter((e): e is SlideElement => e !== null);
+  const elements = ensureAnimations(
+    rawElements.map((e) => repairElement(e)).filter((e): e is SlideElement => e !== null)
+  );
 
   const parsed = SlideSchema.safeParse({ ...raw, elements });
   if (parsed.success) return parsed.data;

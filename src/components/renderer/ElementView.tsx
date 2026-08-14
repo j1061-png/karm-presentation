@@ -6,7 +6,7 @@ import { ChartView } from "./ChartView";
 import { getIcon } from "./icons";
 import {
   Check, ArrowRight, ChevronDown, TrendingUp, TrendingDown, Minus,
-  ImageIcon, Play, MapPin,
+  ImageIcon, Play, MapPin, Repeat,
 } from "lucide-react";
 
 export type RenderMode = "edit" | "live" | "thumb";
@@ -227,7 +227,7 @@ export function ElementView({ el, ctx }: { el: SlideElement; ctx: RenderContext 
             </thead>
             <tbody>
               {el.props.rows.map((row, r) => (
-                <tr key={r} className="transition-colors" style={{ color: theme.colors.text }}>
+                <tr key={r} className={live ? "pk-row-hover" : ""} style={{ color: theme.colors.text }}>
                   {row.map((cell, c) => (
                     <td
                       key={c}
@@ -254,7 +254,7 @@ export function ElementView({ el, ctx }: { el: SlideElement; ctx: RenderContext 
           {el.props.items.map((item, i) => (
             <div
               key={i}
-              className="flex-1 flex flex-col transition-transform duration-200"
+              className={`flex-1 flex flex-col ${live ? "pk-lift" : ""}`}
               style={{
                 ...boxStyle,
                 background: surface,
@@ -292,6 +292,9 @@ export function ElementView({ el, ctx }: { el: SlideElement; ctx: RenderContext 
 
     case "timeline":
       return <TimelineView el={el} ctx={ctx} border={border} />;
+
+    case "flipcards":
+      return <FlipCardsView el={el} ctx={ctx} border={border} />;
 
     case "tabs":
       return <TabsView el={el} ctx={ctx} border={border} boxStyle={boxStyle} />;
@@ -445,7 +448,7 @@ function StatView({
 
   return (
     <div
-      className="w-full h-full flex flex-col justify-center"
+      className={`w-full h-full flex flex-col justify-center ${mode === "live" ? "pk-lift" : ""}`}
       style={{
         ...boxStyle,
         background: s.background ?? theme.colors.surface,
@@ -475,6 +478,93 @@ function StatView({
           </span>
         )}
       </div>
+    </div>
+  );
+}
+
+function FlipCardsView({
+  el, ctx, border,
+}: {
+  el: Extract<SlideElement, { type: "flipcards" }>;
+  ctx: RenderContext;
+  border: string;
+}) {
+  const { theme, mode } = ctx;
+  const [flipped, setFlipped] = useState<Set<number>>(new Set());
+  const s = el.style ?? {};
+  const fontSize = s.fontSize ?? 18;
+
+  function toggle(i: number) {
+    if (mode === "thumb") return;
+    setFlipped((prev) => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
+      return next;
+    });
+  }
+
+  return (
+    <div className="w-full h-full flex gap-[0.9em]" style={{ fontSize }}>
+      {el.props.cards.map((card, i) => {
+        const Icon = card.icon ? getIcon(card.icon) : null;
+        const isFlipped = flipped.has(i);
+        return (
+          <div
+            key={i}
+            className={`pk-flip flex-1 cursor-pointer ${isFlipped ? "flipped" : ""} ${mode === "live" ? "pk-lift" : ""}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              toggle(i);
+            }}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && toggle(i)}
+            style={{ borderRadius: s.borderRadius ?? theme.radius }}
+          >
+            <div className="pk-flip-inner">
+              {/* Front */}
+              <div
+                className="pk-face flex flex-col items-center justify-center gap-[0.6em] text-center p-[1em]"
+                style={{
+                  background: s.background ?? theme.colors.surface,
+                  border: `1px solid ${border}`,
+                  borderRadius: s.borderRadius ?? theme.radius,
+                }}
+              >
+                {Icon && (
+                  <div
+                    className="w-[2.4em] h-[2.4em] rounded-[0.7em] flex items-center justify-center"
+                    style={{ background: `color-mix(in srgb, ${theme.colors.accent} 16%, transparent)` }}
+                  >
+                    <Icon style={{ color: theme.colors.accent, width: "55%", height: "55%" }} />
+                  </div>
+                )}
+                <div className="font-semibold" style={{ color: theme.colors.text, fontSize: "1em", lineHeight: 1.3 }}>
+                  {card.front}
+                </div>
+                <div className="flex items-center gap-1 absolute bottom-[0.7em] right-[0.9em]" style={{ color: theme.colors.muted, fontSize: "0.6em" }}>
+                  <Repeat size={"1em"} />
+                  {mode !== "thumb" && "flip"}
+                </div>
+              </div>
+              {/* Back */}
+              <div
+                className="pk-face pk-face-back flex items-center justify-center text-center p-[1.1em]"
+                style={{
+                  background: `color-mix(in srgb, ${theme.colors.accent} 14%, ${theme.colors.surface})`,
+                  border: `1px solid color-mix(in srgb, ${theme.colors.accent} 45%, transparent)`,
+                  borderRadius: s.borderRadius ?? theme.radius,
+                }}
+              >
+                <div style={{ color: theme.colors.text, fontSize: "0.78em", lineHeight: 1.5 }}>
+                  {card.back}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

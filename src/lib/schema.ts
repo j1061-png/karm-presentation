@@ -284,6 +284,22 @@ export const IconElement = BaseElement.extend({
   }),
 });
 
+export const FlipCardsElement = BaseElement.extend({
+  type: z.literal("flipcards"),
+  props: z.object({
+    cards: z
+      .array(
+        z.object({
+          front: z.string(),
+          back: z.string(),
+          icon: z.string().optional(),
+        })
+      )
+      .min(1)
+      .max(6),
+  }),
+});
+
 export const ElementSchema = z.discriminatedUnion("type", [
   HeadingElement,
   TextElement,
@@ -304,6 +320,7 @@ export const ElementSchema = z.discriminatedUnion("type", [
   VideoElement,
   MapElement,
   IconElement,
+  FlipCardsElement,
 ]);
 export type SlideElement = z.infer<typeof ElementSchema>;
 export type ElementType = SlideElement["type"];

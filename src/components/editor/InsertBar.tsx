@@ -5,7 +5,7 @@ import type { SlideElement } from "@/lib/schema";
 import {
   Type, AlignLeft, List, Quote, ImageIcon, Hash, BarChart3, Table2,
   Columns3, GitCommitHorizontal, PanelTop, ListCollapse, HelpCircle,
-  Percent, MousePointerClick, Square, MapPin, Play,
+  Percent, MousePointerClick, Square, MapPin, Play, Repeat,
 } from "lucide-react";
 
 const COMPONENTS: { type: string; label: string; icon: typeof Type }[] = [
@@ -22,6 +22,7 @@ const COMPONENTS: { type: string; label: string; icon: typeof Type }[] = [
   { type: "tabs", label: "Tabs", icon: PanelTop },
   { type: "accordion", label: "Accordion", icon: ListCollapse },
   { type: "quiz", label: "Quiz", icon: HelpCircle },
+  { type: "flipcards", label: "Flip cards", icon: Repeat },
   { type: "progress", label: "Progress", icon: Percent },
   { type: "button", label: "Button", icon: MousePointerClick },
   { type: "shape", label: "Shape", icon: Square },
@@ -98,6 +99,17 @@ export function createDefaultElement(type: string, x: number, y: number): SlideE
           items: [
             { title: "Section one", content: "Details for section one." },
             { title: "Section two", content: "Details for section two." },
+          ],
+        },
+      } as SlideElement;
+    case "flipcards":
+      return {
+        ...base, type, w: 60, h: 30,
+        props: {
+          cards: [
+            { front: "Card one", back: "Details revealed on flip.", icon: "sun" },
+            { front: "Card two", back: "Details revealed on flip.", icon: "zap" },
+            { front: "Card three", back: "Details revealed on flip.", icon: "leaf" },
           ],
         },
       } as SlideElement;
