@@ -310,7 +310,7 @@ export function DashboardShell({
           <div className="w-full max-w-3xl mx-auto px-6 py-10">
             <h1 className="text-[17px] font-semibold tracking-tight mb-1">Templates</h1>
             <p className="text-[13px] text-text-secondary mb-6">
-              Start from a structure, then let AI fill it with your content.
+              Interactive starting points — charts, quizzes, flip cards, timelines. Then swap in your content.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {TEMPLATES.map((t) => {
@@ -342,6 +342,7 @@ export function DashboardShell({
                       </div>
                     </div>
                     <div className="px-3 py-2.5">
+                      <div className="text-[11px] font-medium text-text-tertiary mb-0.5">{t.category}</div>
                       <div className="text-[13px] font-medium">{t.name}</div>
                       <div className="text-[11.5px] text-text-tertiary mt-0.5 leading-relaxed">
                         {t.description}

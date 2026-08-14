@@ -1,13 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { nanoid } from "nanoid";
 import { useEditorStore, useSelectedSlide } from "@/state/editorStore";
 import { SlideRenderer, SLIDE_W } from "@/components/renderer/SlideRenderer";
 import type { SlideElement } from "@/lib/schema";
 import { extractFile } from "@/lib/api";
+import { elementsFromUpload } from "@/lib/file-to-elements";
 import { InsertBar, createDefaultElement } from "./InsertBar";
-import { Loader2, Minus, Plus, Maximize } from "lucide-react";
+import { Loader2, Minus, Plus, Maximize, UploadCloud } from "lucide-react";
 
 type DragState =
   | { kind: "move"; elementId: string; startX: number; startY: number; origX: number; origY: number; moved: boolean }
@@ -44,7 +44,7 @@ export function Canvas() {
   const dragRef = useRef<DragState | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [dropHover, setDropHover] = useState(false);
-  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploading, setUploading] = useState<string | null>(null);
 
   // ----------------------------------------------- contained fit + zoom
   // The slide frame is sized from measurements, never from raw CSS, so the
@@ -170,6 +170,23 @@ export function Canvas() {
     window.addEventListener("pointerup", endDrag, { once: true });
   }
 
+  async function ingestFiles(files: File[], xPct = 28, yPct = 28) {
+    if (!slideId || files.length === 0) return;
+    setUploading(files.length === 1 ? files[0].name : `${files.length} files`);
+    try {
+      for (const [i, file] of files.slice(0, 8).entries()) {
+        const uploaded = await extractFile(file);
+        for (const el of elementsFromUpload(uploaded, xPct, yPct, i)) {
+          addElement(slideId, el);
+        }
+      }
+    } catch {
+      /* extract errors stay on the slide as missing content */
+    } finally {
+      setUploading(null);
+    }
+  }
+
   // --------------------------------------------------------- drop files
   async function handleDrop(e: React.DragEvent) {
     e.preventDefault();
@@ -179,7 +196,6 @@ export function Canvas() {
     const xPct = Math.max(0, Math.min(92, ((e.clientX - rect.left) / rect.width) * 100 - 4));
     const yPct = Math.max(0, Math.min(92, ((e.clientY - rect.top) / rect.height) * 100 - 4));
 
-    // Component from the insert bar
     const componentType = e.dataTransfer.getData("application/x-karm-component");
     if (componentType) {
       const el = createDefaultElement(componentType, xPct, yPct);
@@ -187,29 +203,8 @@ export function Canvas() {
       return;
     }
 
-    // Image files dropped straight onto the slide
-    const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith("image/"));
-    if (files.length > 0) {
-      setUploadingImage(true);
-      try {
-        for (const [i, file] of files.entries()) {
-          const uploaded = await extractFile(file);
-          if (uploaded.imageUrl) {
-            addElement(slideId, {
-              id: nanoid(8),
-              type: "image",
-              x: Math.min(xPct + i * 4, 60), y: Math.min(yPct + i * 4, 60), w: 34, h: 38,
-              z: 5, opacity: 1, rotation: 0,
-              props: { src: uploaded.imageUrl, alt: file.name, fit: "cover" },
-            } as SlideElement);
-          }
-        }
-      } catch {
-        /* upload errors surface via the image placeholder */
-      } finally {
-        setUploadingImage(false);
-      }
-    }
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) await ingestFiles(files, xPct, yPct);
   }
 
   if (!presentation || !slide) return null;
@@ -224,6 +219,7 @@ export function Canvas() {
           const el = createDefaultElement(type, 30, 30);
           if (el) addElement(slideId, el);
         }}
+        onAttach={(list) => void ingestFiles(Array.from(list))}
       />
 
       <div
@@ -242,7 +238,9 @@ export function Canvas() {
             onClick={(e) => e.stopPropagation()}
             onDragOver={(e) => {
               e.preventDefault();
-              setDropHover(true);
+              if (e.dataTransfer.types.includes("Files") || e.dataTransfer.types.includes("application/x-karm-component")) {
+                setDropHover(true);
+              }
             }}
             onDragLeave={() => setDropHover(false)}
             onDrop={(e) => void handleDrop(e)}
@@ -367,11 +365,21 @@ export function Canvas() {
               />
             )}
 
-            {uploadingImage && (
+            {dropHover && (
+              <div className="absolute inset-0 z-40 rounded-lg flex flex-col items-center justify-center gap-2 pointer-events-none"
+                style={{ background: "color-mix(in srgb, var(--color-accent) 12%, transparent)", border: "2px dashed var(--color-accent)" }}
+              >
+                <UploadCloud size={22} className="text-accent" />
+                <div className="text-[13px] font-medium">Drop to add to this slide</div>
+                <div className="text-[11.5px] text-text-secondary">Images, PDFs, decks, docs, or data</div>
+              </div>
+            )}
+
+            {uploading && (
               <div className="absolute inset-0 bg-black/40 rounded-lg flex items-center justify-center z-50">
                 <div className="flex items-center gap-2.5 bg-surface border border-border-strong rounded-xl px-4 py-3 text-[13px]">
                   <Loader2 size={15} className="animate-spin text-accent" />
-                  Uploading image...
+                  Adding {uploading}...
                 </div>
               </div>
             )}
@@ -418,7 +426,7 @@ export function Canvas() {
         <span className="hidden md:inline">⌘D duplicate</span>
         <span className="hidden md:inline">⌫ delete</span>
         <span className="hidden lg:inline">Arrows nudge</span>
-        <span className="hidden lg:inline">Drag files onto the slide</span>
+        <span className="hidden lg:inline">Drop files onto the slide</span>
       </div>
     </div>
   );

@@ -5,7 +5,7 @@ import type { SlideElement } from "@/lib/schema";
 import {
   Type, AlignLeft, List, Quote, ImageIcon, Hash, BarChart3, Table2,
   Columns3, GitCommitHorizontal, PanelTop, ListCollapse, HelpCircle,
-  Percent, MousePointerClick, Square, MapPin, Play, Repeat,
+  Percent, MousePointerClick, Square, MapPin, Play, Repeat, Paperclip,
 } from "lucide-react";
 
 const COMPONENTS: { type: string; label: string; icon: typeof Type }[] = [
@@ -133,7 +133,13 @@ export function createDefaultElement(type: string, x: number, y: number): SlideE
   }
 }
 
-export function InsertBar({ onInsert }: { onInsert: (type: string) => void }) {
+export function InsertBar({
+  onInsert,
+  onAttach,
+}: {
+  onInsert: (type: string) => void;
+  onAttach?: (files: FileList) => void;
+}) {
   return (
     <div className="h-11 border-b border-border flex items-center gap-0.5 px-3 overflow-x-auto flex-shrink-0 bg-surface/40">
       <span className="text-[11px] text-text-tertiary uppercase tracking-wider font-medium mr-2 flex-shrink-0">
@@ -155,6 +161,25 @@ export function InsertBar({ onInsert }: { onInsert: (type: string) => void }) {
           {c.label}
         </button>
       ))}
+      {onAttach && (
+        <>
+          <div className="w-px h-5 bg-border mx-1.5 flex-shrink-0" />
+          <label className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[12px] text-text-secondary hover:text-text hover:bg-surface-2 transition-colors cursor-pointer flex-shrink-0">
+            <Paperclip size={13.5} />
+            Attach
+            <input
+              type="file"
+              multiple
+              accept=".pdf,.docx,.pptx,.csv,.tsv,.txt,.md,.json,.png,.jpg,.jpeg,.gif,.webp"
+              className="hidden"
+              onChange={(e) => {
+                if (e.target.files?.length) onAttach(e.target.files);
+                e.target.value = "";
+              }}
+            />
+          </label>
+        </>
+      )}
     </div>
   );
 }
