@@ -76,6 +76,30 @@ function LoginContent() {
         password,
         options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
       });
+
+      const alreadyRegistered =
+        !!error &&
+        /already\s+(been\s+)?registered|already\s+exists|user already/i.test(error.message);
+      // Supabase often returns a user with no identities and no session when
+      // the email is taken, instead of an error (to avoid enumeration).
+      const silentDuplicate =
+        !error && !data.session && (data.user?.identities?.length ?? 0) === 0 && !!data.user;
+
+      if (alreadyRegistered || silentDuplicate) {
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        });
+        if (!signInError) {
+          window.location.assign(next);
+          return;
+        }
+        setBusy(null);
+        setView("signin");
+        setNotice("This email already has an account. Sign in instead.");
+        return;
+      }
+
       setBusy(null);
       if (error) return setError(error.message);
       if (data.session) {
