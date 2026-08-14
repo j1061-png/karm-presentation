@@ -1,0 +1,134 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #0b0c0e;
+  --color-surface: #121316;
+  --color-surface-2: #191b1f;
+  --color-surface-3: #212429;
+  --color-border: #26292f;
+  --color-border-strong: #33373f;
+  --color-text: #f2f3f5;
+  --color-text-secondary: #a6acb8;
+  --color-text-tertiary: #6c7280;
+  --color-accent: #f5a623;
+  --color-accent-hover: #ffb840;
+  --color-accent-text: #17130a;
+  --color-danger: #f0554d;
+  --color-success: #43c98a;
+
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+html,
+body {
+  height: 100%;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-accent) 35%, transparent);
+}
+
+/* Thin scrollbars everywhere */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #33373f transparent;
+}
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+*::-webkit-scrollbar-thumb {
+  background: #33373f;
+  border-radius: 3px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ------------------------------------------------------------------ */
+/* Slide entrance animations (used by the renderer)                    */
+/* ------------------------------------------------------------------ */
+
+@keyframes el-fade {
+  from { opacity: 0; }
+  to { opacity: var(--el-opacity, 1); }
+}
+@keyframes el-fade-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: var(--el-opacity, 1); transform: translateY(0); }
+}
+@keyframes el-fade-down {
+  from { opacity: 0; transform: translateY(-24px); }
+  to { opacity: var(--el-opacity, 1); transform: translateY(0); }
+}
+@keyframes el-slide-left {
+  from { opacity: 0; transform: translateX(40px); }
+  to { opacity: var(--el-opacity, 1); transform: translateX(0); }
+}
+@keyframes el-slide-right {
+  from { opacity: 0; transform: translateX(-40px); }
+  to { opacity: var(--el-opacity, 1); transform: translateX(0); }
+}
+@keyframes el-zoom {
+  from { opacity: 0; transform: scale(0.85); }
+  to { opacity: var(--el-opacity, 1); transform: scale(1); }
+}
+
+@keyframes slide-in-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slide-in-slide {
+  from { opacity: 0; transform: translateX(6%); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes slide-in-zoom {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* Generation overlay shimmer */
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.animate-in-fade { animation: slide-in-fade 0.35s ease both; }
+
+/* Editor canvas selection */
+.el-selected {
+  outline: 1.5px solid var(--color-accent) !important;
+  outline-offset: 1px;
+}
+.el-hover:hover {
+  outline: 1px solid color-mix(in srgb, var(--color-accent) 55%, transparent);
+  outline-offset: 1px;
+}
+
+/* Hide number input arrows in inspector */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
