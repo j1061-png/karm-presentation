@@ -47,6 +47,8 @@ export interface SlideRendererProps {
   onAction?: RenderContext["onAction"];
   /** Editor hooks — wraps each element for selection/drag. */
   elementWrapper?: (el: SlideElement, child: ReactNode) => ReactNode;
+  /** Hidden while the editor shows its inline text editor on top. */
+  hideElementId?: string | null;
   className?: string;
   rounded?: boolean;
 }
@@ -63,6 +65,7 @@ export function SlideRenderer({
   animateKey,
   onAction,
   elementWrapper,
+  hideElementId,
   className,
   rounded,
 }: SlideRendererProps) {
@@ -120,6 +123,7 @@ export function SlideRenderer({
                   width: `${el.w}%`,
                   height: `${el.h}%`,
                   zIndex: el.z,
+                  visibility: el.id === hideElementId ? "hidden" : undefined,
                   transform: el.rotation ? `rotate(${el.rotation}deg)` : undefined,
                   ["--el-opacity" as string]: el.opacity,
                   ...animationCss(el, animate),

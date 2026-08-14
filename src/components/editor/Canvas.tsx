@@ -256,6 +256,7 @@ export function Canvas() {
               slide={slide}
               theme={theme}
               mode="edit"
+              hideElementId={editingId}
               className="rounded-lg overflow-hidden"
               rounded
             />
@@ -265,6 +266,7 @@ export function Canvas() {
               {slide.elements.map((el) => {
                 const isSelected = el.id === selectedElementId;
                 const isEditing = el.id === editingId;
+                if (isEditing) return null; // the inline editor owns this region
                 return (
                   <div
                     key={el.id}
@@ -295,7 +297,7 @@ export function Canvas() {
                     }}
                     onDoubleClick={(e) => {
                       e.stopPropagation();
-                      if (["heading", "text", "quote"].includes(el.type)) setEditingId(el.id);
+                      if (["heading", "text", "quote", "list"].includes(el.type)) setEditingId(el.id);
                     }}
                   >
                     {/* Resize handles */}
@@ -342,12 +344,22 @@ export function Canvas() {
             </div>
 
             {/* --------------------------------------- inline text editor */}
-            {editingElement && frameRef.current && (
+            {editingElement && (
               <InlineTextEditor
+                key={editingElement.id}
                 element={editingElement}
-                frameWidth={frameRef.current.getBoundingClientRect().width}
+                frameWidth={frameWidth}
                 onCommit={(text) => {
-                  if (slideId) patchElementProps(slideId, editingElement.id, { text });
+                  if (slideId) {
+                    if (editingElement.type === "list") {
+                      const items = text.split("\n").map((l) => l.trim()).filter(Boolean);
+                      patchElementProps(slideId, editingElement.id, {
+                        items: items.length > 0 ? items : ["List item"],
+                      });
+                    } else {
+                      patchElementProps(slideId, editingElement.id, { text });
+                    }
+                  }
                   setEditingId(null);
                 }}
                 onCancel={() => setEditingId(null)}
@@ -412,6 +424,11 @@ export function Canvas() {
   );
 }
 
+/**
+ * WYSIWYG inline editor: replaces the element with an editable copy that
+ * matches the rendered typography exactly (the original is hidden while
+ * editing, so there is no double text and no dark overlay box).
+ */
 function InlineTextEditor({
   element,
   frameWidth,
@@ -425,50 +442,105 @@ function InlineTextEditor({
   onCancel: () => void;
   theme: { colors: { text: string; accent: string } };
 }) {
-  const props = element.props as { text?: string; level?: number };
-  const [value, setValue] = useState(props.text ?? "");
-  const ref = useRef<HTMLTextAreaElement>(null);
+  const props = element.props as { text?: string; items?: string[]; level?: number };
+  const initial = element.type === "list" ? (props.items ?? []).join("\n") : (props.text ?? "");
+  const ref = useRef<HTMLDivElement>(null);
+  const doneRef = useRef(false);
   const scale = frameWidth / SLIDE_W;
-  const style = element.style ?? {};
-  const defaultSize =
-    element.type === "heading"
-      ? ({ 1: 56, 2: 40, 3: 28 } as Record<number, number>)[props.level ?? 1] ?? 56
-      : element.type === "quote"
-        ? 28
-        : 20;
-  const fontSize = (style.fontSize ?? defaultSize) * scale;
+  const s = element.style ?? {};
+
+  const isHeading = element.type === "heading";
+  const isQuote = element.type === "quote";
+  const isList = element.type === "list";
+  const defaultSize = isHeading
+    ? (({ 1: 56, 2: 40, 3: 28 } as Record<number, number>)[props.level ?? 1] ?? 56)
+    : isQuote
+      ? 28
+      : 20;
+  const fontSize = (s.fontSize ?? defaultSize) * scale;
 
   useEffect(() => {
-    ref.current?.focus();
-    ref.current?.select();
+    const node = ref.current;
+    if (!node) return;
+    node.focus();
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    const sel = window.getSelection();
+    sel?.removeAllRanges();
+    sel?.addRange(range);
   }, []);
 
+  const finish = (commit: boolean) => {
+    if (doneRef.current) return;
+    doneRef.current = true;
+    if (commit) onCommit(ref.current?.innerText ?? "");
+    else onCancel();
+  };
+
+  // Vertical alignment mirrors ElementView: text is top-aligned, everything
+  // else centers within its box.
+  const justify = element.type === "text" ? "flex-start" : "center";
+
   return (
-    <textarea
-      ref={ref}
-      value={value}
-      onChange={(e) => setValue(e.target.value)}
-      onBlur={() => onCommit(value)}
-      onKeyDown={(e) => {
-        e.stopPropagation();
-        if (e.key === "Escape") onCancel();
-        if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) onCommit(value);
-      }}
-      className="absolute resize-none outline-none z-[300] rounded-md"
+    <div
+      className="absolute z-[300] flex flex-col"
       style={{
         left: `${element.x}%`,
         top: `${element.y}%`,
         width: `${element.w}%`,
         height: `${element.h}%`,
-        fontSize,
-        fontWeight: style.fontWeight ?? (element.type === "heading" ? 650 : 400),
-        textAlign: style.textAlign,
-        lineHeight: style.lineHeight ?? (element.type === "heading" ? 1.1 : 1.55),
-        color: style.color ?? theme.colors.text,
-        background: "rgba(0,0,0,0.35)",
-        border: `1.5px solid ${theme.colors.accent}`,
-        padding: 4,
+        justifyContent: justify,
+        boxShadow: `0 0 0 1.5px ${theme.colors.accent}, 0 0 0 5px color-mix(in srgb, ${theme.colors.accent} 18%, transparent)`,
+        borderRadius: 6,
+        background: s.background ?? "transparent",
+        paddingLeft: isQuote ? (s.padding ?? 28) * scale : (s.padding ?? 0) * scale,
+        paddingRight: (s.padding ?? 0) * scale,
+        borderLeft: isQuote ? `3px solid ${theme.colors.accent}` : undefined,
+        cursor: "text",
       }}
-    />
+      onPointerDown={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
+      onDoubleClick={(e) => e.stopPropagation()}
+    >
+      <div
+        ref={ref}
+        contentEditable
+        suppressContentEditableWarning
+        role="textbox"
+        aria-multiline={!isHeading}
+        className="w-full outline-none whitespace-pre-wrap break-words"
+        style={{
+          fontSize,
+          fontWeight: s.fontWeight ?? (isHeading ? 650 : isQuote ? 500 : 400),
+          textAlign: s.textAlign,
+          lineHeight: s.lineHeight ?? (isHeading ? 1.1 : isQuote ? 1.4 : isList ? 1.9 : 1.55),
+          letterSpacing: s.letterSpacing ?? (isHeading ? -0.5 * scale : undefined),
+          fontStyle: isQuote ? "italic" : undefined,
+          color: s.color ?? theme.colors.text,
+          caretColor: theme.colors.accent,
+        }}
+        onBlur={() => finish(true)}
+        onKeyDown={(e) => {
+          e.stopPropagation();
+          if (e.key === "Escape") {
+            e.preventDefault();
+            finish(false);
+          } else if (e.key === "Enter" && (e.metaKey || e.ctrlKey || (isHeading && !e.shiftKey))) {
+            e.preventDefault();
+            finish(true);
+          }
+        }}
+      >
+        {initial}
+      </div>
+      {isList && (
+        <div
+          className="absolute -bottom-7 left-0 text-[11px] px-2 py-0.5 rounded-md pointer-events-none"
+          style={{ background: theme.colors.accent, color: "#000", opacity: 0.9 }}
+        >
+          One item per line
+        </div>
+      )}
+    </div>
   );
 }
