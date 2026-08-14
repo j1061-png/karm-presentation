@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowUp, FileText, FileSpreadsheet, Presentation as PresIcon, ImageIcon,
-  File as FileIcon, X, Plus, UploadCloud, AlertCircle, Check, Loader2, Sparkles,
+  File as FileIcon, X, Plus, UploadCloud, AlertCircle, Check, Loader2,
 } from "lucide-react";
 import { extractFile, type UploadedSource } from "@/lib/api";
 
@@ -327,10 +327,6 @@ export function Composer() {
           />
 
           <div className="flex items-center gap-3">
-            <span className="hidden sm:flex items-center gap-1.5 text-[11.5px] text-text-tertiary">
-              <Sparkles size={11} />
-              DeepSeek
-            </span>
             <button
               onClick={() => void generate()}
               disabled={!canGenerate}

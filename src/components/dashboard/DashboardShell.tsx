@@ -10,10 +10,11 @@ import { TEMPLATES } from "@/lib/templates";
 import { Sidebar, type DashboardView } from "./Sidebar";
 import { Composer } from "./Composer";
 import { PresentationItem } from "./PresentationItem";
+import { NotificationsBell } from "./NotificationsBell";
+import { SettingsPanel } from "./SettingsPanel";
 import { SlideRenderer } from "@/components/renderer/SlideRenderer";
-import { useTheme } from "@/components/theme/useTheme";
 import {
-  Search, Plus, Layers, LogOut, Loader2, LayoutTemplate, Presentation, Moon, SunMedium,
+  Search, Plus, Loader2, LayoutTemplate, Presentation,
 } from "lucide-react";
 
 type SortKey = "updated" | "created" | "title";
@@ -24,13 +25,13 @@ export function DashboardShell({
   user: { name: string; email: string; avatarUrl: string | null };
 }) {
   const router = useRouter();
-  const { theme, setTheme } = useTheme();
   const [view, setView] = useState<DashboardView>("home");
   const [metas, setMetas] = useState<PresentationMeta[] | null>(null);
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortKey>("updated");
   const [busy, setBusy] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [recentExpanded, setRecentExpanded] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -111,6 +112,19 @@ export function DashboardShell({
     }
   }
 
+  async function handleLeave(id: string) {
+    const meta = metas?.find((m) => m.id === id);
+    if (!confirm(`Leave “${meta?.title ?? "this presentation"}”? You will lose access until invited again.`)) return;
+    setMetas((prev) => prev?.filter((m) => m.id !== id) ?? null);
+    try {
+      await api.leavePresentation(id);
+      setToast("Left presentation");
+    } catch {
+      setToast("Could not leave presentation");
+      void refresh();
+    }
+  }
+
   async function handleDelete(id: string) {
     const meta = metas?.find((m) => m.id === id);
     if (!confirm(`Delete “${meta?.title ?? "this presentation"}”? This cannot be undone.`)) return;
@@ -129,7 +143,14 @@ export function DashboardShell({
     router.refresh();
   }
 
-  const recent = metas?.slice(0, 5) ?? null;
+  const RECENT_LIMIT = 3;
+  const recent =
+    metas == null
+      ? null
+      : recentExpanded
+        ? metas
+        : metas.slice(0, RECENT_LIMIT);
+  const canToggleRecent = (metas?.length ?? 0) > RECENT_LIMIT;
   const firstName = user.name.split(" ")[0];
 
   return (
@@ -144,6 +165,10 @@ export function DashboardShell({
       />
 
       <main className="flex-1 min-w-0 flex flex-col">
+        <div className="h-12 flex items-center justify-end px-4 flex-shrink-0">
+          <NotificationsBell onChanged={() => void refresh()} />
+        </div>
+
         {/* -------------------------------------------------- home view */}
         {view === "home" && (
           <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
@@ -158,12 +183,14 @@ export function DashboardShell({
                 <div className="mt-12 animate-rise">
                   <div className="flex items-center justify-between px-3 mb-1.5">
                     <h2 className="text-[12px] font-medium text-text-tertiary">Recent</h2>
-                    <button
-                      onClick={() => setView("presentations")}
-                      className="text-[12px] text-text-tertiary hover:text-text transition-colors cursor-pointer"
-                    >
-                      View all
-                    </button>
+                    {canToggleRecent && (
+                      <button
+                        onClick={() => setRecentExpanded((v) => !v)}
+                        className="text-[12px] text-text-tertiary hover:text-text transition-colors cursor-pointer"
+                      >
+                        {recentExpanded ? "Show less" : "View all"}
+                      </button>
+                    )}
                   </div>
                   <div className="flex flex-col">
                     {recent.map((m) => (
@@ -173,6 +200,7 @@ export function DashboardShell({
                         onRename={handleRename}
                         onDuplicate={handleDuplicate}
                         onDelete={handleDelete}
+                        onLeave={handleLeave}
                       />
                     ))}
                   </div>
@@ -269,6 +297,7 @@ export function DashboardShell({
                     onRename={handleRename}
                     onDuplicate={handleDuplicate}
                     onDelete={handleDelete}
+                    onLeave={handleLeave}
                   />
                 ))}
               </div>
@@ -327,81 +356,11 @@ export function DashboardShell({
 
         {/* --------------------------------------------- settings view */}
         {view === "settings" && (
-          <div className="w-full max-w-xl mx-auto px-6 py-10">
-            <h1 className="text-[17px] font-semibold tracking-tight mb-6">Settings</h1>
-
-            <section className="border border-border rounded-xl divide-y divide-border bg-surface mb-4">
-              <div className="flex items-center gap-3.5 px-4 py-3.5">
-                {user.avatarUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={user.avatarUrl} alt="" className="w-9 h-9 rounded-full" referrerPolicy="no-referrer" />
-                ) : (
-                  <div className="w-9 h-9 rounded-full bg-surface-3 flex items-center justify-center text-[13px] font-semibold text-text-secondary">
-                    {user.name.slice(0, 1).toUpperCase()}
-                  </div>
-                )}
-                <div className="min-w-0">
-                  <div className="text-[13.5px] font-medium truncate">{user.name}</div>
-                  <div className="text-[12.5px] text-text-secondary truncate">{user.email}</div>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between px-4 py-3.5">
-                <div>
-                  <div className="text-[13px] font-medium">Appearance</div>
-                  <div className="text-[12px] text-text-tertiary">Theme for the app interface</div>
-                </div>
-                <div className="flex items-center bg-surface-2 border border-border rounded-lg p-0.5">
-                  {(
-                    [
-                      { key: "light", icon: SunMedium, label: "Light" },
-                      { key: "dark", icon: Moon, label: "Dark" },
-                    ] as const
-                  ).map((o) => (
-                    <button
-                      key={o.key}
-                      onClick={() => setTheme(o.key)}
-                      className={`flex items-center gap-1.5 text-[12px] px-2.5 py-1 rounded-[6px] transition-colors cursor-pointer ${
-                        theme === o.key ? "bg-surface text-text font-medium shadow-sm" : "text-text-secondary"
-                      }`}
-                    >
-                      <o.icon size={12} />
-                      {o.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between px-4 py-3.5">
-                <div>
-                  <div className="text-[13px] font-medium">Presentations</div>
-                  <div className="text-[12px] text-text-tertiary">Stored privately in your workspace</div>
-                </div>
-                <div className="flex items-center gap-1.5 text-[13px] text-text-secondary">
-                  <Layers size={13} />
-                  {metas?.length ?? "—"}
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between px-4 py-3.5">
-                <div>
-                  <div className="text-[13px] font-medium">AI model</div>
-                  <div className="text-[12px] text-text-tertiary">DeepSeek — generation and editing</div>
-                </div>
-                <span className="text-[11px] font-medium bg-success/12 text-success rounded-full px-2.5 py-1">
-                  Connected
-                </span>
-              </div>
-            </section>
-
-            <button
-              onClick={() => void signOut()}
-              className="flex items-center gap-2 text-[13px] text-danger border border-danger/30 rounded-lg px-3.5 py-2 hover:bg-danger/10 transition-colors cursor-pointer"
-            >
-              <LogOut size={13} />
-              Sign out
-            </button>
-          </div>
+          <SettingsPanel
+            user={user}
+            presentationCount={metas?.length ?? "—"}
+            onSignOut={() => void signOut()}
+          />
         )}
       </main>
 

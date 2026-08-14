@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { getUser } from "@/lib/supabase/server";
+import { deletePresentation, renamePresentation, savePresentation } from "@/lib/store";
 import {
-  deletePresentation,
-  getPresentation,
-  renamePresentation,
-  savePresentation,
-} from "@/lib/store";
+  cleanupShare,
+  getAccessiblePresentation,
+  refreshSharedIndexes,
+  resolveAccess,
+} from "@/lib/collab";
 import { repairPresentation } from "@/lib/validate";
 
 type Params = { params: Promise<{ id: string }> };
@@ -14,9 +15,9 @@ export async function GET(_request: Request, { params }: Params) {
   const user = await getUser();
   if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   const { id } = await params;
-  const presentation = await getPresentation(user.id, id);
-  if (!presentation) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  return NextResponse.json({ presentation });
+  const result = await getAccessiblePresentation(user.id, id);
+  if (!result) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  return NextResponse.json({ presentation: result.presentation, role: result.access.role });
 }
 
 /** PATCH: full-document save (autosave) or rename. */
@@ -25,14 +26,16 @@ export async function PATCH(request: Request, { params }: Params) {
   if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   const { id } = await params;
 
-  const existing = await getPresentation(user.id, id);
-  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const result = await getAccessiblePresentation(user.id, id);
+  if (!result) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const { presentation: existing, access } = result;
 
   const body = await request.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Invalid body" }, { status: 400 });
 
   if (typeof body.title === "string" && !body.presentation) {
-    const renamed = await renamePresentation(user.id, id, body.title.trim() || "Untitled presentation");
+    const renamed = await renamePresentation(access.ownerId, id, body.title.trim() || "Untitled presentation");
+    await refreshSharedIndexes(id);
     return NextResponse.json({ presentation: renamed });
   }
 
@@ -42,7 +45,8 @@ export async function PATCH(request: Request, { params }: Params) {
         { ...body.presentation, id, createdAt: existing.createdAt },
         existing
       );
-      await savePresentation(user.id, doc);
+      await savePresentation(access.ownerId, doc);
+      await refreshSharedIndexes(id);
       return NextResponse.json({ presentation: doc });
     } catch (e) {
       return NextResponse.json(
@@ -59,6 +63,12 @@ export async function DELETE(_request: Request, { params }: Params) {
   const user = await getUser();
   if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   const { id } = await params;
+  const access = await resolveAccess(user.id, id);
+  if (!access) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (access.role !== "owner") {
+    return NextResponse.json({ error: "Only the owner can delete this presentation." }, { status: 403 });
+  }
+  await cleanupShare(id);
   await deletePresentation(user.id, id);
   return NextResponse.json({ ok: true });
 }

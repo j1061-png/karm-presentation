@@ -7,7 +7,7 @@ import { ThemeSchema } from "@/lib/schema";
 import { SlideRenderer } from "@/components/renderer/SlideRenderer";
 import { ShareModal } from "@/components/share/ShareModal";
 import {
-  MoreHorizontal, Pencil, Copy, Trash2, Play, Share2, Layers,
+  MoreHorizontal, Pencil, Copy, Trash2, Play, Share2, Layers, UserPlus, LogOut,
 } from "lucide-react";
 
 function timeAgo(iso: string): string {
@@ -25,11 +25,13 @@ export function PresentationItem({
   onRename,
   onDuplicate,
   onDelete,
+  onLeave,
 }: {
   meta: PresentationMeta;
   onRename: (id: string, title: string) => void;
   onDuplicate: (id: string) => void;
   onDelete: (id: string) => void;
+  onLeave?: (id: string) => void;
 }) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -115,10 +117,16 @@ export function PresentationItem({
         )}
         <span className="block text-[12px] text-text-tertiary mt-0.5">
           {meta.slideCount} slide{meta.slideCount === 1 ? "" : "s"} · {timeAgo(meta.updatedAt)}
+          {meta.role === "editor" && meta.ownerName ? ` · Shared by ${meta.ownerName}` : ""}
         </span>
       </button>
 
       {/* Live status */}
+      {meta.role === "editor" && (
+        <span className="hidden sm:inline-flex items-center text-[11px] font-medium text-text-secondary bg-surface-2 rounded-full px-2 py-0.5 flex-shrink-0">
+          Shared
+        </span>
+      )}
       {meta.publishedAt && (
         <span className="hidden sm:inline-flex items-center gap-1.5 text-[11px] font-medium text-success bg-success/10 rounded-full px-2 py-0.5 flex-shrink-0">
           <span className="w-1.5 h-1.5 rounded-full bg-success" />
@@ -160,6 +168,9 @@ export function PresentationItem({
               {[
                 { label: "Rename", icon: Pencil, fn: () => setRenaming(true) },
                 { label: "Duplicate", icon: Copy, fn: () => onDuplicate(meta.id) },
+                ...(meta.role !== "editor"
+                  ? [{ label: "Add people", icon: UserPlus, fn: () => setShareOpen(true) }]
+                  : []),
               ].map((item) => (
                 <button
                   key={item.label}
@@ -174,23 +185,41 @@ export function PresentationItem({
                 </button>
               ))}
               <div className="h-px bg-border my-1" />
-              <button
-                onClick={() => {
-                  setMenuOpen(false);
-                  onDelete(meta.id);
-                }}
-                className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[13px] text-danger hover:bg-danger/10 transition-colors cursor-pointer"
-              >
-                <Trash2 size={13.5} />
-                Delete
-              </button>
+              {meta.role === "editor" ? (
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onLeave?.(meta.id);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[13px] text-danger hover:bg-danger/10 transition-colors cursor-pointer"
+                >
+                  <LogOut size={13.5} />
+                  Leave
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onDelete(meta.id);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[13px] text-danger hover:bg-danger/10 transition-colors cursor-pointer"
+                >
+                  <Trash2 size={13.5} />
+                  Delete
+                </button>
+              )}
             </div>
           )}
         </div>
       </div>
 
       {shareOpen && (
-        <ShareModal presentationId={meta.id} title={meta.title} onClose={() => setShareOpen(false)} />
+        <ShareModal
+          presentationId={meta.id}
+          title={meta.title}
+          onClose={() => setShareOpen(false)}
+          isOwner={meta.role !== "editor"}
+        />
       )}
     </div>
   );

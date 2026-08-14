@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { getUser } from "@/lib/supabase/server";
-import { getPresentation } from "@/lib/store";
+import { getAccessiblePresentation } from "@/lib/collab";
 import { EditorShell } from "@/components/editor/EditorShell";
 
 export default async function EditorPage({ params }: { params: Promise<{ id: string }> }) {
@@ -8,15 +8,15 @@ export default async function EditorPage({ params }: { params: Promise<{ id: str
   const user = await getUser();
   if (!user) redirect("/");
 
-  const presentation = await getPresentation(user.id, id);
-  if (!presentation) notFound();
+  const result = await getAccessiblePresentation(user.id, id);
+  if (!result) notFound();
 
-  return <EditorShell initial={presentation} />;
+  return <EditorShell initial={result.presentation} role={result.access.role} />;
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const user = await getUser();
-  const presentation = user ? await getPresentation(user.id, id) : null;
-  return { title: presentation ? `${presentation.title} — present@karm` : "Editor — present@karm" };
+  const result = user ? await getAccessiblePresentation(user.id, id) : null;
+  return { title: result ? `${result.presentation.title} — present@karm` : "Editor — present@karm" };
 }

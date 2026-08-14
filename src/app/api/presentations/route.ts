@@ -1,14 +1,17 @@
 import { NextResponse } from "next/server";
 import { nanoid } from "nanoid";
 import { getUser } from "@/lib/supabase/server";
-import { listPresentations, savePresentation } from "@/lib/store";
+import { savePresentation } from "@/lib/store";
+import { listAccessiblePresentations, registerDirectory } from "@/lib/collab";
+import { profileFromUser } from "@/lib/profile";
 import { repairPresentation } from "@/lib/validate";
 import type { Presentation } from "@/lib/schema";
 
 export async function GET() {
   const user = await getUser();
   if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  const presentations = await listPresentations(user.id);
+  await registerDirectory(profileFromUser(user));
+  const presentations = await listAccessiblePresentations(user.id);
   return NextResponse.json({ presentations });
 }
 

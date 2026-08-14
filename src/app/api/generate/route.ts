@@ -1,12 +1,13 @@
 import { getUser } from "@/lib/supabase/server";
 import { generatePresentation, type GenerationStage, type SourceFile } from "@/lib/generate";
 import { savePresentation } from "@/lib/store";
+import { publicAiError } from "@/lib/public-error";
 
 export const maxDuration = 300;
 
 /**
  * Streams generation progress as server-sent events, then persists the
- * finished presentation and emits its id. The DeepSeek key stays server-side.
+ * finished presentation and emits its id. The AI key stays server-side.
  */
 export async function POST(request: Request) {
   const user = await getUser();
@@ -47,10 +48,7 @@ export async function POST(request: Request) {
       } catch (e) {
         send({
           stage: "error",
-          message:
-            e instanceof Error
-              ? e.message
-              : "Generation failed. Please try again.",
+          message: publicAiError(e),
         });
       } finally {
         controller.close();

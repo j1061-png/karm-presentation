@@ -143,6 +143,102 @@ export async function unpublishPresentation(id: string): Promise<PublishStatus> 
   );
 }
 
+export interface Collaborator {
+  userId: string;
+  email: string;
+  name: string;
+  role: "editor";
+  status: "pending" | "accepted" | "declined";
+  invitedAt: string;
+}
+
+export interface CollaboratorsPayload {
+  owner: { userId: string; email: string; name: string };
+  collaborators: Collaborator[];
+  role: "owner" | "editor";
+}
+
+export async function getCollaborators(id: string): Promise<CollaboratorsPayload> {
+  return json<CollaboratorsPayload>(await fetch(`/api/presentations/${id}/collaborators`));
+}
+
+export async function inviteCollaborator(id: string, email: string): Promise<CollaboratorsPayload> {
+  return json<CollaboratorsPayload>(
+    await fetch(`/api/presentations/${id}/collaborators`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    })
+  );
+}
+
+export async function removeCollaborator(id: string, userId: string): Promise<void> {
+  await json(
+    await fetch(`/api/presentations/${id}/collaborators`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId }),
+    })
+  );
+}
+
+export async function leavePresentation(id: string): Promise<void> {
+  await json(
+    await fetch(`/api/presentations/${id}/collaborators`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    })
+  );
+}
+
+export interface AppNotification {
+  id: string;
+  type: "invite" | "invite-accepted" | "invite-declined";
+  createdAt: string;
+  read: boolean;
+  presentationId: string;
+  presentationTitle: string;
+  from: { userId: string; name: string; email: string };
+  inviteStatus?: "pending" | "accepted" | "declined";
+}
+
+export async function listNotifications(): Promise<AppNotification[]> {
+  const { notifications } = await json<{ notifications: AppNotification[] }>(
+    await fetch("/api/notifications")
+  );
+  return notifications;
+}
+
+export async function respondToInvite(
+  id: string,
+  action: "accept" | "decline"
+): Promise<AppNotification[]> {
+  const { notifications } = await json<{ notifications: AppNotification[] }>(
+    await fetch("/api/notifications", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action, id }),
+    })
+  );
+  return notifications;
+}
+
+export async function markNotificationsRead(ids?: string[]): Promise<AppNotification[]> {
+  const { notifications } = await json<{ notifications: AppNotification[] }>(
+    await fetch("/api/notifications", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "read", ids }),
+    })
+  );
+  return notifications;
+}
+
+export async function deleteAccount(): Promise<void> {
+  await json(await fetch("/api/account", { method: "DELETE" }));
+}
+
 export interface AIEditResult {
   summary: string;
   presentation: Presentation;

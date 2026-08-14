@@ -126,11 +126,12 @@ export async function renamePresentation(
 }
 
 export async function duplicatePresentation(
-  userId: string,
+  sourceOwnerId: string,
   id: string,
+  destUserId: string,
   newId: string
 ): Promise<Presentation | null> {
-  const p = await getPresentation(userId, id);
+  const p = await getPresentation(sourceOwnerId, id);
   if (!p) return null;
   const now = new Date().toISOString();
   const copy: Presentation = {
@@ -140,7 +141,7 @@ export async function duplicatePresentation(
     createdAt: now,
     updatedAt: now,
   };
-  await savePresentation(userId, copy);
+  await savePresentation(destUserId, copy);
   return copy;
 }
 

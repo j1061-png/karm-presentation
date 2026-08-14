@@ -10,6 +10,7 @@ import { Canvas } from "./Canvas";
 import { RightPanel } from "./RightPanel";
 import { Player } from "@/components/present/Player";
 import { ShareModal } from "@/components/share/ShareModal";
+import { NotificationsBell } from "@/components/dashboard/NotificationsBell";
 import {
   Undo2, Redo2, Play, Eye, PencilRuler, Share2,
   Check, Loader2, AlertTriangle, ArrowLeft,
@@ -17,7 +18,13 @@ import {
 
 type EditorMode = "edit" | "preview" | "present";
 
-export function EditorShell({ initial }: { initial: Presentation }) {
+export function EditorShell({
+  initial,
+  role = "owner",
+}: {
+  initial: Presentation;
+  role?: "owner" | "editor";
+}) {
   const setPresentation = useEditorStore((s) => s.setPresentation);
   const presentation = useEditorStore((s) => s.presentation);
   const setTitle = useEditorStore((s) => s.setTitle);
@@ -133,6 +140,7 @@ export function EditorShell({ initial }: { initial: Presentation }) {
             presentationId={presentation.id}
             title={presentation.title}
             onClose={() => setShareOpen(false)}
+            isOwner={role === "owner"}
           />
         )}
       </div>
@@ -191,6 +199,11 @@ export function EditorShell({ initial }: { initial: Presentation }) {
             aria-label="Presentation title"
           />
           <SaveIndicator />
+          {role === "editor" && (
+            <span className="text-[11px] font-medium text-text-tertiary bg-surface-2 rounded-full px-2 py-0.5">
+              Shared with you
+            </span>
+          )}
         </div>
 
         <div className="flex-1" />
@@ -236,6 +249,8 @@ export function EditorShell({ initial }: { initial: Presentation }) {
           ))}
         </div>
 
+        <NotificationsBell />
+
         <button
           onClick={() => setShareOpen(true)}
           className="flex items-center gap-1.5 text-[12.5px] font-medium bg-surface-2 border border-border rounded-lg px-3.5 py-2 hover:border-border-strong hover:bg-surface-3 transition-colors cursor-pointer"
@@ -258,6 +273,7 @@ export function EditorShell({ initial }: { initial: Presentation }) {
           presentationId={presentation.id}
           title={presentation.title}
           onClose={() => setShareOpen(false)}
+          isOwner={role === "owner"}
         />
       )}
 

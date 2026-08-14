@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getUser } from "@/lib/supabase/server";
-import { getPresentation } from "@/lib/store";
+import { getAccessiblePresentation } from "@/lib/collab";
 import { StandalonePlayer } from "./player-client";
 
 /**
@@ -16,15 +16,15 @@ export default async function PresentationPage({
   const user = await getUser();
   if (!user) notFound();
 
-  const presentation = await getPresentation(user.id, id);
-  if (!presentation) notFound();
+  const result = await getAccessiblePresentation(user.id, id);
+  if (!result) notFound();
 
-  return <StandalonePlayer presentation={presentation} />;
+  return <StandalonePlayer presentation={result.presentation} />;
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const user = await getUser();
-  const presentation = user ? await getPresentation(user.id, id) : null;
-  return { title: presentation ? `${presentation.title} — present@karm` : "present@karm" };
+  const result = user ? await getAccessiblePresentation(user.id, id) : null;
+  return { title: result ? `${result.presentation.title} — present@karm` : "present@karm" };
 }

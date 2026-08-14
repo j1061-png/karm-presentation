@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
 import * as api from "@/lib/api";
+import { PeopleSection } from "./PeopleSection";
 import {
   X, Copy, Check, Globe, Link2, Lock, Loader2, Rocket, AlertCircle,
   Mail, Share2, Download, ExternalLink, RefreshCw, CloudOff,
@@ -44,10 +45,12 @@ export function ShareModal({
   presentationId,
   title,
   onClose,
+  isOwner = true,
 }: {
   presentationId: string;
   title: string;
   onClose: () => void;
+  isOwner?: boolean;
 }) {
   const [status, setStatus] = useState<api.PublishStatus | null>(null);
   const [loadError, setLoadError] = useState(false);
@@ -203,6 +206,8 @@ export function ShareModal({
         </div>
 
         <div className="p-5 flex flex-col gap-4 max-h-[70vh] overflow-y-auto">
+          <PeopleSection presentationId={presentationId} isOwner={isOwner} />
+
           {/* ----------------------------------------- deployment status */}
           {loadError ? (
             <div className="flex items-center justify-between bg-danger/10 border border-danger/30 rounded-xl px-4 py-3">
@@ -267,7 +272,7 @@ export function ShareModal({
                   </span>
                   Live
                 </span>
-                {status.hasUnpublishedChanges && (
+                {isOwner && status.hasUnpublishedChanges && (
                   <button
                     onClick={() => void publish()}
                     className="flex items-center gap-1.5 text-[12px] font-medium bg-accent text-accent-text rounded-lg px-3 py-1.5 hover:bg-accent-hover transition-colors cursor-pointer"
@@ -352,7 +357,7 @@ export function ShareModal({
               )}
 
               {/* Visibility */}
-              <div className="flex flex-col gap-1.5">
+              {isOwner && <div className="flex flex-col gap-1.5">
                 <div className="text-[11px] font-medium text-text-tertiary uppercase tracking-wider">
                   Who can view
                 </div>
@@ -381,15 +386,17 @@ export function ShareModal({
                     {status.visibility === o.v && <Check size={14} className="text-accent" />}
                   </button>
                 ))}
-              </div>
+              </div>}
 
-              <button
-                onClick={() => void unpublish()}
-                disabled={visBusy}
-                className="flex items-center justify-center gap-2 text-[12px] text-text-tertiary hover:text-danger transition-colors cursor-pointer py-1 disabled:opacity-60"
-              >
-                <CloudOff size={12} /> Take offline
-              </button>
+              {isOwner && (
+                <button
+                  onClick={() => void unpublish()}
+                  disabled={visBusy}
+                  className="flex items-center justify-center gap-2 text-[12px] text-text-tertiary hover:text-danger transition-colors cursor-pointer py-1 disabled:opacity-60"
+                >
+                  <CloudOff size={12} /> Take offline
+                </button>
+              )}
             </>
           ) : (
             /* ------------------------------------------- not yet published */
@@ -397,20 +404,27 @@ export function ShareModal({
               <div className="w-12 h-12 rounded-2xl bg-accent/12 flex items-center justify-center mb-3">
                 <Rocket size={20} className="text-accent" />
               </div>
-              <div className="text-[14px] font-semibold mb-1">Publish to share</div>
-              <p className="text-[12.5px] text-text-secondary leading-relaxed mb-5 max-w-[300px]">
-                Publishing deploys a live, interactive version of this presentation at a public URL.
-                Your draft stays separate — edits only go live when you republish.
-              </p>
-              <div className="w-full bg-surface-2 border border-border rounded-xl px-3.5 py-2.5 text-[12.5px] font-mono text-text-tertiary truncate mb-4">
-                {publicUrl}
+              <div className="text-[14px] font-semibold mb-1">
+                {isOwner ? "Publish to share" : "Not published yet"}
               </div>
-              <button
-                onClick={() => void publish("link")}
-                className="w-full flex items-center justify-center gap-2 text-[13.5px] font-medium bg-accent text-accent-text rounded-xl py-3 hover:bg-accent-hover transition-colors cursor-pointer"
-              >
-                <Rocket size={15} /> Publish presentation
-              </button>
+              <p className="text-[12.5px] text-text-secondary leading-relaxed mb-5 max-w-[300px]">
+                {isOwner
+                  ? "Publishing deploys a live, interactive version of this presentation at a public URL. Your draft stays separate — edits only go live when you republish."
+                  : "The owner has not published a live link yet. You can still edit this presentation."}
+              </p>
+              {isOwner && (
+                <>
+                  <div className="w-full bg-surface-2 border border-border rounded-xl px-3.5 py-2.5 text-[12.5px] font-mono text-text-tertiary truncate mb-4">
+                    {publicUrl}
+                  </div>
+                  <button
+                    onClick={() => void publish("link")}
+                    className="w-full flex items-center justify-center gap-2 text-[13.5px] font-medium bg-accent text-accent-text rounded-xl py-3 hover:bg-accent-hover transition-colors cursor-pointer"
+                  >
+                    <Rocket size={15} /> Publish presentation
+                  </button>
+                </>
+              )}
             </div>
           )}
         </div>

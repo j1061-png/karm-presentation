@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server";
 import { getUser } from "@/lib/supabase/server";
-import { getPresentation, savePresentation } from "@/lib/store";
+import { savePresentation } from "@/lib/store";
+import { getAccessiblePresentation, refreshSharedIndexes } from "@/lib/collab";
+import { publicAiError } from "@/lib/public-error";
 import { applyOperations, generateEdit } from "@/lib/generate";
 
 export const maxDuration = 180;
 
 /**
  * AI editing: modifies the structured model through validated operations.
- * Receives the user's instruction + selection context, asks DeepSeek for
+ * Receives the user's instruction + selection context, asks the AI for
  * operations, applies them server-side, persists, and returns the updated
  * document plus a summary.
  */
@@ -22,8 +24,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Missing presentationId or instruction" }, { status: 400 });
   }
 
-  const presentation = await getPresentation(user.id, presentationId);
-  if (!presentation) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const result = await getAccessiblePresentation(user.id, presentationId);
+  if (!result) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const presentation = result.presentation;
 
   // The client sends its current (possibly unsaved) document so edits apply
   // to what the user actually sees.
@@ -44,17 +47,10 @@ export async function POST(request: Request) {
       });
     }
     const updated = applyOperations(workingDoc, response);
-    await savePresentation(user.id, updated);
+    await savePresentation(result.access.ownerId, updated);
+    await refreshSharedIndexes(presentationId);
     return NextResponse.json({ summary: response.summary, presentation: updated, changed: true });
   } catch (e) {
-    return NextResponse.json(
-      {
-        error:
-          e instanceof Error
-            ? `AI edit failed: ${e.message}`
-            : "AI edit failed. Please try again.",
-      },
-      { status: 502 }
-    );
+    return NextResponse.json({ error: publicAiError(e) }, { status: 502 });
   }
 }

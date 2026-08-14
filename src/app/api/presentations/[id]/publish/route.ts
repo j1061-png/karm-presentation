@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { getUser } from "@/lib/supabase/server";
 import {
-  getPresentation,
   getPublished,
   publishPresentation,
   setVisibility,
   unpublishPresentation,
   type Visibility,
 } from "@/lib/store";
+import { getAccessiblePresentation, resolveAccess } from "@/lib/collab";
 import { PresentationSchema } from "@/lib/schema";
 
 type Params = { params: Promise<{ id: string }> };
@@ -22,11 +22,12 @@ export async function GET(_request: Request, { params }: Params) {
   if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   const { id } = await params;
 
-  const draft = await getPresentation(user.id, id);
-  if (!draft) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const result = await getAccessiblePresentation(user.id, id);
+  if (!result) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const draft = result.presentation;
 
   const published = await getPublished(id);
-  if (!published || published.ownerId !== user.id) {
+  if (!published || published.ownerId !== result.access.ownerId) {
     return NextResponse.json({ published: false });
   }
   return NextResponse.json({
@@ -47,8 +48,15 @@ export async function POST(request: Request, { params }: Params) {
   const body = await request.json().catch(() => ({}));
   const visibility = parseVisibility(body.visibility);
 
+  const access = await resolveAccess(user.id, id);
+  if (!access) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (access.role !== "owner") {
+    return NextResponse.json({ error: "Only the owner can publish." }, { status: 403 });
+  }
+
   // Validate the draft before it goes live.
-  const draft = await getPresentation(user.id, id);
+  const result = await getAccessiblePresentation(user.id, id);
+  const draft = result?.presentation;
   if (!draft) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const valid = PresentationSchema.safeParse(draft);
   if (!valid.success) {

@@ -378,6 +378,9 @@ export interface PresentationMeta {
   /** Set when the presentation has a live published version. */
   publishedAt?: string;
   visibility?: "private" | "link" | "public";
+  /** Owner of this row, or editor if it was shared with the current user. */
+  role?: "owner" | "editor";
+  ownerName?: string;
 }
 
 // ---------------------------------------------------------------------------
