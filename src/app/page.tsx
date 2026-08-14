@@ -3,7 +3,8 @@
 import { Suspense, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Sun, Loader2, AlertCircle, MailCheck, ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { Loader2, AlertCircle, MailCheck, ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { BrandWordmark } from "@/components/brand/BrandLogo";
 
 function GoogleIcon() {
   return (
@@ -101,14 +102,7 @@ function LoginContent() {
     <main className="min-h-screen bg-bg flex flex-col">
       {/* Top-left brand */}
       <header className="flex items-center px-6 py-5">
-        <div className="flex items-center gap-2">
-          <div className="w-[26px] h-[26px] rounded-md bg-accent flex items-center justify-center">
-            <Sun size={14} className="text-accent-text" strokeWidth={2.5} />
-          </div>
-          <span className="font-semibold text-[14px] tracking-tight">
-            present<span className="text-accent">@</span>karm
-          </span>
-        </div>
+        <BrandWordmark height={26} />
       </header>
 
       {/* Centered auth */}

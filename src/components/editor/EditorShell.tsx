@@ -11,6 +11,7 @@ import { RightPanel } from "./RightPanel";
 import { Player } from "@/components/present/Player";
 import { ShareModal } from "@/components/share/ShareModal";
 import { NotificationsBell } from "@/components/dashboard/NotificationsBell";
+import { BrandMark } from "@/components/brand/BrandLogo";
 import {
   Undo2, Redo2, Play, Eye, PencilRuler, Share2,
   Check, Loader2, AlertTriangle, ArrowLeft,
@@ -184,6 +185,7 @@ export function EditorShell({
         >
           <ArrowLeft size={16} />
         </Link>
+        <BrandMark size={22} />
 
         <div className="flex items-center gap-3 min-w-0">
           <input

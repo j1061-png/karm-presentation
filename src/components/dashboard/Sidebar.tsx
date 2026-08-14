@@ -5,9 +5,10 @@ import { useRouter } from "next/navigation";
 import type { PresentationMeta } from "@/lib/schema";
 import { useTheme } from "@/components/theme/useTheme";
 import {
-  Sun, Plus, House, Layers, LayoutTemplate, Settings, PanelLeft,
+  Plus, House, Layers, LayoutTemplate, Settings, PanelLeft,
   LogOut, Moon, SunMedium, FileText,
 } from "lucide-react";
+import { BrandLockup, BrandMark } from "@/components/brand/BrandLogo";
 
 export type DashboardView = "home" | "presentations" | "templates" | "settings";
 
@@ -81,21 +82,14 @@ export function Sidebar({
       }`}
     >
       {/* Header: brand + collapse */}
-      <div className={`flex items-center h-[54px] flex-shrink-0 ${collapsed ? "justify-center" : "justify-between pl-3.5 pr-2"}`}>
-        {!collapsed && (
-          <button
-            className="flex items-center gap-2 cursor-pointer"
-            onClick={() => onNavigate("home")}
-            aria-label="Home"
-          >
-            <div className="w-[24px] h-[24px] rounded-md bg-accent flex items-center justify-center flex-shrink-0">
-              <Sun size={13} className="text-accent-text" strokeWidth={2.5} />
-            </div>
-            <span className="font-semibold text-[13.5px] tracking-tight">
-              present<span className="text-accent">@</span>karm
-            </span>
-          </button>
-        )}
+      <div className={`flex items-center flex-shrink-0 ${collapsed ? "flex-col justify-center gap-0.5 py-2" : "h-[54px] justify-between pl-3.5 pr-2"}`}>
+        <button
+          className={`flex items-center cursor-pointer ${collapsed ? "justify-center" : "gap-2 min-w-0"}`}
+          onClick={() => onNavigate("home")}
+          aria-label="Home"
+        >
+          {collapsed ? <BrandMark size={22} /> : <BrandLockup markSize={22} />}
+        </button>
         <button
           onClick={toggleCollapsed}
           className="p-2 rounded-lg text-text-tertiary hover:text-text hover:bg-surface-2 transition-colors cursor-pointer"

@@ -3,7 +3,8 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Sun, Loader2, AlertCircle, Check, Eye, EyeOff } from "lucide-react";
+import { Loader2, AlertCircle, Check, Eye, EyeOff } from "lucide-react";
+import { BrandWordmark } from "@/components/brand/BrandLogo";
 
 function ResetContent() {
   const router = useRouter();
@@ -39,13 +40,8 @@ function ResetContent() {
   return (
     <main className="min-h-screen bg-bg flex items-center justify-center px-6">
       <div className="w-full max-w-[400px]">
-        <div className="flex items-center gap-2.5 justify-center mb-8">
-          <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center">
-            <Sun size={17} className="text-accent-text" strokeWidth={2.5} />
-          </div>
-          <span className="font-semibold text-[15px] tracking-tight">
-            present<span className="text-accent">@</span>karm
-          </span>
+        <div className="flex items-center justify-center mb-8">
+          <BrandWordmark height={32} />
         </div>
 
         <div className="bg-surface border border-border rounded-2xl p-7 shadow-2xl shadow-black/40">

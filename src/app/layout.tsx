@@ -6,6 +6,10 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "present@karm",
   description: "AI-powered interactive presentations for KarmSolar",
+  icons: {
+    icon: "/favicon.png",
+    apple: "/karm-mark.png",
+  },
 };
 
 /** Applies the saved theme before first paint to avoid a flash. */

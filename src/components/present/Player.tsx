@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { Presentation } from "@/lib/schema";
 import { SlideRenderer } from "@/components/renderer/SlideRenderer";
 import { ChevronLeft, ChevronRight, X, Maximize, Minimize, Share2 } from "lucide-react";
+import { BrandMark } from "@/components/brand/BrandLogo";
 
 /**
  * Fullscreen interactive presentation player.
@@ -121,6 +122,10 @@ export function Player({
           className="h-full transition-all duration-300"
           style={{ width: `${((index + 1) / slides.length) * 100}%`, background: theme.colors.accent }}
         />
+      </div>
+
+      <div className="absolute bottom-5 left-5 pointer-events-none" style={{ opacity: controlsVisible ? 0.9 : 0.35 }}>
+        <BrandMark size={28} />
       </div>
 
       {/* Controls */}
