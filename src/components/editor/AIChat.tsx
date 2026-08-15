@@ -160,7 +160,7 @@ export function AIChat() {
               }
             }}
             rows={2}
-            placeholder="Ask present@karm to change anything..."
+            placeholder="Ask to change anything..."
             className="flex-1 bg-transparent resize-none outline-none px-3.5 py-3 text-[13px] placeholder:text-text-tertiary"
             disabled={busy}
           />

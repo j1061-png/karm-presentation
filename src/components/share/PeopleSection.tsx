@@ -101,7 +101,7 @@ export function PeopleSection({
         ))}
         {data && data.collaborators.length === 0 && (
           <div className="text-[12px] text-text-tertiary">
-            {isOwner ? "Invite a teammate with a present@karm account." : "Only you and the owner so far."}
+            {isOwner ? "Invite a teammate who already has an account." : "Only you and the owner so far."}
           </div>
         )}
       </div>

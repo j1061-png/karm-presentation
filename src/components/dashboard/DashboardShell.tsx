@@ -5,16 +5,15 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import * as api from "@/lib/api";
 import type { PresentationMeta } from "@/lib/schema";
-import { ThemeSchema } from "@/lib/schema";
 import { TEMPLATES } from "@/lib/templates";
 import { Sidebar, type DashboardView } from "./Sidebar";
 import { Composer } from "./Composer";
 import { PresentationItem } from "./PresentationItem";
 import { NotificationsBell } from "./NotificationsBell";
 import { SettingsPanel } from "./SettingsPanel";
-import { SlideRenderer } from "@/components/renderer/SlideRenderer";
+import { TemplateGallery } from "./TemplateGallery";
 import {
-  Search, Plus, Loader2, LayoutTemplate, Presentation,
+  Search, Plus, Loader2, Presentation,
 } from "lucide-react";
 
 type SortKey = "updated" | "created" | "title";
@@ -305,54 +304,8 @@ export function DashboardShell({
           </div>
         )}
 
-        {/* -------------------------------------------- templates view */}
         {view === "templates" && (
-          <div className="w-full max-w-3xl mx-auto px-6 py-10">
-            <h1 className="text-[17px] font-semibold tracking-tight mb-1">Templates</h1>
-            <p className="text-[13px] text-text-secondary mb-6">
-              Interactive starting points — charts, quizzes, flip cards, timelines. Then swap in your content.
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {TEMPLATES.map((t) => {
-                const slideTheme = ThemeSchema.parse(t.doc.theme);
-                return (
-                  <div
-                    key={t.key}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => busy === null && void handleTemplate(t.key)}
-                    onKeyDown={(e) =>
-                      (e.key === "Enter" || e.key === " ") && busy === null && void handleTemplate(t.key)
-                    }
-                    className={`group text-left border border-border rounded-xl overflow-hidden hover:border-border-strong transition-colors cursor-pointer bg-surface ${
-                      busy !== null ? "opacity-60 pointer-events-none" : ""
-                    }`}
-                  >
-                    <div className="relative pointer-events-none">
-                      <SlideRenderer slide={t.doc.slides[0]} theme={slideTheme} mode="thumb" />
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                        <span className="text-[12px] font-medium bg-white text-black rounded-lg px-3 py-1.5 shadow-md flex items-center gap-1.5">
-                          {busy === t.key ? (
-                            <Loader2 size={11} className="animate-spin" />
-                          ) : (
-                            <LayoutTemplate size={11} />
-                          )}
-                          Use template
-                        </span>
-                      </div>
-                    </div>
-                    <div className="px-3 py-2.5">
-                      <div className="text-[11px] font-medium text-text-tertiary mb-0.5">{t.category}</div>
-                      <div className="text-[13px] font-medium">{t.name}</div>
-                      <div className="text-[11.5px] text-text-tertiary mt-0.5 leading-relaxed">
-                        {t.description}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          <TemplateGallery busy={busy} onUse={(key) => void handleTemplate(key)} />
         )}
 
         {/* --------------------------------------------- settings view */}

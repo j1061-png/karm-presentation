@@ -6,9 +6,10 @@ import type { PresentationMeta } from "@/lib/schema";
 import { useTheme } from "@/components/theme/useTheme";
 import {
   Plus, House, Layers, LayoutTemplate, Settings, PanelLeft,
-  LogOut, Moon, SunMedium, FileText,
+  LogOut, Moon, SunMedium, FileText, Download,
 } from "lucide-react";
 import { BrandLockup, BrandMark } from "@/components/brand/BrandLogo";
+import { usePwa } from "@/components/pwa/PwaProvider";
 
 export type DashboardView = "home" | "presentations" | "templates" | "settings";
 
@@ -35,6 +36,7 @@ export function Sidebar({
 }) {
   const router = useRouter();
   const { theme, toggle } = useTheme();
+  const { canInstall, install } = usePwa();
   const [collapsed, setCollapsed] = useState(false);
   const [userMenu, setUserMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -164,6 +166,16 @@ export function Sidebar({
 
       {/* Bottom: settings, theme, profile */}
       <div className={`flex flex-col gap-0.5 py-2 border-t border-border ${collapsed ? "px-0" : "px-2.5"}`}>
+        {canInstall && (
+          <button
+            onClick={() => void install()}
+            title="Install app"
+            className={`${itemBase} ${itemPad} text-text-secondary hover:text-text hover:bg-surface-2`}
+          >
+            <Download size={16} className="flex-shrink-0" />
+            {!collapsed && "Install app"}
+          </button>
+        )}
         <button
           onClick={() => onNavigate("settings")}
           title="Settings"

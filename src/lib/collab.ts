@@ -265,7 +265,7 @@ export async function inviteCollaborator(
 
   const target = await findUserByEmail(email);
   if (!target) {
-    throw new Error("No present@karm account uses that email. Ask them to sign up first.");
+    throw new Error("No account uses that email. Ask them to sign up first.");
   }
   if (target.userId === owner.userId) throw new Error("You already own this presentation.");
 

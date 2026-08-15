@@ -4,7 +4,7 @@ import { ImageResponse } from "next/og";
 import { getPublished } from "@/lib/store";
 
 export const runtime = "nodejs";
-export const alt = "present@karm presentation";
+export const alt = "KarmSolar presentation";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -63,11 +63,6 @@ export default async function OpenGraphImage({ params }: { params: Promise<{ id:
         {/* Brand */}
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <img src={markSrc} alt="" width={52} height={52} style={{ objectFit: "contain" }} />
-          <div style={{ display: "flex", fontSize: 30, fontWeight: 600, color: text }}>
-            present
-            <span style={{ color: accent }}>@</span>
-            karm
-          </div>
         </div>
 
         {/* Title */}

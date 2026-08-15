@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import * as api from "@/lib/api";
 import { useTheme } from "@/components/theme/useTheme";
-import { Eye, EyeOff, Layers, Loader2, LogOut, Moon, SunMedium, Trash2 } from "lucide-react";
+import { Download, Eye, EyeOff, Layers, Loader2, LogOut, Moon, Share, SunMedium, Trash2 } from "lucide-react";
+import { usePwa } from "@/components/pwa/PwaProvider";
 
 export function SettingsPanel({
   user,
@@ -18,6 +19,7 @@ export function SettingsPanel({
 }) {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
+  const { canInstall, installed, iosHint, install } = usePwa();
   const [canChangePassword, setCanChangePassword] = useState(false);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -125,6 +127,36 @@ export function SettingsPanel({
             {presentationCount}
           </div>
         </div>
+      </section>
+
+      <section className="border border-border rounded-xl bg-surface mb-4 px-4 py-3.5">
+        <div className="text-[13px] font-medium mb-0.5">Install app</div>
+        {installed ? (
+          <div className="text-[12px] text-text-tertiary">This app is installed on this device.</div>
+        ) : canInstall ? (
+          <>
+            <div className="text-[12px] text-text-tertiary mb-3">
+              Add it to your dock or home screen and open it like a native app.
+            </div>
+            <button
+              onClick={() => void install()}
+              className="flex items-center gap-1.5 text-[13px] font-medium bg-accent text-accent-text rounded-lg px-3 py-1.5 hover:bg-accent-hover cursor-pointer"
+            >
+              <Download size={13} />
+              Install
+            </button>
+          </>
+        ) : iosHint ? (
+          <div className="text-[12px] text-text-tertiary leading-relaxed">
+            On iPhone or iPad: tap <Share size={12} className="inline -mt-0.5" /> Share, then{" "}
+            <span className="text-text">Add to Home Screen</span>.
+          </div>
+        ) : (
+          <div className="text-[12px] text-text-tertiary leading-relaxed">
+            In Chrome or Edge, open the browser menu and choose <span className="text-text">Install</span> or{" "}
+            <span className="text-text">Add to dock</span>.
+          </div>
+        )}
       </section>
 
       {canChangePassword && (

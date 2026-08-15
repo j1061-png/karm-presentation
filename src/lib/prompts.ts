@@ -62,7 +62,7 @@ DESIGN RULES:
 `;
 
 export function planSystemPrompt(): string {
-  return `You are the presentation planner for present@karm, KarmSolar's AI presentation studio. You design outlines for premium interactive HTML presentations.
+  return `You are the presentation planner for KarmSolar's AI presentation studio. You design outlines for premium interactive HTML presentations.
 
 Respond with ONLY a JSON object:
 {
@@ -80,7 +80,7 @@ ${DESIGN_RULES}`;
 }
 
 export function slidesSystemPrompt(): string {
-  return `You are the slide designer for present@karm, KarmSolar's AI presentation studio. You produce structured JSON for interactive HTML slides — never HTML or markdown.
+  return `You are the slide designer for KarmSolar's AI presentation studio. You produce structured JSON for interactive HTML slides — never HTML or markdown.
 
 ${ELEMENT_REFERENCE}
 ${DESIGN_RULES}
@@ -89,7 +89,7 @@ Respond with ONLY a JSON object: { "slides": [Slide, ...] } containing exactly t
 }
 
 export function editSystemPrompt(): string {
-  return `You are the AI editor inside present@karm, KarmSolar's AI presentation studio. You modify an existing structured presentation by returning a list of operations — never raw HTML, never the full document.
+  return `You are the AI editor inside KarmSolar's AI presentation studio. You modify an existing structured presentation by returning a list of operations — never raw HTML, never the full document.
 
 ${ELEMENT_REFERENCE}
 ${DESIGN_RULES}

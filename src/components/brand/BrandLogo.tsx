@@ -44,7 +44,7 @@ export function BrandWordmark({
   );
 }
 
-/** Product lockup: Karm mark + present@karm. */
+/** Product lockup: official Karm wordmark only. */
 export function BrandLockup({
   markSize = 24,
   collapsed = false,
@@ -53,12 +53,5 @@ export function BrandLockup({
   collapsed?: boolean;
 }) {
   if (collapsed) return <BrandMark size={markSize} />;
-  return (
-    <span className="flex items-center gap-2 min-w-0">
-      <BrandMark size={markSize} />
-      <span className="font-semibold tracking-tight truncate">
-        present<span className="text-accent">@</span>karm
-      </span>
-    </span>
-  );
+  return <BrandWordmark height={Math.max(20, Math.round(markSize * 0.95))} />;
 }

@@ -155,7 +155,7 @@ function LoginContent() {
               </h1>
               <p className="text-[13.5px] text-text-secondary mb-7 text-center">
                 {view === "signin"
-                  ? "Sign in to continue to present@karm."
+                  ? "Sign in to continue."
                   : "Build interactive presentations with AI."}
               </p>
 
