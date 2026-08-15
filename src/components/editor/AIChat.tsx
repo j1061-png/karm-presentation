@@ -3,12 +3,15 @@
 import { useEffect, useRef, useState } from "react";
 import { useEditorStore } from "@/state/editorStore";
 import { aiEdit } from "@/lib/api";
-import { ArrowUp, Sparkles, AlertCircle, Loader2 } from "lucide-react";
+import { ATTACH_ACCEPT, useAttachments } from "@/lib/use-attachments";
+import { FileChips } from "@/components/chat/FileChips";
+import { ArrowUp, Paperclip, Sparkles, AlertCircle, Loader2, UploadCloud } from "lucide-react";
 
 interface Message {
   id: string;
   role: "user" | "assistant";
   text: string;
+  files?: string[];
   error?: boolean;
 }
 
@@ -29,7 +32,11 @@ export function AIChat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const { files, addFiles, removeFile, clearFiles, readySources, uploading, inputRef } =
+    useAttachments();
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -46,14 +53,21 @@ export function AIChat() {
     return `Slide ${idx + 1} · ${presentation.slides[idx].name}`;
   })();
 
+  const canSend =
+    (input.trim().length > 0 || readySources.length > 0) && !busy && !uploading && !!presentation;
+
   async function send(text: string) {
-    const instruction = text.trim();
-    if (!instruction || busy || !presentation) return;
+    const instruction =
+      text.trim() || (readySources.length > 0 ? "Incorporate the attached files into the presentation." : "");
+    if (!instruction || busy || !presentation || uploading) return;
+    const attachedNames = files.filter((f) => f.status === "done").map((f) => f.name);
+    const attached = readySources;
     setInput("");
+    clearFiles();
     setBusy(true);
     setMessages((m) => [
       ...m,
-      { id: `u${Date.now()}`, role: "user", text: instruction },
+      { id: `u${Date.now()}`, role: "user", text: instruction, files: attachedNames },
     ]);
 
     try {
@@ -63,6 +77,7 @@ export function AIChat() {
         presentation,
         selectedSlideId: selectedSlideId ?? undefined,
         selectedElementId: selectedElementId ?? undefined,
+        files: attached,
       });
       if (result.changed) replacePresentation(result.presentation);
       setMessages((m) => [
@@ -85,8 +100,39 @@ export function AIChat() {
   }
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col">
-      {/* Messages */}
+    <div
+      ref={panelRef}
+      className="flex-1 min-h-0 flex flex-col relative"
+      onDragEnter={(e) => {
+        if (!e.dataTransfer.types.includes("Files")) return;
+        e.preventDefault();
+        e.stopPropagation();
+        setDragging(true);
+      }}
+      onDragOver={(e) => {
+        if (!e.dataTransfer.types.includes("Files")) return;
+        e.preventDefault();
+        e.stopPropagation();
+      }}
+      onDragLeave={(e) => {
+        if (!panelRef.current?.contains(e.relatedTarget as Node)) setDragging(false);
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setDragging(false);
+        if (e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
+      }}
+    >
+      {dragging && (
+        <div className="absolute inset-0 z-10 bg-bg/80 backdrop-blur-sm flex items-center justify-center pointer-events-none">
+          <div className="border-2 border-dashed border-accent rounded-xl px-6 py-5 flex flex-col items-center gap-2">
+            <UploadCloud size={22} className="text-accent" />
+            <div className="text-[12.5px] font-medium">Drop files to attach</div>
+          </div>
+        </div>
+      )}
+
       <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto px-4 py-4 flex flex-col gap-3">
         {messages.length === 0 && (
           <div className="flex flex-col items-center text-center pt-10 px-2">
@@ -95,8 +141,8 @@ export function AIChat() {
             </div>
             <div className="text-[13.5px] font-medium mb-1">Edit with AI</div>
             <div className="text-[12.5px] text-text-secondary leading-relaxed mb-6">
-              Select a slide or element, then describe any change. The AI edits your presentation
-              directly.
+              Select a slide or element, then describe any change. Attach files or drop them here
+              to ground the edit.
             </div>
             <div className="flex flex-col gap-1.5 w-full">
               {QUICK_ACTIONS.map((a) => (
@@ -126,6 +172,11 @@ export function AIChat() {
           >
             {m.error && <AlertCircle size={13} className="inline mr-1.5 -mt-0.5" />}
             {m.text}
+            {m.files && m.files.length > 0 && (
+              <div className="mt-1.5 text-[11px] text-text-tertiary">
+                {m.files.join(" · ")}
+              </div>
+            )}
           </div>
         ))}
 
@@ -137,7 +188,6 @@ export function AIChat() {
         )}
       </div>
 
-      {/* Selection context */}
       {selection && (
         <div className="px-4 pb-1.5">
           <span className="inline-flex items-center gap-1.5 text-[11px] text-text-tertiary bg-surface border border-border rounded-full px-2.5 py-1">
@@ -147,31 +197,58 @@ export function AIChat() {
         </div>
       )}
 
-      {/* Input */}
       <div className="p-3 border-t border-border flex-shrink-0">
-        <div className="bg-surface border border-border rounded-xl focus-within:border-border-strong transition-colors flex items-end">
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                void send(input);
-              }
-            }}
-            rows={2}
-            placeholder="Ask to change anything..."
-            className="flex-1 bg-transparent resize-none outline-none px-3.5 py-3 text-[13px] placeholder:text-text-tertiary"
-            disabled={busy}
-          />
-          <button
-            onClick={() => void send(input)}
-            disabled={busy || !input.trim()}
-            className="m-2 w-8 h-8 rounded-lg bg-accent text-accent-text flex items-center justify-center hover:bg-accent-hover transition-colors disabled:opacity-30 cursor-pointer flex-shrink-0"
-            aria-label="Send"
-          >
-            <ArrowUp size={15} strokeWidth={2.5} />
-          </button>
+        <div
+          className={`bg-surface border rounded-xl transition-colors ${
+            dragging ? "border-accent" : "border-border focus-within:border-border-strong"
+          }`}
+        >
+          <FileChips files={files} onRemove={removeFile} compact />
+          <div className="flex items-end">
+            <button
+              type="button"
+              onClick={() => inputRef.current?.click()}
+              disabled={busy}
+              className="m-2 w-8 h-8 rounded-lg text-text-secondary hover:text-text hover:bg-surface-2 transition-colors cursor-pointer flex items-center justify-center disabled:opacity-50 flex-shrink-0"
+              title="Attach files"
+              aria-label="Attach files"
+            >
+              <Paperclip size={15} />
+            </button>
+            <input
+              ref={inputRef}
+              type="file"
+              multiple
+              accept={ATTACH_ACCEPT}
+              className="hidden"
+              onChange={(e) => {
+                if (e.target.files?.length) addFiles(e.target.files);
+                e.target.value = "";
+              }}
+            />
+            <textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  void send(input);
+                }
+              }}
+              rows={2}
+              placeholder="Ask to change anything, or attach a file..."
+              className="flex-1 bg-transparent resize-none outline-none px-1 py-3 text-[13px] placeholder:text-text-tertiary"
+              disabled={busy}
+            />
+            <button
+              onClick={() => void send(input)}
+              disabled={!canSend}
+              className="m-2 w-8 h-8 rounded-lg bg-accent text-accent-text flex items-center justify-center hover:bg-accent-hover transition-colors disabled:opacity-30 cursor-pointer flex-shrink-0"
+              aria-label="Send"
+            >
+              <ArrowUp size={15} strokeWidth={2.5} />
+            </button>
+          </div>
         </div>
       </div>
     </div>

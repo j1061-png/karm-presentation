@@ -19,7 +19,24 @@ export async function POST(request: Request) {
 
   const body = await request.json().catch(() => null);
   const presentationId: string | undefined = body?.presentationId;
-  const instruction: string | undefined = body?.instruction?.trim();
+  const files = Array.isArray(body?.files)
+    ? body.files
+        .filter(
+          (f: unknown) =>
+            f &&
+            typeof f === "object" &&
+            typeof (f as { name?: unknown }).name === "string" &&
+            typeof (f as { content?: unknown }).content === "string"
+        )
+        .map((f: { name: string; kind?: string; content: string }) => ({
+          name: f.name,
+          kind: f.kind || "file",
+          content: f.content,
+        }))
+    : [];
+  const instruction: string =
+    body?.instruction?.trim() ||
+    (files.length > 0 ? "Incorporate the attached files into the presentation." : "");
   if (!presentationId || !instruction) {
     return NextResponse.json({ error: "Missing presentationId or instruction" }, { status: 400 });
   }
@@ -37,7 +54,8 @@ export async function POST(request: Request) {
       workingDoc,
       instruction,
       body?.selectedSlideId,
-      body?.selectedElementId
+      body?.selectedElementId,
+      files
     );
     if (response.operations.length === 0) {
       return NextResponse.json({

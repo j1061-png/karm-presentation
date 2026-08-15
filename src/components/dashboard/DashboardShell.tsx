@@ -31,6 +31,7 @@ export function DashboardShell({
   const [busy, setBusy] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [recentExpanded, setRecentExpanded] = useState(false);
+  const [threadActive, setThreadActive] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -153,7 +154,7 @@ export function DashboardShell({
   const firstName = user.name.split(" ")[0];
 
   return (
-    <div className="flex min-h-screen bg-bg">
+    <div className="flex h-screen overflow-hidden bg-bg">
       <Sidebar
         view={view}
         onNavigate={setView}
@@ -163,22 +164,32 @@ export function DashboardShell({
         onSignOut={() => void signOut()}
       />
 
-      <main className="flex-1 min-w-0 flex flex-col">
+      <main
+        className={`flex-1 min-w-0 min-h-0 flex flex-col ${
+          threadActive && view === "home" ? "overflow-hidden" : "overflow-y-auto"
+        }`}
+      >
         <div className="h-12 flex items-center justify-end px-4 flex-shrink-0">
           <NotificationsBell onChanged={() => void refresh()} />
         </div>
 
         {/* -------------------------------------------------- home view */}
         {view === "home" && (
-          <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
-            <div className="w-full max-w-[680px]">
-              <h1 className="text-[26px] font-semibold tracking-tight text-center mb-7 animate-rise">
-                What do you want to create{firstName ? `, ${firstName}` : ""}?
-              </h1>
-              <Composer />
+          <div
+            className={`flex-1 flex flex-col px-6 ${
+              threadActive ? "min-h-0 pb-4" : "items-center justify-center py-12"
+            }`}
+          >
+            <div className={`w-full ${threadActive ? "flex-1 min-h-0 flex flex-col max-w-[760px] mx-auto" : "max-w-[680px]"}`}>
+              {!threadActive && (
+                <h1 className="text-[26px] font-semibold tracking-tight text-center mb-7 animate-rise">
+                  What do you want to create{firstName ? `, ${firstName}` : ""}?
+                </h1>
+              )}
+              <Composer onThreadChange={setThreadActive} onCreated={() => void refresh()} />
 
               {/* Compact recents */}
-              {recent && recent.length > 0 && (
+              {!threadActive && recent && recent.length > 0 && (
                 <div className="mt-12 animate-rise">
                   <div className="flex items-center justify-between px-3 mb-1.5">
                     <h2 className="text-[12px] font-medium text-text-tertiary">Recent</h2>

@@ -8,6 +8,7 @@ import { useEditorStore, type SaveState } from "@/state/editorStore";
 import { SlidesPanel } from "./SlidesPanel";
 import { Canvas } from "./Canvas";
 import { RightPanel } from "./RightPanel";
+import { ResizeHandle, beginPanelResize } from "./ResizeHandle";
 import { Player } from "@/components/present/Player";
 import { ShareModal } from "@/components/share/ShareModal";
 import { NotificationsBell } from "@/components/dashboard/NotificationsBell";
@@ -33,6 +34,8 @@ export function EditorShell({
   const [shareOpen, setShareOpen] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("saved");
   const [titleDraft, setTitleDraft] = useState(initial.title);
+  const [slidesWidth, setSlidesWidth] = useState(200);
+  const [rightWidth, setRightWidth] = useState(320);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestDoc = useRef<Presentation | null>(null);
   const savedDoc = useRef<Presentation>(initial);
@@ -43,6 +46,26 @@ export function EditorShell({
     useEditorStore.temporal.getState().clear();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initial.id]);
+
+  useEffect(() => {
+    try {
+      const left = Number(localStorage.getItem("pk-panel-slides"));
+      const right = Number(localStorage.getItem("pk-panel-right"));
+      if (left >= 140 && left <= 420) setSlidesWidth(left);
+      if (right >= 240 && right <= 640) setRightWidth(right);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("pk-panel-slides", String(slidesWidth));
+      localStorage.setItem("pk-panel-right", String(rightWidth));
+    } catch {
+      /* ignore */
+    }
+  }, [slidesWidth, rightWidth]);
 
   useEffect(() => {
     if (presentation) setTitleDraft(presentation.title);
@@ -286,9 +309,15 @@ export function EditorShell({
         </div>
       ) : (
         <div className="flex-1 flex min-h-0">
-          <SlidesPanel />
+          <SlidesPanel width={slidesWidth} />
+          <ResizeHandle
+            onBegin={(x) => beginPanelResize(x, slidesWidth, 1, 140, 420, setSlidesWidth)}
+          />
           <Canvas />
-          <RightPanel />
+          <ResizeHandle
+            onBegin={(x) => beginPanelResize(x, rightWidth, -1, 240, 640, setRightWidth)}
+          />
+          <RightPanel width={rightWidth} />
         </div>
       )}
     </div>

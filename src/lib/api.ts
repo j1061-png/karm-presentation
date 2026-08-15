@@ -251,6 +251,7 @@ export async function aiEdit(input: {
   presentation: Presentation;
   selectedSlideId?: string;
   selectedElementId?: string;
+  files?: UploadedSource[];
 }): Promise<AIEditResult> {
   return json<AIEditResult>(
     await fetch("/api/ai-edit", {

@@ -222,14 +222,15 @@ export async function generateEdit(
   presentation: Presentation,
   instruction: string,
   selectedSlideId?: string,
-  selectedElementId?: string
+  selectedElementId?: string,
+  files: SourceFile[] = []
 ): Promise<AIEditResponse> {
   return chatJson(
     [
       { role: "system", content: editSystemPrompt() },
       {
         role: "user",
-        content: `${presentationContext(presentation, selectedSlideId, selectedElementId)}\n\nUSER REQUEST: "${instruction}"`,
+        content: `${presentationContext(presentation, selectedSlideId, selectedElementId)}\n\nUSER REQUEST: "${instruction}"${sourceContext(files)}`,
       },
     ],
     (raw) => AIEditResponseSchema.parse(extractJson(raw)),

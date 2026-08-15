@@ -104,7 +104,7 @@ function SlideThumb({
   );
 }
 
-export function SlidesPanel() {
+export function SlidesPanel({ width = 200 }: { width?: number }) {
   const presentation = useEditorStore((s) => s.presentation);
   const selectedSlideId = useEditorStore((s) => s.selectedSlideId);
   const selectSlide = useEditorStore((s) => s.selectSlide);
@@ -129,7 +129,10 @@ export function SlidesPanel() {
   }
 
   return (
-    <aside className="w-[200px] flex-shrink-0 border-r border-border bg-surface/40 flex flex-col min-h-0">
+    <aside
+      className="flex-shrink-0 border-r border-border bg-surface/40 flex flex-col min-h-0"
+      style={{ width }}
+    >
       <div className="flex items-center justify-between px-4 h-10 border-b border-border flex-shrink-0">
         <span className="text-[11.5px] font-medium text-text-secondary uppercase tracking-wider">
           Slides
