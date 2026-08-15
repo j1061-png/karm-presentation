@@ -4,7 +4,7 @@
  */
 
 const DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
-const MODEL = "deepseek-chat";
+const DEFAULT_MODEL = "deepseek-chat";
 
 export interface ChatMessage {
   role: "system" | "user" | "assistant";
@@ -16,6 +16,7 @@ interface ChatOptions {
   maxTokens?: number;
   json?: boolean;
   signal?: AbortSignal;
+  model?: "deepseek-chat" | "deepseek-reasoner";
 }
 
 export class DeepSeekError extends Error {
@@ -37,10 +38,13 @@ export async function chat(messages: ChatMessage[], options: ChatOptions = {}): 
       Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: MODEL,
+      model: options.model ?? DEFAULT_MODEL,
       messages,
-      temperature: options.temperature ?? 0.7,
       max_tokens: options.maxTokens ?? 8000,
+      // Reasoner ignores sampling knobs and can reject them.
+      ...((options.model ?? DEFAULT_MODEL) === "deepseek-reasoner"
+        ? {}
+        : { temperature: options.temperature ?? 0.3 }),
       ...(options.json ? { response_format: { type: "json_object" } } : {}),
       stream: false,
     }),

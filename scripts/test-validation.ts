@@ -3,6 +3,8 @@
  * Run: npm run test:validation
  */
 import { extractJson, repairPresentation, repairSlide } from "../src/lib/validate";
+import { layoutSlide } from "../src/lib/layouts";
+import { ThemeSchema } from "../src/lib/schema";
 
 let passed = 0;
 let failed = 0;
@@ -142,6 +144,46 @@ test("throws when nothing is recoverable", () => {
     threw = true;
   }
   expect(threw, "should throw with no valid slides");
+});
+
+console.log("\nlayoutSlide:");
+
+test("snaps a messy title slide onto non-overlapping boxes", () => {
+  const theme = ThemeSchema.parse({});
+  const raw = repairSlide(
+    {
+      name: "Title",
+      elements: [
+        { type: "heading", x: 2, y: 2, w: 90, h: 40, props: { text: "Hello", level: 1 } },
+        { type: "stat", x: 0, y: 0, w: 90, h: 90, props: { value: "10", label: "A", countUp: true } },
+        { type: "stat", x: 10, y: 10, w: 90, h: 90, props: { value: "20", label: "B", countUp: true } },
+        { type: "button", x: 40, y: 40, w: 40, h: 40, props: { label: "Go", action: "next-slide", variant: "primary" } },
+      ],
+    },
+    0
+  )!;
+  const laid = layoutSlide(raw, 0, 5, theme);
+  const content = laid.elements.filter((e) => e.type !== "shape");
+  for (let i = 0; i < content.length; i++) {
+    for (let j = i + 1; j < content.length; j++) {
+      const a = content[i];
+      const b = content[j];
+      const overlap =
+        a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+      expect(!overlap, `${a.type} overlaps ${b.type}`);
+    }
+  }
+  expect(laid.background?.particles === true, "title slide should have particles");
+});
+
+test("promotes a heading-only slide into an interactive layout", () => {
+  const theme = ThemeSchema.parse({});
+  const raw = repairSlide({ name: "Empty", elements: [{ type: "heading", props: { text: "Empty", level: 2 } }] }, 1)!;
+  const laid = layoutSlide(raw, 1, 4, theme);
+  expect(
+    laid.elements.some((e) => ["cards", "stat", "chart", "flipcards"].includes(e.type)),
+    "should inject an interactive widget"
+  );
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

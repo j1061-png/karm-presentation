@@ -7,6 +7,7 @@ import {
   File as FileIcon, X, Plus, UploadCloud, AlertCircle, Check, Loader2,
 } from "lucide-react";
 import { extractFile, type UploadedSource } from "@/lib/api";
+import { EFFORT, EFFORT_LEVELS, parseEffort, type Effort } from "@/lib/effort";
 
 interface PendingFile {
   id: string;
@@ -63,10 +64,19 @@ export function Composer() {
   const [files, setFiles] = useState<PendingFile[]>([]);
   const [dragging, setDragging] = useState(false);
   const [generating, setGenerating] = useState<GenProgress | null>(null);
+  const [effort, setEffort] = useState<Effort>("standard");
   const inputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const dragDepth = useRef(0);
+
+  useEffect(() => {
+    try {
+      setEffort(parseEffort(localStorage.getItem("pk-effort")));
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   const addFiles = useCallback((incoming: FileList | File[]) => {
     const list = Array.from(incoming).slice(0, 8);
@@ -153,7 +163,7 @@ export function Composer() {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: prompt.trim(), files: readySources }),
+        body: JSON.stringify({ prompt: prompt.trim(), files: readySources, effort }),
         signal: controller.signal,
       });
       if (!res.ok || !res.body) {
@@ -326,7 +336,35 @@ export function Composer() {
             }}
           />
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
+            <div
+              className="flex items-center rounded-full border border-border p-0.5"
+              title="How hard the model should work"
+            >
+              {EFFORT_LEVELS.map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  disabled={!!generating && !failed}
+                  onClick={() => {
+                    setEffort(key);
+                    try {
+                      localStorage.setItem("pk-effort", key);
+                    } catch {
+                      /* ignore */
+                    }
+                  }}
+                  className={`px-2.5 py-1 rounded-full text-[11.5px] transition-colors cursor-pointer disabled:opacity-50 ${
+                    effort === key
+                      ? "bg-text text-bg font-medium"
+                      : "text-text-secondary hover:text-text"
+                  }`}
+                  title={EFFORT[key].hint}
+                >
+                  {EFFORT[key].label}
+                </button>
+              ))}
+            </div>
             <button
               onClick={() => void generate()}
               disabled={!canGenerate}

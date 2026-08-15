@@ -41,7 +41,8 @@ export async function POST(request: Request) {
         const presentation = await generatePresentation(
           prompt || "A presentation based on the attached source material.",
           files,
-          send
+          send,
+          body?.effort
         );
         await savePresentation(user.id, presentation);
         send({ stage: "complete", presentationId: presentation.id });

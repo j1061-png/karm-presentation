@@ -1,5 +1,7 @@
 import { nanoid } from "nanoid";
 import { chatJson } from "./deepseek";
+import { EFFORT, parseEffort, type Effort } from "./effort";
+import { fallbackSlide, layoutSlide } from "./layouts";
 import { editSystemPrompt, planSystemPrompt, slidesSystemPrompt } from "./prompts";
 import {
   AIEditResponseSchema,
@@ -26,42 +28,66 @@ export interface SourceFile {
   content: string;
 }
 
-const BATCH_SIZE = 3;
-
 function sourceContext(files: SourceFile[]): string {
   if (files.length === 0) return "";
   const parts = files.map(
     (f) =>
-      `--- SOURCE FILE: ${f.name} (${f.kind}) ---\n${f.content.slice(0, 12000)}\n--- END OF ${f.name} ---`
+      `--- SOURCE FILE: ${f.name} (${f.kind}) ---\n${f.content.slice(0, 8000)}\n--- END OF ${f.name} ---`
   );
-  return `\n\nSOURCE MATERIAL provided by the user (ground the presentation in this content):\n${parts.join("\n\n")}`;
+  return `\n\nSOURCE MATERIAL (ground every fact in this):\n${parts.join("\n\n")}`;
 }
 
-export async function generatePlan(prompt: string, files: SourceFile[]): Promise<Plan> {
-  return chatJson(
+async function mapPool<T, R>(items: T[], concurrency: number, fn: (item: T, index: number) => Promise<R>): Promise<R[]> {
+  const out: R[] = new Array(items.length);
+  let next = 0;
+  async function worker() {
+    while (next < items.length) {
+      const i = next++;
+      out[i] = await fn(items[i], i);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, () => worker()));
+  return out;
+}
+
+export async function generatePlan(prompt: string, files: SourceFile[], effort: Effort): Promise<Plan> {
+  const cfg = EFFORT[effort];
+  const plan = await chatJson(
     [
-      { role: "system", content: planSystemPrompt() },
+      { role: "system", content: planSystemPrompt(cfg.minSlides, cfg.maxSlides) },
       {
         role: "user",
-        content: `Plan a live interactive talk (not a static deck) for this request. Every content slide needs a widget the audience clicks or watches count — stats, charts, flow, cards, callout, quiz, or map.\n\n"${prompt}"${sourceContext(files)}`,
+        content: `Plan a ${cfg.minSlides}–${cfg.maxSlides} slide interactive presentation for:\n\n"${prompt}"${sourceContext(files)}`,
       },
     ],
     (raw) => PlanSchema.parse(extractJson(raw)),
-    { maxTokens: 4000, temperature: 0.7 }
+    {
+      maxTokens: cfg.maxTokensPlan,
+      temperature: cfg.temperature,
+      model: cfg.model,
+      json: cfg.jsonMode,
+    }
   );
+  return {
+    ...plan,
+    slides: plan.slides.slice(0, cfg.maxSlides),
+  };
 }
 
 async function generateSlideBatch(
   plan: Plan,
   batch: { index: number; name: string; goal: string; suggestedComponents: string[] }[],
   prompt: string,
-  files: SourceFile[]
+  files: SourceFile[],
+  effort: Effort
 ): Promise<Slide[]> {
+  const cfg = EFFORT[effort];
   const briefs = batch
-    .map(
-      (s) =>
-        `SLIDE ${s.index + 1} — "${s.name}"\nGoal: ${s.goal}\nSuggested components: ${s.suggestedComponents.join(", ") || "your choice"}`
-    )
+    .map((s) => {
+      const role =
+        s.index === 0 ? "title" : s.index === plan.slides.length - 1 ? "close" : "content";
+      return `SLIDE ${s.index + 1} — "${s.name}" (layout hint: ${role})\nGoal: ${s.goal}\nHero widget: ${s.suggestedComponents.join(", ") || "stat or cards"}`;
+    })
     .join("\n\n");
 
   const parsed = await chatJson(
@@ -72,12 +98,10 @@ async function generateSlideBatch(
         content: `Presentation: "${plan.title}" — ${plan.description}
 Audience: ${plan.audience}
 Theme: ${JSON.stringify(plan.theme)}
-Total slides in deck: ${plan.slides.length}
-Original request: "${prompt}"${sourceContext(files)}
+Total slides: ${plan.slides.length}
+Request: "${prompt}"${sourceContext(files)}
 
-Design these slides now as a live talk: kicker + editorial headline + a widget the viewer must touch + a callout on any claim. Title/close get particles. Every slide gets speaker notes.
-
-Return them in this exact order:
+Design ONLY these slides, in this order. One layout each. Copy the layout coordinates from the system prompt.
 
 ${briefs}`,
       },
@@ -87,67 +111,47 @@ ${briefs}`,
       if (!Array.isArray(obj.slides)) throw new Error("Response missing 'slides' array.");
       return obj.slides;
     },
-    { maxTokens: 8000, temperature: 0.7 }
+    {
+      maxTokens: cfg.maxTokensSlides,
+      temperature: cfg.temperature,
+      model: cfg.model,
+      json: cfg.jsonMode,
+    }
   );
 
+  const theme = repairTheme(plan.theme);
   const slides = parsed
     .map((s, i) => repairSlide(s, batch[i]?.index ?? i))
-    .filter((s): s is Slide => s !== null);
+    .filter((s): s is Slide => s !== null)
+    .map((s, i) => layoutSlide(s, batch[i]?.index ?? i, plan.slides.length, theme));
 
-  // If the model dropped slides, synthesise simple fallbacks so the deck
-  // structure survives; the user can regenerate individual slides later.
   while (slides.length < batch.length) {
     const missing = batch[slides.length];
-    slides.push({
-      id: nanoid(8),
-      name: missing.name,
-      transition: "fade",
-      elements: [
-        {
-          id: nanoid(8),
-          type: "heading",
-          x: 6,
-          y: 10,
-          w: 88,
-          h: 14,
-          z: 1,
-          opacity: 1,
-          rotation: 0,
-          props: { text: missing.name, level: 1 },
-        },
-        {
-          id: nanoid(8),
-          type: "text",
-          x: 6,
-          y: 30,
-          w: 70,
-          h: 20,
-          z: 1,
-          opacity: 1,
-          rotation: 0,
-          props: { text: missing.goal },
-        },
-      ],
-    });
+    slides.push(fallbackSlide(missing.name, missing.goal, missing.index, theme));
   }
 
   return slides.slice(0, batch.length);
 }
 
-/**
- * Full generation pipeline:
- * prompt/files → plan (DeepSeek) → batched slide generation (DeepSeek, parallel)
- * → validation/repair → assembled Presentation.
- */
 export async function generatePresentation(
   prompt: string,
   files: SourceFile[],
-  onStage: (s: GenerationStage) => void
+  onStage: (s: GenerationStage) => void,
+  effortInput: unknown = "standard"
 ): Promise<Presentation> {
-  onStage({ stage: "analysing", detail: files.length ? `Reading ${files.length} source file${files.length > 1 ? "s" : ""}` : "Understanding your request" });
+  const effort = parseEffort(effortInput);
+  const cfg = EFFORT[effort];
 
-  onStage({ stage: "planning", detail: "Structuring the narrative" });
-  const plan = await generatePlan(prompt, files);
+  onStage({
+    stage: "analysing",
+    detail: files.length
+      ? `Reading ${files.length} source file${files.length > 1 ? "s" : ""}`
+      : "Understanding your request",
+  });
+
+  onStage({ stage: "planning", detail: `${cfg.label} pass — structuring the narrative` });
+  const plan = await generatePlan(prompt, files, effort);
+  const theme = repairTheme(plan.theme);
 
   onStage({
     stage: "designing",
@@ -158,28 +162,27 @@ export async function generatePresentation(
 
   const indexed = plan.slides.map((s, index) => ({ index, ...s }));
   const batches: (typeof indexed)[] = [];
-  for (let i = 0; i < indexed.length; i += BATCH_SIZE) {
-    batches.push(indexed.slice(i, i + BATCH_SIZE));
+  for (let i = 0; i < indexed.length; i += cfg.batchSize) {
+    batches.push(indexed.slice(i, i + cfg.batchSize));
   }
 
   let done = 0;
-  const results = await Promise.all(
-    batches.map(async (batch) => {
-      const slides = await generateSlideBatch(plan, batch, prompt, files);
-      done += batch.length;
-      onStage({
-        stage: "designing",
-        detail: `Designed ${Math.min(done, plan.slides.length)} of ${plan.slides.length} slides`,
-        done,
-        total: plan.slides.length,
-      });
-      return slides;
-    })
-  );
+  const results = await mapPool(batches, cfg.concurrency, async (batch) => {
+    const slides = await generateSlideBatch(plan, batch, prompt, files, effort);
+    done += batch.length;
+    onStage({
+      stage: "designing",
+      detail: `Designed ${Math.min(done, plan.slides.length)} of ${plan.slides.length} slides`,
+      done,
+      total: plan.slides.length,
+    });
+    return slides;
+  });
 
-  onStage({ stage: "interactive", detail: "Wiring up interactive elements" });
+  onStage({ stage: "interactive", detail: "Snapping layouts and wiring interactions" });
 
-  const allSlides = results.flat();
+  const merged = results.flat();
+  const allSlides = merged.map((s, i) => layoutSlide(s, i, merged.length, theme));
   onStage({ stage: "finalising", detail: "Polishing and validating" });
 
   const now = new Date().toISOString();
@@ -188,7 +191,7 @@ export async function generatePresentation(
       id: nanoid(12),
       title: plan.title,
       description: plan.description,
-      theme: repairTheme(plan.theme),
+      theme,
       slides: allSlides,
       createdAt: now,
       updatedAt: now,
@@ -197,7 +200,6 @@ export async function generatePresentation(
   );
 }
 
-/** Compact representation of the presentation for AI-edit context. */
 function presentationContext(p: Presentation, selectedSlideId?: string, selectedElementId?: string): string {
   const slides = p.slides.map((s, i) => {
     const isSelected = s.id === selectedSlideId;
@@ -231,11 +233,10 @@ export async function generateEdit(
       },
     ],
     (raw) => AIEditResponseSchema.parse(extractJson(raw)),
-    { maxTokens: 8000, temperature: 0.6 }
+    { maxTokens: 6000, temperature: 0.25, model: "deepseek-chat", json: true }
   );
 }
 
-/** Apply validated AI operations to a presentation immutably. */
 export function applyOperations(p: Presentation, response: AIEditResponse): Presentation {
   let next: Presentation = { ...p, slides: [...p.slides] };
   for (const op of response.operations) {
@@ -243,14 +244,16 @@ export function applyOperations(p: Presentation, response: AIEditResponse): Pres
       case "replaceSlide": {
         const repaired = repairSlide(op.slide, 0);
         if (!repaired) break;
-        next.slides = next.slides.map((s) => (s.id === op.slideId ? { ...repaired, id: s.id } : s));
+        const laid = layoutSlide(repaired, next.slides.findIndex((s) => s.id === op.slideId), next.slides.length, next.theme);
+        next.slides = next.slides.map((s) => (s.id === op.slideId ? { ...laid, id: s.id } : s));
         break;
       }
       case "addSlide": {
         const repaired = repairSlide(op.slide, next.slides.length);
         if (!repaired) break;
         const idx = op.index !== undefined ? Math.min(op.index, next.slides.length) : next.slides.length;
-        next.slides = [...next.slides.slice(0, idx), repaired, ...next.slides.slice(idx)];
+        const laid = layoutSlide(repaired, idx, next.slides.length + 1, next.theme);
+        next.slides = [...next.slides.slice(0, idx), laid, ...next.slides.slice(idx)];
         break;
       }
       case "deleteSlide": {

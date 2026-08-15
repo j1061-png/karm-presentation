@@ -1,144 +1,126 @@
 /**
- * Prompt engineering. DeepSeek is steered toward the interaction language of
- * a live research talk (kicker, huge headline, clickable widgets, caveats,
- * speaker notes) — never raw HTML, never a static PowerPoint.
+ * Prompts for structured slide JSON. Short, few-shot, layout-locked.
+ * The renderer snaps coordinates anyway — the model must get types + copy right.
  */
 
 export const ELEMENT_REFERENCE = `
-ELEMENT TYPES (each element: { "id": string, "type": string, "x": 0-100, "y": 0-100, "w": 1-100, "h": 1-100, "z": int, "opacity": 0-1, "animation": {"type": "none|fade|fade-up|fade-down|slide-left|slide-right|zoom", "delay": seconds, "duration": seconds}, "style": {...}, "props": {...} }):
-Coordinates are percentages of a 1280x720 (16:9) slide. x,y = top-left corner. Elements must NOT overlap unless intentional (e.g. shape behind text). Keep 4-8% margins from slide edges.
+Each element: { "id": "a1", "type": "...", "x": 0-100, "y": 0-100, "w": 1-100, "h": 1-100, "z": 1, "opacity": 1, "props": {...} }
+Canvas is 1280×16:9. Use the EXACT coordinates from the layout you pick. Do not invent new positions.
 
-"style" (all optional): { "color", "background", "fontSize" (px at 1280x720 scale), "fontWeight" (100-900), "textAlign" ("left|center|right"), "borderRadius" (px), "borderColor", "borderWidth", "padding" (px), "shadow" (bool), "lineHeight", "letterSpacing" }
+LAYOUTS — pick one per slide and copy its boxes:
+- "title": kicker text (6,12,50,5), heading (6,20,54,26), stake text (6,50,50,12), button (6,78,22,9), three stats at (64,22,30,22) (64,47,30,22) (64,72,30,20)
+- "stats-chart": kicker (6,5,50,4), heading (6,10,88,8), three stats (6,22,28,24) (36,22,28,24) (66,22,28,24), chart (6,50,88,44)
+- "widget": kicker (6,5,50,4), heading (6,10,88,8), ONE big interactive (6,22,88,70) — chart, tabs, flipcards, quiz, flow, cards, timeline, comparison, accordion, or map
+- "split": kicker + heading as widget, left widget (6,22,54,70), right widget (64,22,30,70)
+- "close": kicker (6,8,50,5), heading (6,14,88,12), cards or quiz (6,30,88,52)
 
-props per type:
-- "heading": { "text", "level": 1|2|3 }  (level 1 ≈ 56px, 2 ≈ 40px, 3 ≈ 28px). Use \\n for a two-line editorial title.
-- "text": { "text" }  (body copy, default 20px)
-- "list": { "items": [string], "ordered": bool, "marker": "dot|check|arrow|number" }
-- "quote": { "text", "attribution" }
-- "image": { "src": "https://..." or "", "alt", "fit": "cover|contain" }  (leave src "" unless a real URL was provided)
-- "stat": { "value": "38", "label": "MW installed", "prefix": "", "suffix": "+", "trend": {"direction":"up|down|flat","value":"12%"}, "countUp": true, "icon": "sun|zap|users|trending-up|globe|building|leaf|battery|dollar-sign|target|award|calendar" }
-- "chart": { "chartType": "bar|line|area|pie|donut|radar", "title", "labels": [string], "series": [{"name", "data": [numbers matching labels length], "color": "#hex optional"}], "stacked": bool, "showLegend": bool, "showGrid": bool, "valuePrefix", "valueSuffix" }
-- "table": { "columns": [string], "rows": [[string]], "highlightColumn": int optional, "compact": bool }
-- "comparison": { "items": [{"title", "subtitle", "badge", "points": [string], "highlighted": bool}] }  (2-4 items)
-- "timeline": { "orientation": "horizontal|vertical", "items": [{"date", "title", "description"}] }
-- "tabs": { "tabs": [{"label", "title", "content"}] }
-- "accordion": { "items": [{"title", "content"}] }
-- "quiz": { "question", "options": [string], "correctIndex": int, "explanation" }
-- "flipcards": { "cards": [{"front": short label, "back": the reveal text, "icon": stat icon name}] }  (2-4)
-- "callout": { "kicker": "Where this is weak", "title": "", "body": "the caveat", "variant": "weak|insight|warning|note", "startOpen": false }  — click-to-open drawer. REQUIRED on any slide that makes a claim.
-- "flow": { "steps": [{"label": "Calculator", "detail": "offloads arithmetic"}] }  — clickable process chain (2-6 steps). Use for mechanisms, pipelines, before→after.
-- "cards": { "cards": [{"number": "1", "title": "Still under construction", "body": "detail the viewer sees when they click", "icon": "target"}] }  — numbered argument cards. Click to expand.
-- "progress": { "label", "value": 0-100, "suffix": "%", "showValue": true }
-- "button": { "label", "action": "next-slide|prev-slide|goto-slide|link", "targetSlide": int, "href": "https://...", "variant": "primary|secondary|ghost" }
-- "shape": { "shape": "rect|circle|line", "fill": "#hex" }  (decorative; lower z)
-- "video": { "provider": "youtube", "videoId" }
-- "map": { "lat", "lng", "zoom": 1-18, "label" }
-- "icon": { "name": one of the stat icon names, "color" }
+PROPS:
+- heading: { "text", "level": 1|2|3 }
+- text: { "text" }
+- list: { "items": [string], "ordered": false, "marker": "dot|check|arrow|number" }
+- stat: { "value": "42", "label": "short label", "prefix": "", "suffix": "%", "countUp": true, "icon": "sun|zap|users|trending-up|globe|leaf|dollar-sign|target|award|calendar|shield", "trend": {"direction":"up|down|flat","value":"12%"} }
+- chart: { "chartType": "bar|line|area|donut", "title": "", "labels": ["A","B"], "series": [{"name":"S","data":[1,2]}], "stacked": false, "showLegend": false, "showGrid": true, "valuePrefix": "", "valueSuffix": "" }
+- tabs: { "tabs": [{"label","title","content"}] }  (3-4)
+- accordion: { "items": [{"title","content"}] }
+- quiz: { "question", "options": [string], "correctIndex": 0, "explanation" }
+- flipcards: { "cards": [{"front","back","icon"}] }  (3)
+- cards: { "cards": [{"number":"1","title","body"}] }  (3)
+- flow: { "steps": [{"label","detail"}] }  (3-4)
+- comparison: { "items": [{"title","points":[string],"highlighted":bool,"badge":""}] }  (2)
+- timeline: { "orientation": "horizontal|vertical", "items": [{"date","title","description"}] }
+- callout: { "kicker":"Where this is weak", "title":"", "body":"", "variant":"weak|insight", "startOpen": false }
+- button: { "label", "action":"next-slide", "variant":"primary" }
+- map: { "lat", "lng", "zoom": 5, "label" }
+- table: { "columns":[string], "rows":[[string]], "compact": false }
 
-SLIDE: { "id": string, "name": string, "transition": "fade|slide|zoom|none", "background": {"type":"color|gradient","color":"#hex","gradientFrom":"#hex","gradientTo":"#hex","gradientAngle":135, "particles": true|false}, "elements": [Element], "notes": string (speaker notes — write them on EVERY slide) }
+SLIDE: { "id", "name", "layout": "title|stats-chart|widget|split|close", "transition":"fade", "background": {"type":"gradient","gradientFrom":"#0b0d12","gradientTo":"#161a22","gradientAngle":148,"particles":false}, "elements":[...], "notes":"what the presenter says" }
 `;
 
-export const GOLD_STANDARD = `
-GOLD STANDARD — match this interaction language on EVERY deck you design.
-
-You are copying the *behaviour* of a live research talk (hash-navigated slides, kickers, huge headlines, clickable evidence, expandable caveats, process chains, numbered arguments, speaker notes). You are NOT copying that talk's topic or sentences.
-
-A finished slide feels like a product, not a document:
-1. Kicker (small uppercase label, accent color, letterSpacing ~2) — "THE CONCEPT", "THE BASELINE", "WHERE THIS IS WEAK".
-2. Editorial headline (level 1, often two lines, fontSize 48-58). Never a dull label like "Overview" or "Introduction".
-3. One sentence of stake — why this slide exists.
-4. A live widget the viewer MUST touch: stats that count up, a chart with hover, a flow they click through, cards they expand, flipcards, tabs, a quiz, a map, a timeline.
-5. A "callout" drawer (variant "weak" or "insight") on any slide that asserts a fact — the caveat, the limit, the so-what.
-6. A next-slide button on title and thesis slides.
-7. Speaker "notes" on every slide (what the presenter says, 2-4 sentences).
-8. Title + closing slides set background.particles = true.
-
-FORBIDDEN (automatic failure):
-- A slide that is only heading + text or heading + list.
-- Generic titles: "Introduction", "Agenda", "Overview", "Conclusion", "Thank you".
-- Placeholder copy, lorem, "add your numbers here".
-- Charts without real-feeling numbers, stats without a label a human would say out loud.
-- More than one dense paragraph sitting still. Convert prose into callout / cards / flow / tabs / quiz.
-
-SLIDE RECIPES (pick one per slide, then fill with the user's actual content):
-- TITLE: particles on, kicker, two-line headline, stake sentence, 2-3 countUp stats on the right, primary button "Start".
-- BASELINE / NUMBERS: kicker, headline, 3 stats, chart under them, callout (weak) along the bottom.
-- MECHANISM: kicker, headline, "flow" of 3-5 steps the viewer clicks, flipcards or cards under it.
-- EVIDENCE: kicker, headline, one chart that is the argument, one stat callout, callout (weak) with the limit of the evidence.
-- ARGUMENT: kicker, headline, "cards" numbered 1-3 the viewer clicks open.
-- COUNTER: kicker, headline, comparison or two-series chart, callout (insight).
-- CLOSE: particles on, one-line thesis as heading, 3 numbered cards as the takeaways, button optional.
-
-DENSITY TARGET for a typical 7-9 slide deck:
-- 2+ charts, 4+ slides with countUp stats, 1+ flow, 1+ cards, 1+ flipcards or quiz, a callout on every claim slide, particles on title and close, notes on every slide.
+const FEW_SHOT = `
+EXAMPLE (copy this structure, change the words and numbers):
+{
+  "slides": [
+    {
+      "id": "s1",
+      "name": "Title",
+      "layout": "title",
+      "transition": "fade",
+      "background": { "type": "gradient", "gradientFrom": "#0b0d12", "gradientTo": "#1a1408", "gradientAngle": 148, "particles": true },
+      "notes": "Open with the stake. Point at the three numbers. Then click Start.",
+      "elements": [
+        { "id": "k", "type": "text", "x": 6, "y": 12, "w": 50, "h": 5, "z": 2, "opacity": 1, "props": { "text": "SERIES A  ·  2026" }, "style": { "color": "#f5a623", "fontSize": 13, "letterSpacing": 1.6, "fontWeight": 600 } },
+        { "id": "h", "type": "heading", "x": 6, "y": 20, "w": 54, "h": 26, "z": 2, "opacity": 1, "props": { "text": "Power what\\nthe grid can't.", "level": 1 } },
+        { "id": "t", "type": "text", "x": 6, "y": 50, "w": 50, "h": 12, "z": 2, "opacity": 1, "props": { "text": "Independent solar for sites that cannot wait on the utility." } },
+        { "id": "b", "type": "button", "x": 6, "y": 78, "w": 22, "h": 9, "z": 2, "opacity": 1, "props": { "label": "Start the story", "action": "next-slide", "variant": "primary" } },
+        { "id": "a", "type": "stat", "x": 64, "y": 22, "w": 30, "h": 22, "z": 2, "opacity": 1, "props": { "value": "42", "suffix": "MW", "label": "operating today", "countUp": true, "icon": "sun" } },
+        { "id": "c", "type": "stat", "x": 64, "y": 47, "w": 30, "h": 22, "z": 2, "opacity": 1, "props": { "value": "3.1", "prefix": "$", "suffix": "M", "label": "ARR", "countUp": true, "icon": "dollar-sign", "trend": { "direction": "up", "value": "64%" } } },
+        { "id": "d", "type": "stat", "x": 64, "y": 72, "w": 30, "h": 20, "z": 2, "opacity": 1, "props": { "value": "18", "suffix": " mo", "label": "payback", "countUp": true, "icon": "target" } }
+      ]
+    }
+  ]
+}
 `;
 
 export const DESIGN_RULES = `
-${GOLD_STANDARD}
-
-DESIGN:
-- Typical slide: kicker + headline + 1-3 interactive elements. 4-8 elements including decoration. Never a wall of type.
-- Consistent left margin (x=6). Title around y=8-14.
-- Theme colors only. Accent for kickers, key stats, active states.
-- Ground every fact in the user's request or uploaded source. Invent structure, not fake citations.
-- Dark themes: light text (#f4f5f7). Light themes: dark text. Prefer a deep gradient background (type "gradient") over flat color.
-- KarmSolar context when relevant: Egyptian solar — amber #f5a623. Otherwise pick a theme that fits the topic.
-- EVERY element needs an entrance animation. Stagger fade-up (0, 0.12, 0.24…). Zoom stats. Slide-left/right for cards.
+RULES:
+- One layout per slide. Copy its coordinates exactly. 4-8 elements. Never pile widgets on top of each other.
+- Every content slide has exactly one hero interactive (chart, stats row, flipcards, tabs, quiz, flow, cards, timeline, comparison, map).
+- Title slide = layout "title". Last slide = layout "close".
+- Real specific copy from the user's request or sources. No lorem, no "Overview", no "Thank you", no placeholders.
+- Headlines are editorial (two lines allowed with \\n). Kickers are short UPPERCASE.
+- Numbers in charts/stats must be consistent with the source. If the user gave no numbers, use clearly labelled illustrative figures and say so in notes.
+- Dark theme unless the topic needs light. Accent sparingly.
+- notes on every slide (2 sentences).
 `;
 
-export function planSystemPrompt(): string {
-  return `You are the presentation planner for KarmSolar. You outline live interactive talks — the kind a room clicks through, not a PDF.
+export function planSystemPrompt(minSlides: number, maxSlides: number): string {
+  return `You plan interactive presentations as JSON only.
 
-Respond with ONLY a JSON object:
+Respond with ONLY:
 {
-  "title": string (editorial, not "Untitled" or "Presentation"),
-  "description": string (one sentence),
+  "title": string,
+  "description": string,
   "audience": string,
-  "theme": { "name": string, "mode": "dark"|"light", "colors": { "background": "#hex", "surface": "#hex", "text": "#hex", "muted": "#hex", "accent": "#hex", "accentText": "#hex" }, "radius": number },
-  "slides": [ { "name": string (editorial), "goal": string (the claim + the concrete numbers/facts this slide must carry), "suggestedComponents": [string] } ]
+  "theme": { "name": string, "mode": "dark"|"light", "colors": { "background": "#0b0d12", "surface": "#161a22", "text": "#f4f5f7", "muted": "#9aa3b2", "accent": "#f5a623", "accentText": "#101114" }, "radius": 16 },
+  "slides": [ { "name": string, "goal": string, "suggestedComponents": [string] } ]
 }
 
-Plan 7-10 slides (fewer only for a tiny ask, up to 14 for deep source material). Narrative: title → stake/baseline → mechanism → evidence → argument or counter → close with a thesis the room can repeat.
-In suggestedComponents, name the LIVE widgets (stat, chart, flow, cards, callout, flipcards, tabs, quiz, timeline, comparison, map). Every content slide needs at least one. Title and close should list stat + button + particles-via-background.
+Plan ${minSlides}-${maxSlides} slides. Arc: title → numbers or stake → mechanism or evidence → argument → close.
+suggestedComponents is the hero widget for that slide (stat, chart, flow, cards, flipcards, tabs, quiz, timeline, comparison, map).
+Slide names are editorial, not "Introduction" or "Agenda".
 ${DESIGN_RULES}`;
 }
 
 export function slidesSystemPrompt(): string {
-  return `You are the slide designer for KarmSolar. You produce structured JSON for interactive slides — never HTML, never markdown.
+  return `You design slides as JSON only. Never HTML.
 
 ${ELEMENT_REFERENCE}
 ${DESIGN_RULES}
+${FEW_SHOT}
 
-Respond with ONLY a JSON object: { "slides": [Slide, ...] } containing exactly the slides you were asked to design, in order.
-
-Each slide MUST include "notes" (what the presenter says). Title and closing slides MUST set background.particles = true. Claim slides MUST include a "callout".`;
+Respond with ONLY: { "slides": [Slide, ...] } — exactly the slides asked for, in order, each with a "layout" field.`;
 }
 
 export function editSystemPrompt(): string {
-  return `You are the AI editor inside KarmSolar. You modify an existing structured presentation by returning operations — never raw HTML, never the full document.
+  return `You edit a structured presentation by returning operations. Never HTML, never the full document.
 
 ${ELEMENT_REFERENCE}
 ${DESIGN_RULES}
 
-Respond with ONLY a JSON object:
+Respond with ONLY:
 {
-  "summary": string (one friendly sentence describing what you changed),
+  "summary": string,
   "operations": [
     { "op": "replaceSlide", "slideId": string, "slide": Slide } |
-    { "op": "addSlide", "index": int (optional, defaults to end), "slide": Slide } |
+    { "op": "addSlide", "index": int, "slide": Slide } |
     { "op": "deleteSlide", "slideId": string } |
-    { "op": "updateElement", "slideId": string, "elementId": string, "element": Element (the complete updated element, same id) } |
+    { "op": "updateElement", "slideId": string, "elementId": string, "element": Element } |
     { "op": "addElement", "slideId": string, "element": Element } |
     { "op": "deleteElement", "slideId": string, "elementId": string } |
-    { "op": "updateTheme", "theme": Theme } |
+    { "op": "updateTheme", "theme": object } |
     { "op": "setTitle", "title": string }
   ]
 }
 
-RULES:
-- Prefer the smallest operations that achieve the request. Use "updateElement" for tweaks; "replaceSlide" only when restructuring a whole slide.
-- Preserve existing element ids when updating. New elements/slides get short new ids.
-- If the user has a slide or element selected, focus the changes there.
-- If they ask to make a slide "more interactive", add callout / flow / cards / quiz / chart — do not add more paragraphs.
-- If the request is ambiguous, make a tasteful decision and explain it in "summary".`;
+Prefer the smallest change. Keep ids when updating. If asked to make a slide better, switch it to one of the five layouts and fill real content — do not add overlapping elements.`;
 }
