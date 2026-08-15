@@ -212,7 +212,7 @@ function SlideInspector() {
               if (type === "theme") updateSlide(slide.id, { background: undefined });
               else if (type === "color")
                 updateSlide(slide.id, {
-                  background: { type: "color", color: theme.colors.background, gradientAngle: 135, overlayOpacity: 0.5 },
+                  background: { type: "color", color: theme.colors.background, gradientAngle: 135, overlayOpacity: 0.5, particles: false },
                 });
               else
                 updateSlide(slide.id, {
@@ -222,6 +222,7 @@ function SlideInspector() {
                     gradientTo: theme.colors.surface,
                     gradientAngle: 135,
                     overlayOpacity: 0.5,
+                    particles: false,
                   },
                 });
             }}
@@ -258,6 +259,18 @@ function SlideInspector() {
               />
             </Row>
           </>
+        )}
+        {bg && (
+          <Row label="Particles">
+            <Select
+              value={bg.particles ? "on" : "off"}
+              options={[
+                { value: "off", label: "Off" },
+                { value: "on", label: "On" },
+              ]}
+              onChange={(v) => updateSlide(slide.id, { background: { ...bg, particles: v === "on" } })}
+            />
+          </Row>
         )}
         <Row label="Notes">
           <span />
@@ -859,6 +872,73 @@ function ElementPropsEditor({ element, slideId }: { element: SlideElement; slide
           <Row label="Color">
             <ColorInput value={element.props.color ?? ""} onChange={(color) => set({ color })} />
           </Row>
+        </Section>
+      );
+
+    case "callout":
+      return (
+        <Section title="Content">
+          <Row label="Kicker">
+            <TextInput value={element.props.kicker} onChange={(kicker) => set({ kicker })} />
+          </Row>
+          <Row label="Title">
+            <TextInput value={element.props.title} onChange={(title) => set({ title })} />
+          </Row>
+          <TextArea value={element.props.body} rows={4} onChange={(body) => set({ body })} />
+          <Row label="Variant">
+            <Select
+              value={element.props.variant}
+              options={[
+                { value: "weak", label: "Weak / caveat" },
+                { value: "insight", label: "Insight" },
+                { value: "warning", label: "Warning" },
+                { value: "note", label: "Note" },
+              ]}
+              onChange={(variant) => set({ variant })}
+            />
+          </Row>
+        </Section>
+      );
+
+    case "flow":
+      return (
+        <Section title="Content">
+          <div className="text-[11px] text-text-tertiary -mb-1">One per line: label | detail</div>
+          <TextArea
+            rows={6}
+            value={element.props.steps.map((s) => [s.label, s.detail ?? ""].join(" | ")).join("\n")}
+            onChange={(v) => {
+              const steps = v
+                .split("\n")
+                .filter((l) => l.trim())
+                .map((l) => {
+                  const [label = "", detail = ""] = l.split("|").map((p) => p.trim());
+                  return { label, detail: detail || undefined };
+                });
+              if (steps.length >= 2) set({ steps });
+            }}
+          />
+        </Section>
+      );
+
+    case "cards":
+      return (
+        <Section title="Content">
+          <div className="text-[11px] text-text-tertiary -mb-1">One per line: number | title | body</div>
+          <TextArea
+            rows={6}
+            value={element.props.cards.map((c) => [c.number ?? "", c.title, c.body].join(" | ")).join("\n")}
+            onChange={(v) => {
+              const cards = v
+                .split("\n")
+                .filter((l) => l.trim())
+                .map((l) => {
+                  const [number = "", title = "", body = ""] = l.split("|").map((p) => p.trim());
+                  return { number: number || undefined, title, body };
+                });
+              if (cards.length >= 2) set({ cards });
+            }}
+          />
         </Section>
       );
 

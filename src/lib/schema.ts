@@ -300,6 +300,49 @@ export const FlipCardsElement = BaseElement.extend({
   }),
 });
 
+export const CalloutElement = BaseElement.extend({
+  type: z.literal("callout"),
+  props: z.object({
+    kicker: z.string().default("Where this is weak"),
+    title: z.string().default(""),
+    body: z.string().default(""),
+    variant: z.enum(["weak", "insight", "warning", "note"]).default("weak"),
+    startOpen: z.boolean().default(false),
+  }),
+});
+
+export const FlowElement = BaseElement.extend({
+  type: z.literal("flow"),
+  props: z.object({
+    steps: z
+      .array(
+        z.object({
+          label: z.string(),
+          detail: z.string().optional(),
+        })
+      )
+      .min(2)
+      .max(6),
+  }),
+});
+
+export const CardsElement = BaseElement.extend({
+  type: z.literal("cards"),
+  props: z.object({
+    cards: z
+      .array(
+        z.object({
+          number: z.string().optional(),
+          title: z.string(),
+          body: z.string().default(""),
+          icon: z.string().optional(),
+        })
+      )
+      .min(2)
+      .max(6),
+  }),
+});
+
 export const ElementSchema = z.discriminatedUnion("type", [
   HeadingElement,
   TextElement,
@@ -321,6 +364,9 @@ export const ElementSchema = z.discriminatedUnion("type", [
   MapElement,
   IconElement,
   FlipCardsElement,
+  CalloutElement,
+  FlowElement,
+  CardsElement,
 ]);
 export type SlideElement = z.infer<typeof ElementSchema>;
 export type ElementType = SlideElement["type"];
@@ -337,6 +383,8 @@ export const SlideBackgroundSchema = z.object({
   gradientAngle: z.number().min(0).max(360).default(135),
   imageSrc: z.string().optional(),
   overlayOpacity: z.number().min(0).max(1).default(0.5),
+  /** Live constellation / particle field — use on title and thesis slides. */
+  particles: z.boolean().default(false),
 });
 export type SlideBackground = z.infer<typeof SlideBackgroundSchema>;
 

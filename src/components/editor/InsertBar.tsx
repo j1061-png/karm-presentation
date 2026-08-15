@@ -6,6 +6,7 @@ import {
   Type, AlignLeft, List, Quote, ImageIcon, Hash, BarChart3, Table2,
   Columns3, GitCommitHorizontal, PanelTop, ListCollapse, HelpCircle,
   Percent, MousePointerClick, Square, MapPin, Play, Repeat, Paperclip,
+  MessageSquareWarning, Workflow, LayoutGrid,
 } from "lucide-react";
 
 const COMPONENTS: { type: string; label: string; icon: typeof Type }[] = [
@@ -23,6 +24,9 @@ const COMPONENTS: { type: string; label: string; icon: typeof Type }[] = [
   { type: "accordion", label: "Accordion", icon: ListCollapse },
   { type: "quiz", label: "Quiz", icon: HelpCircle },
   { type: "flipcards", label: "Flip cards", icon: Repeat },
+  { type: "callout", label: "Callout", icon: MessageSquareWarning },
+  { type: "flow", label: "Flow", icon: Workflow },
+  { type: "cards", label: "Cards", icon: LayoutGrid },
   { type: "progress", label: "Progress", icon: Percent },
   { type: "button", label: "Button", icon: MousePointerClick },
   { type: "shape", label: "Shape", icon: Square },
@@ -117,6 +121,39 @@ export function createDefaultElement(type: string, x: number, y: number): SlideE
       return {
         ...base, type, w: 50, h: 44,
         props: { question: "Your question here?", options: ["Answer A", "Answer B", "Answer C"], correctIndex: 0, explanation: "Why this is correct." },
+      } as SlideElement;
+    case "callout":
+      return {
+        ...base, type, w: 88, h: 22,
+        props: {
+          kicker: "Where this is weak",
+          title: "",
+          body: "The limit of the claim — sample, method, or what would change your mind.",
+          variant: "weak",
+          startOpen: false,
+        },
+      } as SlideElement;
+    case "flow":
+      return {
+        ...base, type, w: 88, h: 28,
+        props: {
+          steps: [
+            { label: "Step one", detail: "What this step actually does." },
+            { label: "Step two", detail: "What changes here." },
+            { label: "Step three", detail: "The outcome." },
+          ],
+        },
+      } as SlideElement;
+    case "cards":
+      return {
+        ...base, type, w: 88, h: 40,
+        props: {
+          cards: [
+            { number: "1", title: "First argument", body: "Click to read the detail.", icon: "target" },
+            { number: "2", title: "Second argument", body: "Click to read the detail.", icon: "zap" },
+            { number: "3", title: "Third argument", body: "Click to read the detail.", icon: "shield" },
+          ],
+        },
       } as SlideElement;
     case "progress":
       return { ...base, type, w: 40, h: 10, props: { label: "Progress", value: 60, suffix: "%", showValue: true } } as SlideElement;

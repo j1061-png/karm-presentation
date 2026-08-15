@@ -296,6 +296,15 @@ export function ElementView({ el, ctx }: { el: SlideElement; ctx: RenderContext 
     case "flipcards":
       return <FlipCardsView el={el} ctx={ctx} border={border} />;
 
+    case "callout":
+      return <CalloutView el={el} ctx={ctx} border={border} boxStyle={boxStyle} />;
+
+    case "flow":
+      return <FlowView el={el} ctx={ctx} border={border} />;
+
+    case "cards":
+      return <CardsView el={el} ctx={ctx} border={border} />;
+
     case "tabs":
       return <TabsView el={el} ctx={ctx} border={border} boxStyle={boxStyle} />;
 
@@ -768,6 +777,175 @@ function QuizView({ el, ctx, border, boxStyle }: { el: Extract<SlideElement, { t
           {el.props.explanation}
         </div>
       )}
+    </div>
+  );
+}
+
+function CalloutView({
+  el, ctx, border, boxStyle,
+}: {
+  el: Extract<SlideElement, { type: "callout" }>;
+  ctx: RenderContext;
+  border: string;
+  boxStyle: React.CSSProperties;
+}) {
+  const { theme, mode } = ctx;
+  const [open, setOpen] = useState(el.props.startOpen || mode === "thumb");
+  const s = el.style ?? {};
+  const tone =
+    el.props.variant === "insight" ? theme.colors.accent :
+    el.props.variant === "warning" ? "#f0554d" :
+    el.props.variant === "note" ? theme.colors.muted :
+    theme.colors.accent;
+
+  return (
+    <div
+      className="w-full h-full flex flex-col overflow-hidden"
+      style={{
+        ...boxStyle,
+        background: s.background ?? `color-mix(in srgb, ${tone} 10%, ${theme.colors.surface})`,
+        border: `1px solid color-mix(in srgb, ${tone} 45%, ${border})`,
+      }}
+    >
+      <button
+        className="w-full flex items-center justify-between px-[1.1em] py-[0.75em] cursor-pointer text-left"
+        onClick={(e) => {
+          e.stopPropagation();
+          if (mode !== "thumb") setOpen((v) => !v);
+        }}
+      >
+        <span className="font-semibold tracking-[0.14em] uppercase" style={{ color: tone, fontSize: (s.fontSize ?? 15) * 0.78 }}>
+          {el.props.kicker}
+        </span>
+        <ChevronDown
+          size={"1em"}
+          className="transition-transform duration-200"
+          style={{ color: tone, transform: open ? "rotate(180deg)" : undefined }}
+        />
+      </button>
+      {open && (
+        <div className="px-[1.1em] pb-[1em] overflow-auto animate-in-fade">
+          {el.props.title && (
+            <div className="font-semibold mb-[0.35em]" style={{ color: theme.colors.text, fontSize: s.fontSize ?? 16 }}>
+              {el.props.title}
+            </div>
+          )}
+          <div className="whitespace-pre-wrap" style={{ color: theme.colors.muted, fontSize: (s.fontSize ?? 16) * 0.92, lineHeight: 1.55 }}>
+            {el.props.body}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FlowView({
+  el, ctx, border,
+}: {
+  el: Extract<SlideElement, { type: "flow" }>;
+  ctx: RenderContext;
+  border: string;
+}) {
+  const { theme, mode } = ctx;
+  const [active, setActive] = useState(0);
+  const s = el.style ?? {};
+  const step = el.props.steps[Math.min(active, el.props.steps.length - 1)];
+
+  return (
+    <div className="w-full h-full flex flex-col justify-center gap-[0.9em]" style={{ fontSize: s.fontSize ?? 16 }}>
+      <div className="flex items-stretch gap-[0.45em]">
+        {el.props.steps.map((item, i) => (
+          <div key={i} className="flex-1 flex items-center gap-[0.45em] min-w-0">
+            <button
+              className={`flex-1 min-w-0 px-[0.7em] py-[0.85em] text-left cursor-pointer transition-all ${mode === "live" ? "pk-lift" : ""}`}
+              style={{
+                background: i === active ? `color-mix(in srgb, ${theme.colors.accent} 16%, ${theme.colors.surface})` : theme.colors.surface,
+                border: `1px solid ${i === active ? theme.colors.accent : border}`,
+                borderRadius: s.borderRadius ?? theme.radius,
+                color: theme.colors.text,
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (mode !== "thumb") setActive(i);
+              }}
+            >
+              <div className="font-semibold" style={{ fontSize: "0.92em", lineHeight: 1.3 }}>{item.label}</div>
+            </button>
+            {i < el.props.steps.length - 1 && (
+              <ArrowRight size={"0.95em"} style={{ color: theme.colors.accent, flexShrink: 0 }} />
+            )}
+          </div>
+        ))}
+      </div>
+      {step?.detail && (
+        <div
+          className="px-[1.1em] py-[0.9em] animate-in-fade"
+          style={{
+            background: theme.colors.surface,
+            border: `1px solid ${border}`,
+            borderRadius: s.borderRadius ?? theme.radius,
+            color: theme.colors.muted,
+            fontSize: "0.88em",
+            lineHeight: 1.5,
+          }}
+        >
+          {step.detail}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CardsView({
+  el, ctx, border,
+}: {
+  el: Extract<SlideElement, { type: "cards" }>;
+  ctx: RenderContext;
+  border: string;
+}) {
+  const { theme, mode } = ctx;
+  const [active, setActive] = useState<number | null>(mode === "thumb" ? 0 : 0);
+  const s = el.style ?? {};
+
+  return (
+    <div className="w-full h-full flex gap-[0.8em]" style={{ fontSize: s.fontSize ?? 16 }}>
+      {el.props.cards.map((card, i) => {
+        const Icon = card.icon ? getIcon(card.icon) : null;
+        const on = active === i;
+        return (
+          <button
+            key={i}
+            className={`flex-1 flex flex-col text-left cursor-pointer overflow-hidden ${mode === "live" ? "pk-lift" : ""}`}
+            style={{
+              background: theme.colors.surface,
+              border: `1px solid ${on ? theme.colors.accent : border}`,
+              borderRadius: s.borderRadius ?? theme.radius,
+              padding: "1.1em",
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (mode !== "thumb") setActive(on ? null : i);
+            }}
+          >
+            <div className="flex items-center gap-[0.6em] mb-[0.55em]">
+              {card.number && (
+                <span className="font-semibold tabular-nums" style={{ color: theme.colors.accent, fontSize: "1.35em" }}>
+                  {card.number}
+                </span>
+              )}
+              {Icon && <Icon style={{ color: theme.colors.accent, width: "1.2em", height: "1.2em" }} />}
+            </div>
+            <div className="font-semibold" style={{ color: theme.colors.text, fontSize: "1em", lineHeight: 1.3 }}>
+              {card.title}
+            </div>
+            {(on || mode === "thumb") && card.body && (
+              <div className="mt-[0.55em] animate-in-fade" style={{ color: theme.colors.muted, fontSize: "0.78em", lineHeight: 1.5 }}>
+                {card.body}
+              </div>
+            )}
+          </button>
+        );
+      })}
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { Slide, SlideElement, Theme } from "@/lib/schema";
 import { ElementView, type RenderContext, type RenderMode } from "./ElementView";
+import { ParticleField } from "./ParticleField";
 
 export const SLIDE_W = 1280;
 export const SLIDE_H = 720;
@@ -98,6 +99,9 @@ export function SlideRenderer({
         ...slideBackgroundCss(slide, theme),
       }}
     >
+      {slide.background?.particles && mode !== "thumb" && (
+        <ParticleField color={theme.colors.accent} />
+      )}
       {scale > 0 && (
         <div
           key={animateKey}

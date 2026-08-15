@@ -3,12 +3,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Presentation } from "@/lib/schema";
 import { SlideRenderer } from "@/components/renderer/SlideRenderer";
-import { ChevronLeft, ChevronRight, X, Maximize, Minimize, Share2 } from "lucide-react";
+import {
+  ChevronLeft, ChevronRight, X, Maximize, Minimize, Share2,
+  LayoutGrid, StickyNote, HelpCircle,
+} from "lucide-react";
 import { BrandMark } from "@/components/brand/BrandLogo";
 
 /**
  * Fullscreen interactive presentation player.
- * Keyboard: ←/→/space/enter navigate, F fullscreen, Esc exits.
+ * Keyboard: ←/→/space navigate, Esc overview, N notes, ? help, F fullscreen.
  */
 export function Player({
   presentation,
@@ -24,6 +27,9 @@ export function Player({
   const [index, setIndex] = useState(0);
   const [controlsVisible, setControlsVisible] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [overview, setOverview] = useState(false);
+  const [notes, setNotes] = useState(false);
+  const [help, setHelp] = useState(false);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -34,12 +40,39 @@ export function Player({
   const go = useCallback(
     (next: number) => {
       setIndex(Math.max(0, Math.min(slides.length - 1, next)));
+      setOverview(false);
     },
     [slides.length]
   );
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    const n = parseInt(window.location.hash.replace("#", ""), 10);
+    if (Number.isFinite(n) && n >= 1 && n <= slides.length) setIndex(n - 1);
+  }, [slides.length]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const next = `${window.location.pathname}${window.location.search}#${index + 1}`;
+    window.history.replaceState(null, "", next);
+  }, [index]);
+
+  useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement)?.isContentEditable) return;
+
+      if (e.key === "Escape") {
+        e.preventDefault();
+        if (help) return setHelp(false);
+        if (notes) return setNotes(false);
+        if (overview) return setOverview(false);
+        setOverview(true);
+        return;
+      }
+      if (overview) {
+        if (e.key === "ArrowRight" || e.key === "ArrowLeft") return;
+      }
       if (e.key === "ArrowRight" || e.key === " " || e.key === "Enter" || e.key === "PageDown") {
         e.preventDefault();
         setIndex((i) => Math.min(slides.length - 1, i + 1));
@@ -49,12 +82,14 @@ export function Player({
       } else if (e.key === "Home") setIndex(0);
       else if (e.key === "End") setIndex(slides.length - 1);
       else if (e.key.toLowerCase() === "f") toggleFullscreen();
-      else if (e.key === "Escape" && onExit && !document.fullscreenElement) onExit();
+      else if (e.key.toLowerCase() === "n") setNotes((v) => !v);
+      else if (e.key.toLowerCase() === "g" || e.key.toLowerCase() === "o") setOverview((v) => !v);
+      else if (e.key === "?" || e.key.toLowerCase() === "h") setHelp((v) => !v);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slides.length, onExit]);
+  }, [slides.length, overview, notes, help]);
 
   useEffect(() => {
     const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
@@ -92,7 +127,6 @@ export function Player({
       onMouseMove={poke}
       onClick={poke}
     >
-      {/* Slide area — letterboxed 16:9 */}
       <div className="absolute inset-0 flex items-center justify-center">
         <div
           key={slide.id}
@@ -116,7 +150,6 @@ export function Player({
         </div>
       </div>
 
-      {/* Progress bar */}
       <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-white/5">
         <div
           className="h-full transition-all duration-300"
@@ -128,14 +161,29 @@ export function Player({
         <BrandMark size={28} />
       </div>
 
-      {/* Controls */}
+      {notes && slide.notes && (
+        <div
+          className="absolute left-5 bottom-20 max-w-md rounded-xl px-4 py-3 text-[13px] leading-relaxed z-20"
+          style={{
+            background: "rgba(10,11,13,0.88)",
+            border: "1px solid rgba(255,255,255,0.12)",
+            color: "rgba(255,255,255,0.82)",
+          }}
+        >
+          <div className="text-[10px] uppercase tracking-[0.16em] mb-1.5" style={{ color: theme.colors.accent }}>
+            Presenter notes
+          </div>
+          {slide.notes}
+        </div>
+      )}
+
       <div
-        className="absolute bottom-5 left-1/2 -translate-x-1/2 flex items-center gap-1 rounded-full px-2 py-1.5 transition-opacity duration-300 backdrop-blur-md"
+        className="absolute bottom-5 left-1/2 -translate-x-1/2 flex items-center gap-1 rounded-full px-2 py-1.5 transition-opacity duration-300 backdrop-blur-md z-20"
         style={{
           background: "rgba(10,11,13,0.75)",
           border: "1px solid rgba(255,255,255,0.1)",
-          opacity: controlsVisible ? 1 : 0,
-          pointerEvents: controlsVisible ? "auto" : "none",
+          opacity: controlsVisible || overview || help ? 1 : 0,
+          pointerEvents: controlsVisible || overview || help ? "auto" : "none",
         }}
       >
         <button
@@ -146,9 +194,13 @@ export function Player({
         >
           <ChevronLeft size={16} />
         </button>
-        <span className="text-xs text-white/70 tabular-nums px-2 min-w-[52px] text-center">
+        <button
+          className="text-xs text-white/70 tabular-nums px-2 min-w-[52px] text-center cursor-pointer hover:text-white"
+          onClick={() => setOverview((v) => !v)}
+          aria-label="Slide overview"
+        >
           {index + 1} / {slides.length}
-        </span>
+        </button>
         <button
           className="p-2 rounded-full hover:bg-white/10 transition-colors text-white/80 disabled:opacity-30 cursor-pointer"
           onClick={() => go(index + 1)}
@@ -158,6 +210,30 @@ export function Player({
           <ChevronRight size={16} />
         </button>
         <div className="w-px h-4 bg-white/15 mx-1" />
+        <button
+          className={`p-2 rounded-full hover:bg-white/10 transition-colors cursor-pointer ${overview ? "text-white" : "text-white/80"}`}
+          onClick={() => setOverview((v) => !v)}
+          aria-label="Grid overview"
+          title="Overview (Esc)"
+        >
+          <LayoutGrid size={15} />
+        </button>
+        <button
+          className={`p-2 rounded-full hover:bg-white/10 transition-colors cursor-pointer ${notes ? "text-white" : "text-white/80"}`}
+          onClick={() => setNotes((v) => !v)}
+          aria-label="Presenter notes"
+          title="Notes (N)"
+        >
+          <StickyNote size={15} />
+        </button>
+        <button
+          className={`p-2 rounded-full hover:bg-white/10 transition-colors cursor-pointer ${help ? "text-white" : "text-white/80"}`}
+          onClick={() => setHelp((v) => !v)}
+          aria-label="Keyboard help"
+          title="Help (?)"
+        >
+          <HelpCircle size={15} />
+        </button>
         <button
           className="p-2 rounded-full hover:bg-white/10 transition-colors text-white/80 cursor-pointer"
           onClick={toggleFullscreen}
@@ -185,19 +261,73 @@ export function Player({
         )}
       </div>
 
-      {/* Click zones for navigation on edges */}
-      <button
-        className="absolute left-0 top-0 bottom-10 w-[8%] cursor-w-resize opacity-0"
-        onClick={() => go(index - 1)}
-        aria-label="Previous"
-        tabIndex={-1}
-      />
-      <button
-        className="absolute right-0 top-0 bottom-10 w-[8%] cursor-e-resize opacity-0"
-        onClick={() => go(index + 1)}
-        aria-label="Next"
-        tabIndex={-1}
-      />
+      {!overview && (
+        <>
+          <button
+            className="absolute left-0 top-0 bottom-10 w-[8%] cursor-w-resize opacity-0"
+            onClick={() => go(index - 1)}
+            aria-label="Previous"
+            tabIndex={-1}
+          />
+          <button
+            className="absolute right-0 top-0 bottom-10 w-[8%] cursor-e-resize opacity-0"
+            onClick={() => go(index + 1)}
+            aria-label="Next"
+            tabIndex={-1}
+          />
+        </>
+      )}
+
+      {overview && (
+        <div
+          className="absolute inset-0 z-30 flex flex-col p-8"
+          style={{ background: "rgba(8,9,12,0.88)" }}
+          onClick={() => setOverview(false)}
+        >
+          <div className="text-white/70 text-[13px] mb-4">Where do you want to go?</div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 overflow-auto" onClick={(e) => e.stopPropagation()}>
+            {slides.map((s, i) => (
+              <button
+                key={s.id}
+                onClick={() => go(i)}
+                className={`text-left rounded-xl overflow-hidden border cursor-pointer ${
+                  i === index ? "border-white" : "border-white/15 hover:border-white/40"
+                }`}
+              >
+                <SlideRenderer slide={s} theme={theme} mode="thumb" />
+                <div className="px-2.5 py-1.5 text-[11px] text-white/70 truncate">
+                  {i + 1}. {s.name}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {help && (
+        <div
+          className="absolute inset-0 z-40 flex items-center justify-center p-6"
+          style={{ background: "rgba(8,9,12,0.72)" }}
+          onClick={() => setHelp(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl p-5 text-[13px] text-white/80"
+            style={{ background: "rgba(16,18,22,0.96)", border: "1px solid rgba(255,255,255,0.1)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-[15px] font-semibold text-white mb-3">How to drive this deck</div>
+            <ul className="space-y-1.5">
+              <li>→ / Space — next slide</li>
+              <li>← — previous slide</li>
+              <li>Esc / G — grid overview</li>
+              <li>N — presenter notes</li>
+              <li>F — fullscreen</li>
+              <li>? — this help</li>
+              <li>Click stats, charts, flip cards, flows, callouts, quizzes</li>
+            </ul>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

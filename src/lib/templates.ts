@@ -64,13 +64,14 @@ const b = { opacity: 1 as const, rotation: 0, z: 1 };
 const anim = (delay: number, type: "fade-up" | "zoom" | "slide-left" | "slide-right" = "fade-up") =>
   ({ type, delay, duration: 0.55 });
 
-function bg(from: string, to: string, angle = 148): SlideBackground {
+function bg(from: string, to: string, angle = 148, particles = false): SlideBackground {
   return {
     type: "gradient",
     gradientFrom: from,
     gradientTo: to,
     gradientAngle: angle,
     overlayOpacity: 0.5,
+    particles,
   };
 }
 
@@ -150,7 +151,7 @@ export const TEMPLATES: Template[] = [
             { id: "p1s2", type: "stat", x: 64, y: 47, w: 30, h: 22, ...b, props: { value: "3.1", prefix: "$", suffix: "M", label: "ARR, last twelve months", countUp: true, icon: "dollar-sign", trend: { direction: "up", value: "64%" } }, animation: anim(0.3, "zoom") },
             { id: "p1s3", type: "stat", x: 64, y: 72, w: 30, h: 20, ...b, props: { value: "18", suffix: " mo", label: "payback for buyers", countUp: true, icon: "target" }, animation: anim(0.4, "zoom") },
           ],
-          bg("#0b0d12", "#1a1408")
+          bg("#0b0d12", "#1a1408", 148, true)
         ),
         slide(
           "p2",
@@ -161,11 +162,12 @@ export const TEMPLATES: Template[] = [
             { id: "p2b", type: "stat", x: 6, y: 24, w: 28, h: 28, ...b, props: { value: "68", suffix: "%", label: "of sites wait 18+ months", countUp: true, icon: "target", trend: { direction: "up", value: "12%" } }, animation: anim(0, "zoom") },
             { id: "p2c", type: "stat", x: 36, y: 24, w: 28, h: 28, ...b, props: { value: "4.2", prefix: "$", suffix: "B", label: "lost to diesel each year", countUp: true, icon: "dollar-sign" }, animation: anim(0.12, "zoom") },
             { id: "p2d", type: "stat", x: 66, y: 24, w: 28, h: 28, ...b, props: { value: "3", suffix: "×", label: "slower than they need", countUp: true, icon: "trending-up" }, animation: anim(0.24, "zoom") },
-            { id: "p2e", type: "accordion", x: 6, y: 56, w: 88, h: 38, ...b, props: { items: [
+            { id: "p2e", type: "accordion", x: 6, y: 56, w: 88, h: 22, ...b, props: { items: [
               { title: "What the customer feels every day", content: "A plant manager in 10th of Ramadan is running diesel at 3am because the feeder tripped. That is the product." },
               { title: "Why incumbents fail", content: "Utilities sell connection queues. EPCs sell capex. Nobody sells uptime as a service." },
               { title: "Why this year", content: "Diesel is volatile, industrial load is growing, and C&I buyers will sign 15-year offtake if you remove the wait." },
             ] }, animation: anim(0.32) },
+            { id: "p2f", type: "callout", x: 6, y: 80, w: 88, h: 16, ...b, props: { kicker: "Where this is weak", title: "", body: "These figures are directional until you drop in your own market study. Treat them as a floor, not a ceiling.", variant: "weak", startOpen: false }, animation: anim(0.4) },
           ],
           bg("#0b0d12", "#141820")
         ),
@@ -180,9 +182,10 @@ export const TEMPLATES: Template[] = [
               { front: "Wedge", back: "Off-grid and weak-grid industrials first — the ones already burning diesel tonight.", icon: "target" },
               { front: "Moat", back: "Site data + offtake contracts + a construction crew that has already built 40MW in-country.", icon: "shield" },
             ] }, animation: anim(0.1) },
-            { id: "p3c", type: "comparison", x: 6, y: 60, w: 88, h: 34, ...b, props: { items: [
-              { title: "Status quo", points: ["18-month interconnection", "Capex on the buyer's books", "No one accountable for uptime"], highlighted: false },
-              { title: "With us", badge: "Recommended", points: ["Live in under 6 months", "OpEx, metered, measurable", "We get paid when they get power"], highlighted: true },
+            { id: "p3c", type: "flow", x: 6, y: 60, w: 88, h: 34, ...b, props: { steps: [
+              { label: "Diesel today", detail: "The site already burns fuel every night. That is the budget you are replacing." },
+              { label: "We build & own", detail: "No capex on their books. We carry construction, operations, and the interconnection fight." },
+              { label: "They buy kWh", detail: "A 15-year offtake. We get paid when they get power — not when a slide says we shipped." },
             ] }, animation: anim(0.22) },
           ],
           bg("#0b0d12", "#12161c")
@@ -232,7 +235,7 @@ export const TEMPLATES: Template[] = [
             { id: "p6c", type: "list", x: 50, y: 26, w: 44, h: 30, ...b, props: { items: ["Hire the founding sales pod", "Prove unit economics in one market", "Close two expansion sites"], ordered: false, marker: "check" }, animation: anim(0.12) },
             { id: "p6d", type: "quiz", x: 6, y: 60, w: 88, h: 34, ...b, props: { question: "What should an investor remember when they leave?", options: ["A vague vision and a long feature list", "A clear wedge, live proof, and a precise ask", "A market size slide with no buyer"], correctIndex: 1, explanation: "Wedge + proof + ask. Everything else is decoration." }, animation: anim(0.22) },
           ],
-          bg("#0b0d12", "#1a1408")
+          bg("#0b0d12", "#1a1408", 148, true)
         ),
       ],
     },
@@ -262,7 +265,7 @@ export const TEMPLATES: Template[] = [
             { id: "q1s2", type: "stat", x: 64, y: 48, w: 30, h: 22, ...b, props: { value: "38", suffix: "MW", label: "Capacity delivered", countUp: true, icon: "zap", trend: { direction: "up", value: "9%" } }, animation: anim(0.26, "zoom") },
             { id: "q1s3", type: "stat", x: 64, y: 74, w: 30, h: 18, ...b, props: { value: "97", suffix: "%", label: "Uptime", countUp: true, icon: "award" }, animation: anim(0.36, "zoom") },
           ],
-          bg("#0b0d12", "#1a1408")
+          bg("#0b0d12", "#1a1408", 148, true)
         ),
         slide(
           "q2",
@@ -336,7 +339,7 @@ export const TEMPLATES: Template[] = [
             { id: "k1s", type: "stat", x: 64, y: 28, w: 30, h: 28, ...b, props: { value: "90", suffix: " days", label: "to the first measurable outcome", countUp: true, icon: "calendar" }, animation: anim(0.2, "zoom") },
             { id: "k1s2", type: "stat", x: 64, y: 60, w: 30, h: 26, ...b, props: { value: "1", label: "number the sponsor will check", countUp: true, icon: "target" }, animation: anim(0.3, "zoom") },
           ],
-          bg("#0a1018", "#0d1828")
+          bg("#0a1018", "#0d1828", 148, true)
         ),
         slide(
           "k2",
@@ -411,7 +414,7 @@ export const TEMPLATES: Template[] = [
             { id: "o1s2", type: "stat", x: 64, y: 50, w: 30, h: 22, ...b, props: { value: "45", suffix: "k t", label: "CO₂ offset / year", countUp: true, icon: "leaf" }, animation: anim(0.28, "zoom") },
             { id: "o1s3", type: "stat", x: 64, y: 76, w: 30, h: 16, ...b, props: { value: "2011", label: "Founded in Zamalek", countUp: false, icon: "calendar" }, animation: anim(0.36, "zoom") },
           ],
-          bg("#0b0d12", "#1a1408")
+          bg("#0b0d12", "#1a1408", 148, true)
         ),
         slide(
           "o2",
@@ -482,7 +485,7 @@ export const TEMPLATES: Template[] = [
             { id: "e1s", type: "stat", x: 64, y: 28, w: 30, h: 28, ...b, props: { value: "12", suffix: " min", label: "Guided time", countUp: true, icon: "calendar" }, animation: anim(0.2, "zoom") },
             { id: "e1s2", type: "stat", x: 64, y: 60, w: 30, h: 26, ...b, props: { value: "1", label: "quiz before you leave", countUp: true, icon: "award" }, animation: anim(0.3, "zoom") },
           ],
-          bg("#f4f1ea", "#e4efe9")
+          bg("#f4f1ea", "#e4efe9", 148, true)
         ),
         slide(
           "e2",
@@ -563,7 +566,7 @@ export const TEMPLATES: Template[] = [
             { id: "s1s", type: "stat", x: 64, y: 28, w: 30, h: 28, ...b, props: { value: "4", label: "non-negotiables", countUp: true, icon: "shield" }, animation: anim(0.2, "zoom") },
             { id: "s1s2", type: "stat", x: 64, y: 60, w: 30, h: 26, ...b, props: { value: "100", suffix: "%", label: "must pass to enter", countUp: true, icon: "award" }, animation: anim(0.3, "zoom") },
           ],
-          bg("#14090a", "#1c0e10")
+          bg("#14090a", "#1c0e10", 148, true)
         ),
         slide(
           "s2",
@@ -631,7 +634,7 @@ export const TEMPLATES: Template[] = [
             { id: "m1s", type: "stat", x: 64, y: 28, w: 30, h: 28, ...b, props: { value: "1", label: "promise they can repeat", countUp: true, icon: "target" }, animation: anim(0.2, "zoom") },
             { id: "m1s2", type: "stat", x: 64, y: 60, w: 30, h: 26, ...b, props: { value: "30", suffix: " days", label: "from lock to readout", countUp: true, icon: "calendar" }, animation: anim(0.3, "zoom") },
           ],
-          bg("#120814", "#1a0c1c")
+          bg("#120814", "#1a0c1c", 148, true)
         ),
         slide(
           "m2",
@@ -708,7 +711,7 @@ export const TEMPLATES: Template[] = [
             { id: "r1s2", type: "stat", x: 64, y: 50, w: 30, h: 22, ...b, props: { value: "2.4", suffix: "×", label: "Finding two", countUp: true, icon: "trending-up" }, animation: anim(0.28, "zoom") },
             { id: "r1s3", type: "stat", x: 64, y: 76, w: 30, h: 16, ...b, props: { value: "14", suffix: " days", label: "Finding three", countUp: true, icon: "calendar" }, animation: anim(0.36, "zoom") },
           ],
-          bg("#eef2f7", "#e4ebf5")
+          bg("#eef2f7", "#e4ebf5", 148, true)
         ),
         slide(
           "r2",
@@ -777,7 +780,7 @@ export const TEMPLATES: Template[] = [
             { id: "w1s", type: "stat", x: 64, y: 28, w: 30, h: 28, ...b, props: { value: "90", suffix: " min", label: "on the clock", countUp: true, icon: "calendar" }, animation: anim(0.2, "zoom") },
             { id: "w1s2", type: "stat", x: 64, y: 60, w: 30, h: 26, ...b, props: { value: "1", label: "decision we owe the room", countUp: true, icon: "target" }, animation: anim(0.3, "zoom") },
           ],
-          bg("#07140f", "#0c1c14")
+          bg("#07140f", "#0c1c14", 148, true)
         ),
         slide(
           "w2",

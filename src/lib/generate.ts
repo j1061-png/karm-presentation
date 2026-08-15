@@ -43,7 +43,7 @@ export async function generatePlan(prompt: string, files: SourceFile[]): Promise
       { role: "system", content: planSystemPrompt() },
       {
         role: "user",
-        content: `Plan an interactive presentation for this request:\n\n"${prompt}"${sourceContext(files)}`,
+        content: `Plan a live interactive talk (not a static deck) for this request. Every content slide needs a widget the audience clicks or watches count — stats, charts, flow, cards, callout, quiz, or map.\n\n"${prompt}"${sourceContext(files)}`,
       },
     ],
     (raw) => PlanSchema.parse(extractJson(raw)),
@@ -75,7 +75,9 @@ Theme: ${JSON.stringify(plan.theme)}
 Total slides in deck: ${plan.slides.length}
 Original request: "${prompt}"${sourceContext(files)}
 
-Design these slides now (return them in this exact order):
+Design these slides now as a live talk: kicker + editorial headline + a widget the viewer must touch + a callout on any claim. Title/close get particles. Every slide gets speaker notes.
+
+Return them in this exact order:
 
 ${briefs}`,
       },
