@@ -213,7 +213,15 @@ function SlideInspector() {
               if (type === "theme") updateSlide(slide.id, { background: undefined });
               else if (type === "color")
                 updateSlide(slide.id, {
-                  background: { type: "color", color: theme.colors.background, gradientAngle: 135, overlayOpacity: 0.5, particles: false },
+                  background: {
+                    type: "color",
+                    color: theme.colors.background,
+                    gradientAngle: 135,
+                    overlayOpacity: 0.5,
+                    particles: false,
+                    particleDensity: 46,
+                    particleSpeed: 1,
+                  },
                 });
               else
                 updateSlide(slide.id, {
@@ -224,6 +232,8 @@ function SlideInspector() {
                     gradientAngle: 135,
                     overlayOpacity: 0.5,
                     particles: false,
+                    particleDensity: 46,
+                    particleSpeed: 1,
                   },
                 });
             }}

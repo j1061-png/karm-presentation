@@ -87,6 +87,18 @@ RULES — this deck is judged like a designed keynote, not a slideshow template:
  */
 export type GenerationMode = "creative" | "faithful";
 
+function interactivityInstructions(interactivity: "calm" | "balanced" | "vivid"): string {
+  if (interactivity === "calm") {
+    return `
+INTERACTIVITY — CALM: the user wants a quiet, static-feeling deck. Prefer stat, chart, cards, and simple lists as hero widgets. Avoid stacking multiple click-to-reveal gimmicks (quiz + flipcards + accordion) — at most one gentle interaction per slide, and it's fine for several slides to have none beyond hover.`;
+  }
+  if (interactivity === "vivid") {
+    return `
+INTERACTIVITY — VIVID: the user wants a lively, playful deck. Favor the most interactive widgets available (flipcards, quiz, tabs, accordion, timeline, flow) over plain stat/chart wherever the content supports it. It is fine for consecutive slides to both be highly interactive as long as the widget type still varies.`;
+  }
+  return "";
+}
+
 function modeInstructions(mode: GenerationMode): string {
   if (mode === "faithful") {
     return `
@@ -103,7 +115,8 @@ IMPORT MODE — INTERACTIVE (default): if source material was supplied, treat it
 export function planSystemPrompt(
   minSlides: number,
   maxSlides: number,
-  mode: GenerationMode = "creative"
+  mode: GenerationMode = "creative",
+  interactivity: "calm" | "balanced" | "vivid" = "balanced"
 ): string {
   return `You plan interactive presentations as JSON only. You are a presentation designer with taste, not a template filler — think keynote deck, not corporate slideshow.
 
@@ -122,14 +135,19 @@ suggestedComponents is the hero widget for that slide (stat, chart, flow, cards,
 THEME: pick colors that feel like a single considered palette, not defaults. background and surface should be close, muted tones (near-black/near-white with a whisper of hue, not pure #000/#fff); text/muted must have strong contrast against background; accent is one deliberate, saturated color that suits the subject (e.g. warm amber for energy/solar, deep teal for climate/water, violet for tech/AI, forest green for sustainability) — never leave it at a generic default unless the request is generic. accentText must be readable on top of accent.
 Slide names are editorial claims, not "Introduction" or "Agenda".
 ${modeInstructions(mode)}
+${interactivityInstructions(interactivity)}
 ${DESIGN_RULES}`;
 }
 
-export function slidesSystemPrompt(mode: GenerationMode = "creative"): string {
+export function slidesSystemPrompt(
+  mode: GenerationMode = "creative",
+  interactivity: "calm" | "balanced" | "vivid" = "balanced"
+): string {
   return `You design slides as JSON only. Never raw HTML except through the "embed" element type described below, and only when the rules for it apply.
 
 ${ELEMENT_REFERENCE}
 ${modeInstructions(mode)}
+${interactivityInstructions(interactivity)}
 ${DESIGN_RULES}
 ${FEW_SHOT}
 

@@ -399,6 +399,8 @@ export const SlideBackgroundSchema = z.object({
   overlayOpacity: z.number().min(0).max(1).default(0.5),
   /** Live constellation / particle field — use on title and thesis slides. */
   particles: z.boolean().default(false),
+  particleDensity: z.number().min(0).max(160).default(46),
+  particleSpeed: z.number().min(0.2).max(3).default(1),
 });
 export type SlideBackground = z.infer<typeof SlideBackgroundSchema>;
 
@@ -417,6 +419,8 @@ export const PresentationSchema = z.object({
   title: z.string().default("Untitled presentation"),
   description: z.string().default(""),
   theme: ThemeSchema.default({}),
+  /** How much motion/particle flourish this deck was generated with — see lib/interactivity.ts. */
+  interactivity: z.enum(["calm", "balanced", "vivid"]).default("balanced"),
   slides: z.array(SlideSchema).min(1),
   version: z.number().int().default(1),
   createdAt: z.string(),

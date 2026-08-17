@@ -9,8 +9,10 @@ import {
 import { aiEdit, getPresentation } from "@/lib/api";
 import { EFFORT, EFFORT_LEVELS, parseEffort, type Effort } from "@/lib/effort";
 import type { GenerationMode } from "@/lib/prompts";
+import { parseInteractivity, type InteractivityLevel } from "@/lib/interactivity";
 import { ATTACH_ACCEPT, useAttachments } from "@/lib/use-attachments";
 import { FileChips } from "@/components/chat/FileChips";
+import { InteractivityPicker } from "./InteractivityPicker";
 import { SlideRenderer } from "@/components/renderer/SlideRenderer";
 import type { Presentation } from "@/lib/schema";
 
@@ -57,6 +59,7 @@ export function Composer({
   const [editing, setEditing] = useState(false);
   const [effort, setEffort] = useState<Effort>("standard");
   const [importMode, setImportMode] = useState<GenerationMode>("creative");
+  const [interactivity, setInteractivity] = useState<InteractivityLevel>("balanced");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [activeDoc, setActiveDoc] = useState<Presentation | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -75,6 +78,7 @@ export function Composer({
   useEffect(() => {
     try {
       setEffort(parseEffort(localStorage.getItem("pk-effort")));
+      setInteractivity(parseInteractivity(localStorage.getItem("pk-interactivity")));
     } catch {
       /* ignore */
     }
@@ -184,6 +188,7 @@ export function Composer({
           files: attached,
           effort,
           mode: attached.length > 0 ? importMode : "creative",
+          interactivity,
         }),
         signal: controller.signal,
       });
@@ -386,6 +391,22 @@ export function Composer({
         }`}
         style={{ boxShadow: "0 2px 12px var(--shadow-color)" }}
       >
+        {!activeDoc && !busy && (
+          <div className="px-4 pt-3.5">
+            <div className="text-[11px] text-text-tertiary mb-1.5">How interactive should it feel?</div>
+            <InteractivityPicker
+              value={interactivity}
+              onChange={(v) => {
+                setInteractivity(v);
+                try {
+                  localStorage.setItem("pk-interactivity", v);
+                } catch {
+                  /* ignore */
+                }
+              }}
+            />
+          </div>
+        )}
         {!activeDoc && files.length > 0 && (
           <div className="flex items-center gap-2 px-4 pt-3.5">
             <span className="text-[11px] text-text-tertiary flex-shrink-0">From these files:</span>

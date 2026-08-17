@@ -9,13 +9,17 @@ import { useEffect, useRef } from "react";
 export function ParticleField({
   color,
   density = 46,
+  speed = 1,
 }: {
   color: string;
   density?: number;
+  /** Multiplier on drift velocity — the "vivid" interactivity level runs faster. */
+  speed?: number;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
+    if (density <= 0) return;
     const canvas = ref.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -27,8 +31,8 @@ export function ParticleField({
     const nodes = Array.from({ length: density }, () => ({
       x: Math.random(),
       y: Math.random(),
-      vx: (Math.random() - 0.5) * 0.00018,
-      vy: (Math.random() - 0.5) * 0.00018,
+      vx: (Math.random() - 0.5) * 0.00018 * speed,
+      vy: (Math.random() - 0.5) * 0.00018 * speed,
     }));
 
     let frame = 0;
@@ -98,7 +102,9 @@ export function ParticleField({
       cancelAnimationFrame(frame);
       ro.disconnect();
     };
-  }, [color, density]);
+  }, [color, density, speed]);
+
+  if (density <= 0) return null;
 
   return (
     <canvas

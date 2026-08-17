@@ -100,7 +100,11 @@ export function SlideRenderer({
       }}
     >
       {slide.background?.particles && mode !== "thumb" && (
-        <ParticleField color={theme.colors.accent} />
+        <ParticleField
+          color={theme.colors.accent}
+          density={slide.background.particleDensity}
+          speed={slide.background.particleSpeed}
+        />
       )}
       {scale > 0 && (
         <div

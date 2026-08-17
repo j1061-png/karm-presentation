@@ -270,6 +270,10 @@ export function repairPresentation(input: unknown, existing?: Partial<Presentati
         : existing?.title ?? "Untitled presentation",
     description: typeof raw.description === "string" ? raw.description : "",
     theme: repairTheme(raw.theme ?? existing?.theme),
+    interactivity:
+      raw.interactivity === "calm" || raw.interactivity === "vivid" || raw.interactivity === "balanced"
+        ? raw.interactivity
+        : existing?.interactivity ?? "balanced",
     slides,
     version: 1,
     createdAt: existing?.createdAt ?? now,

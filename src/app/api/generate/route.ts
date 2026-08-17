@@ -43,7 +43,8 @@ export async function POST(request: Request) {
           files,
           send,
           body?.effort,
-          body?.mode
+          body?.mode,
+          body?.interactivity
         );
         await savePresentation(user.id, presentation);
         send({ stage: "complete", presentationId: presentation.id });

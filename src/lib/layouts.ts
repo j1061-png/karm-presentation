@@ -1,5 +1,6 @@
 import { nanoid } from "nanoid";
 import type { Slide, SlideElement, Theme } from "./schema";
+import { INTERACTIVITY, type InteractivityLevel } from "./interactivity";
 
 /**
  * Snap generated slides onto proven 16:9 layouts. The model is bad at
@@ -164,7 +165,14 @@ function fallbackCards(slide: Slide): SlideElement {
  * Re-place a repaired slide onto a known-good layout. Content is preserved;
  * coordinates, heading sizes, kickers, and atmosphere are corrected.
  */
-export function layoutSlide(slide: Slide, index: number, total: number, theme: Theme): Slide {
+export function layoutSlide(
+  slide: Slide,
+  index: number,
+  total: number,
+  theme: Theme,
+  interactivity: InteractivityLevel = "balanced"
+): Slide {
+  const cfg = INTERACTIVITY[interactivity];
   const kind = classify(slide, index, total);
   const kicker = ensureKicker(slide, theme);
   const heading = ensureHeading(slide);
@@ -178,13 +186,17 @@ export function layoutSlide(slide: Slide, index: number, total: number, theme: T
 
   const placed: SlideElement[] = [blob(`${slide.id}-blob`, theme.colors.accent)];
   const firstLast = index === 0 || index === total - 1;
+  const showParticles =
+    cfg.particleFrequency === "all" || (cfg.particleFrequency === "bookend" && firstLast);
   const background = {
     type: "gradient" as const,
     gradientFrom: theme.colors.background,
     gradientTo: theme.colors.surface,
     gradientAngle: 148,
     overlayOpacity: 0.5,
-    particles: firstLast,
+    particles: showParticles,
+    particleDensity: cfg.particleDensity,
+    particleSpeed: cfg.particleSpeed,
   };
 
   if (kind === "title") {
@@ -250,15 +262,35 @@ export function layoutSlide(slide: Slide, index: number, total: number, theme: T
   // them so they cannot overlap. Content already lives in the hero widget.
   void seen;
 
+  // Pace entrance animations to the chosen interactivity level (vivid = snappier).
+  const paced = placed.map((el) =>
+    el.animation && el.animation.type !== "none"
+      ? {
+          ...el,
+          animation: {
+            ...el.animation,
+            duration: Math.round(Math.max(0.15, el.animation.duration * cfg.animationSpeed) * 100) / 100,
+            delay: Math.round(el.animation.delay * cfg.animationSpeed * 100) / 100,
+          },
+        }
+      : el
+  );
+
   return {
     ...slide,
     transition: slide.transition ?? "fade",
     background,
-    elements: placed,
+    elements: paced,
   };
 }
 
-export function fallbackSlide(name: string, goal: string, index: number, theme: Theme): Slide {
+export function fallbackSlide(
+  name: string,
+  goal: string,
+  index: number,
+  theme: Theme,
+  interactivity: InteractivityLevel = "balanced"
+): Slide {
   const id = nanoid(8);
   const slide: Slide = {
     id,
@@ -298,5 +330,5 @@ export function fallbackSlide(name: string, goal: string, index: number, theme: 
     ],
     notes: goal,
   };
-  return layoutSlide(slide, index, Math.max(index + 1, 3), theme);
+  return layoutSlide(slide, index, Math.max(index + 1, 3), theme, interactivity);
 }

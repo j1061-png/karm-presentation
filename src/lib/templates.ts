@@ -72,6 +72,8 @@ function bg(from: string, to: string, angle = 148, particles = false): SlideBack
     gradientAngle: angle,
     overlayOpacity: 0.5,
     particles,
+    particleDensity: 46,
+    particleSpeed: 1,
   };
 }
 
@@ -134,6 +136,7 @@ export const TEMPLATES: Template[] = [
       description: "Interactive investor pitch",
       theme: dark("#f5a623", "Karm Dark"),
       version: 1,
+      interactivity: "balanced" as const,
       slides: [
         slide(
           "p1",
@@ -251,6 +254,7 @@ export const TEMPLATES: Template[] = [
       description: "Internal QBR",
       theme: dark("#f5a623", "Karm Dark"),
       version: 1,
+      interactivity: "balanced" as const,
       slides: [
         slide(
           "q1",
@@ -326,6 +330,7 @@ export const TEMPLATES: Template[] = [
       description: "Kickoff deck",
       theme: dark("#4f9cf9", "Studio Blue", { accentText: "#071018" }),
       version: 1,
+      interactivity: "balanced" as const,
       slides: [
         slide(
           "k1",
@@ -400,6 +405,7 @@ export const TEMPLATES: Template[] = [
       description: "Who we are",
       theme: dark("#f5a623", "Karm Dark"),
       version: 1,
+      interactivity: "balanced" as const,
       slides: [
         slide(
           "o1",
@@ -472,6 +478,7 @@ export const TEMPLATES: Template[] = [
       description: "Interactive lesson",
       theme: light("#0f7a72", "Lesson", { accentText: "#ffffff" }),
       version: 1,
+      interactivity: "balanced" as const,
       slides: [
         slide(
           "e1",
@@ -553,6 +560,7 @@ export const TEMPLATES: Template[] = [
       description: "Interactive safety briefing",
       theme: dark("#f0554d", "Safety", { accentText: "#fff" }),
       version: 1,
+      interactivity: "balanced" as const,
       slides: [
         slide(
           "s1",
@@ -621,6 +629,7 @@ export const TEMPLATES: Template[] = [
       description: "Marketing campaign",
       theme: dark("#e66df2", "Campaign", { accentText: "#1a0b1c" }),
       version: 1,
+      interactivity: "balanced" as const,
       slides: [
         slide(
           "m1",
@@ -697,6 +706,7 @@ export const TEMPLATES: Template[] = [
       description: "Findings readout",
       theme: light("#1d4ed8", "Report", { accentText: "#ffffff", background: "#eef2f7" }),
       version: 1,
+      interactivity: "balanced" as const,
       slides: [
         slide(
           "r1",
@@ -767,6 +777,7 @@ export const TEMPLATES: Template[] = [
       description: "Facilitated session",
       theme: dark("#43c98a", "Workshop", { accentText: "#062016" }),
       version: 1,
+      interactivity: "balanced" as const,
       slides: [
         slide(
           "w1",
