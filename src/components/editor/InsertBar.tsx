@@ -6,7 +6,7 @@ import {
   Type, AlignLeft, List, Quote, ImageIcon, Hash, BarChart3, Table2,
   Columns3, GitCommitHorizontal, PanelTop, ListCollapse, HelpCircle,
   Percent, MousePointerClick, Square, MapPin, Play, Repeat, Paperclip,
-  MessageSquareWarning, Workflow, LayoutGrid,
+  MessageSquareWarning, Workflow, LayoutGrid, Code2,
 } from "lucide-react";
 
 const COMPONENTS: { type: string; label: string; icon: typeof Type }[] = [
@@ -32,6 +32,7 @@ const COMPONENTS: { type: string; label: string; icon: typeof Type }[] = [
   { type: "shape", label: "Shape", icon: Square },
   { type: "map", label: "Map", icon: MapPin },
   { type: "video", label: "Video", icon: Play },
+  { type: "embed", label: "Custom HTML", icon: Code2 },
 ];
 
 /** Sensible starter element for each type, positioned at (x,y) percent. */
@@ -165,6 +166,13 @@ export function createDefaultElement(type: string, x: number, y: number): SlideE
       return { ...base, type, w: 44, h: 44, props: { lat: 24.0889, lng: 32.8998, zoom: 6, label: "Aswan, Egypt" } } as SlideElement;
     case "video":
       return { ...base, type, w: 44, h: 44, props: { provider: "youtube", videoId: "" } } as SlideElement;
+    case "embed":
+      return {
+        ...base, type, w: 60, h: 46,
+        props: {
+          html: `<div style="font-family:sans-serif;padding:24px;color:#111">\n  <h2 style="margin:0 0 8px">Custom HTML</h2>\n  <p style="margin:0;color:#555">Edit this in the Design panel. Scripts never run — this renders in a sandboxed frame.</p>\n</div>`,
+        },
+      } as SlideElement;
     default:
       return null;
   }
@@ -207,7 +215,7 @@ export function InsertBar({
             <input
               type="file"
               multiple
-              accept=".pdf,.docx,.pptx,.csv,.tsv,.txt,.md,.json,.png,.jpg,.jpeg,.gif,.webp"
+              accept=".pdf,.docx,.pptx,.csv,.tsv,.txt,.md,.json,.png,.jpg,.jpeg,.gif,.webp,.html,.htm"
               className="hidden"
               onChange={(e) => {
                 if (e.target.files?.length) onAttach(e.target.files);

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { SlideElement, Theme } from "@/lib/schema";
 import { ChartView } from "./ChartView";
 import { getIcon } from "./icons";
+import { sanitizeEmbedHtml } from "@/lib/sanitize-html";
 import {
   Check, ArrowRight, ChevronDown, TrendingUp, TrendingDown, Minus,
   ImageIcon, Play, MapPin, Repeat,
@@ -248,6 +249,26 @@ export function ElementView({ el, ctx }: { el: SlideElement; ctx: RenderContext 
         </div>
       );
 
+    case "embed":
+      return (
+        <iframe
+          className="w-full h-full"
+          style={{
+            border: 0,
+            borderRadius: s.borderRadius ?? theme.radius,
+            background: s.background ?? "#ffffff",
+          }}
+          srcDoc={
+            sanitizeEmbedHtml(el.props.html) ||
+            `<div style="font-family:sans-serif;color:#8a8f98;display:flex;align-items:center;justify-content:center;height:100%;font-size:13px">Empty embed — add HTML in the Design panel.</div>`
+          }
+          title="Embedded HTML"
+          sandbox="allow-same-origin"
+          referrerPolicy="no-referrer"
+          loading="lazy"
+        />
+      );
+
     case "comparison":
       return (
         <div className="w-full h-full flex gap-4">
@@ -260,6 +281,11 @@ export function ElementView({ el, ctx }: { el: SlideElement; ctx: RenderContext 
                 background: surface,
                 padding: s.padding ?? 22,
                 border: item.highlighted ? `1.5px solid ${theme.colors.accent}` : `1px solid ${border}`,
+                boxShadow: s.shadow
+                  ? "0 12px 40px rgba(0,0,0,0.35)"
+                  : live
+                    ? "0 1px 2px rgba(0,0,0,0.14)"
+                    : undefined,
                 transform: undefined,
               }}
             >
@@ -463,6 +489,11 @@ function StatView({
         background: s.background ?? theme.colors.surface,
         padding: s.padding ?? 22,
         border: `1px solid ${theme.mode === "dark" ? "rgba(255,255,255,0.09)" : "rgba(0,0,0,0.1)"}`,
+        boxShadow: s.shadow
+          ? "0 12px 40px rgba(0,0,0,0.35)"
+          : mode === "live"
+            ? "0 1px 2px rgba(0,0,0,0.14)"
+            : undefined,
       }}
     >
       {Icon && (
@@ -539,6 +570,7 @@ function FlipCardsView({
                   background: s.background ?? theme.colors.surface,
                   border: `1px solid ${border}`,
                   borderRadius: s.borderRadius ?? theme.radius,
+                  boxShadow: mode === "live" ? "0 1px 2px rgba(0,0,0,0.14)" : undefined,
                 }}
               >
                 {Icon && (
@@ -921,6 +953,7 @@ function CardsView({
               border: `1px solid ${on ? theme.colors.accent : border}`,
               borderRadius: s.borderRadius ?? theme.radius,
               padding: "1.1em",
+              boxShadow: mode === "live" ? "0 1px 2px rgba(0,0,0,0.14)" : undefined,
             }}
             onClick={(e) => {
               e.stopPropagation();

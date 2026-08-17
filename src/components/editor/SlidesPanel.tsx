@@ -56,7 +56,7 @@ function SlideThumb({
           <button
             {...attributes}
             {...listeners}
-            className="p-0.5 text-text-tertiary opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing transition-opacity touch-none"
+            className="p-0.5 text-text-tertiary opacity-100 md:opacity-0 md:group-hover:opacity-100 cursor-grab active:cursor-grabbing transition-opacity touch-none"
             aria-label="Drag to reorder"
           >
             <GripVertical size={11} />
@@ -79,8 +79,8 @@ function SlideThumb({
         </div>
       </div>
 
-      {/* Hover actions */}
-      <div className="absolute right-4 top-1.5 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      {/* Hover actions — always visible on touch devices */}
+      <div className="absolute right-4 top-1.5 flex flex-col gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
         <button
           onClick={onDuplicate}
           className="p-1.5 rounded-md bg-black/60 backdrop-blur-sm text-white/80 hover:text-white border border-white/10 cursor-pointer"
@@ -104,7 +104,7 @@ function SlideThumb({
   );
 }
 
-export function SlidesPanel({ width = 200 }: { width?: number }) {
+export function SlidesPanel({ width = 200 }: { width?: number | string }) {
   const presentation = useEditorStore((s) => s.presentation);
   const selectedSlideId = useEditorStore((s) => s.selectedSlideId);
   const selectSlide = useEditorStore((s) => s.selectSlide);

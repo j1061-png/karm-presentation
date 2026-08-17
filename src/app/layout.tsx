@@ -26,6 +26,7 @@ export const viewport = {
   ],
   width: "device-width",
   initialScale: 1,
+  viewportFit: "cover",
 };
 
 /** Applies the saved theme before first paint to avoid a flash. */

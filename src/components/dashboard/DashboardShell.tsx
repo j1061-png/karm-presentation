@@ -13,7 +13,7 @@ import { NotificationsBell } from "./NotificationsBell";
 import { SettingsPanel } from "./SettingsPanel";
 import { TemplateGallery } from "./TemplateGallery";
 import {
-  Search, Plus, Loader2, Presentation,
+  Search, Plus, Loader2, Presentation, Menu,
 } from "lucide-react";
 
 type SortKey = "updated" | "created" | "title";
@@ -32,6 +32,7 @@ export function DashboardShell({
   const [toast, setToast] = useState<string | null>(null);
   const [recentExpanded, setRecentExpanded] = useState(false);
   const [threadActive, setThreadActive] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -162,6 +163,8 @@ export function DashboardShell({
         recents={metas}
         user={user}
         onSignOut={() => void signOut()}
+        mobileOpen={mobileNavOpen}
+        onMobileClose={() => setMobileNavOpen(false)}
       />
 
       <main
@@ -169,7 +172,15 @@ export function DashboardShell({
           threadActive && view === "home" ? "overflow-hidden" : "overflow-y-auto"
         }`}
       >
-        <div className="h-12 flex items-center justify-end px-4 flex-shrink-0">
+        <div className="h-12 flex items-center justify-between px-3 md:px-4 flex-shrink-0 safe-top">
+          <button
+            onClick={() => setMobileNavOpen(true)}
+            className="md:hidden p-2 -ml-1 rounded-lg text-text-secondary hover:text-text hover:bg-surface-2 transition-colors cursor-pointer"
+            aria-label="Open menu"
+          >
+            <Menu size={18} />
+          </button>
+          <span className="flex-1 md:hidden" />
           <NotificationsBell onChanged={() => void refresh()} />
         </div>
 
