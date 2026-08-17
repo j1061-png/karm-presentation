@@ -10,8 +10,8 @@ Canvas is 1280×16:9. Use the EXACT coordinates from the layout you pick. Do not
 LAYOUTS — pick one per slide and copy its boxes:
 - "title": kicker text (6,12,50,5), heading (6,20,54,26), stake text (6,50,50,12), button (6,78,22,9), three stats at (64,22,30,22) (64,47,30,22) (64,72,30,20)
 - "stats-chart": kicker (6,5,50,4), heading (6,10,88,8), three stats (6,22,28,24) (36,22,28,24) (66,22,28,24), chart (6,50,88,44)
-- "widget": kicker (6,5,50,4), heading (6,10,88,8), ONE big interactive (6,22,88,70) — chart, tabs, flipcards, quiz, flow, cards, timeline, comparison, accordion, or map
-- "split": kicker + heading as widget, left widget (6,22,54,70), right widget (64,22,30,70)
+- "widget": kicker (6,5,50,4), heading (6,10,88,8), ONE big interactive (6,22,88,70) — chart, tabs, flipcards, quiz, flow, cards, timeline, comparison, accordion, map, or image
+- "split": kicker + heading as widget, left widget (6,22,54,70), right widget (64,22,30,70) — an image is a natural fit for one side of a split slide
 - "close": kicker (6,8,50,5), heading (6,14,88,12), cards or quiz (6,30,88,52)
 
 PROPS:
@@ -32,6 +32,7 @@ PROPS:
 - button: { "label", "action":"next-slide", "variant":"primary" }
 - map: { "lat", "lng", "zoom": 5, "label" }
 - table: { "columns":[string], "rows":[[string]], "compact": false }
+- image: { "src": "https://...", "alt": "short description", "fit": "cover|contain" } — src MUST be a URL from the SOURCE MATERIAL below (a line like "User-provided image available at URL: ..."). NEVER invent, guess, or hallucinate an image URL — if you have no real URL for what you want to show, use a different widget instead (icon, stat, shape) rather than a fake image element.
 - embed: { "html": "<div>...</div>" } — raw HTML/CSS rendered in a sandboxed frame (no scripts ever run). Use ONLY when the user supplied their own HTML/CSS and asked to keep it as-is, or explicitly asked for a "custom HTML" block. Never use embed to sidestep the structured element types for ordinary content.
 
 SLIDE: { "id", "name", "layout": "title|stats-chart|widget|split|close", "transition":"fade", "background": {"type":"gradient","gradientFrom":"#0b0d12","gradientTo":"#161a22","gradientAngle":148,"particles":false}, "elements":[...], "notes":"what the presenter says" }
@@ -74,6 +75,7 @@ RULES — this deck is judged like a designed keynote, not a slideshow template:
 - COLOR: dark theme unless the topic clearly calls for light. Pick ONE accent color for the whole deck and use it sparingly — for the kicker, the hero number, one highlighted state — never as a background flood. Background/surface colors should sit close in tone (a restrained gradient of 1-2 steps), not clash.
 - SPACING: respect the whitespace already built into each layout's coordinates — do not shrink boxes to cram in extra copy. Trim the copy instead.
 - Charts: 4 series maximum, legible labels, only show a legend when there is more than one series.
+- IMAGES: if the SOURCE MATERIAL lists one or more "User-provided image available at URL: ..." lines, you MUST place every one of them on some slide as an "image" element (title slide, a "split" side panel, or a "widget" hero are all good spots) — a deck the user attached photos to should visibly include those photos. Do not repeat the same image URL on more than one slide. Never fabricate an image URL that wasn't given to you.
 - notes on every slide (2 sentences: what the presenter says + what to physically point at).
 `;
 
@@ -130,7 +132,7 @@ Respond with ONLY:
 }
 
 Plan ${minSlides}-${maxSlides} slides. Arc: title → numbers or stake → mechanism or evidence → argument → close. Every slide's "goal" is a specific claim it must prove, not a topic.
-suggestedComponents is the hero widget for that slide (stat, chart, flow, cards, flipcards, tabs, quiz, timeline, comparison, map) — vary these across the deck so no two adjacent slides use the same widget.
+suggestedComponents is the hero widget for that slide (stat, chart, flow, cards, flipcards, tabs, quiz, timeline, comparison, map, image) — vary these across the deck so no two adjacent slides use the same widget. If the user attached photos (SOURCE MATERIAL will list "User-provided image available at URL: ..." lines), give at least one of them an "image" slide slot — do not let attached photos go unused.
 
 THEME: pick colors that feel like a single considered palette, not defaults. background and surface should be close, muted tones (near-black/near-white with a whisper of hue, not pure #000/#fff); text/muted must have strong contrast against background; accent is one deliberate, saturated color that suits the subject (e.g. warm amber for energy/solar, deep teal for climate/water, violet for tech/AI, forest green for sustainability) — never leave it at a generic default unless the request is generic. accentText must be readable on top of accent.
 Slide names are editorial claims, not "Introduction" or "Agenda".

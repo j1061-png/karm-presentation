@@ -4,6 +4,8 @@ import { create } from "zustand";
 import { temporal } from "zundo";
 import { nanoid } from "nanoid";
 import type { Presentation, Slide, SlideElement, Theme } from "@/lib/schema";
+import { layoutSlide } from "@/lib/layouts";
+import type { InteractivityLevel } from "@/lib/interactivity";
 
 export type SaveState = "saved" | "saving" | "dirty" | "error";
 
@@ -21,6 +23,7 @@ interface EditorState {
   updateTheme: (
     patch: Omit<Partial<Theme>, "colors"> & { colors?: Partial<Theme["colors"]> }
   ) => void;
+  setInteractivity: (level: InteractivityLevel) => void;
 
   updateSlide: (slideId: string, patch: Partial<Slide>) => void;
   addSlide: (afterId?: string) => void;
@@ -102,6 +105,16 @@ export const useEditorStore = create<EditorState>()(
             },
           }),
         });
+      },
+
+      setInteractivity: (level) => {
+        const p = get().presentation;
+        if (!p) return;
+        // Re-lay out every slide so its particle background and entrance-
+        // animation pacing pick up the new level immediately (same logic
+        // used at generation time), not just future AI edits.
+        const slides = p.slides.map((s, i) => layoutSlide(s, i, p.slides.length, p.theme, level));
+        set({ presentation: touch({ ...p, interactivity: level, slides }) });
       },
 
       updateSlide: (slideId, patch) => {
