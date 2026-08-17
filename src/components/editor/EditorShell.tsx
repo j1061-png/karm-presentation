@@ -339,8 +339,23 @@ export function EditorShell({
         <div key="edit-mobile" className="flex-1 min-h-0 flex flex-col pk-panel-swap">
           <Canvas />
 
-          {/* Bottom toolbar: open Slides / AI+Design as drawers */}
+          {/* Bottom toolbar: undo/redo (hidden in the header on phones) + drawers */}
           <div className="flex items-stretch border-t border-border bg-bg flex-shrink-0 safe-bottom">
+            <button
+              onClick={() => useEditorStore.temporal.getState().undo()}
+              className="px-4 flex items-center justify-center text-text-secondary active:bg-surface-2 transition-colors cursor-pointer"
+              aria-label="Undo"
+            >
+              <Undo2 size={16} />
+            </button>
+            <button
+              onClick={() => useEditorStore.temporal.getState().redo()}
+              className="px-4 flex items-center justify-center text-text-secondary active:bg-surface-2 transition-colors cursor-pointer"
+              aria-label="Redo"
+            >
+              <Redo2 size={16} />
+            </button>
+            <div className="w-px bg-border" />
             <button
               onClick={() => setMobileDrawer("slides")}
               className="flex-1 flex items-center justify-center gap-2 py-3 text-[13px] font-medium text-text-secondary hover:text-text active:bg-surface-2 transition-colors cursor-pointer"

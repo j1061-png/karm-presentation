@@ -13,11 +13,52 @@ export function InteractivityPicker({
   value,
   onChange,
   disabled,
+  compact = false,
 }: {
   value: InteractivityLevel;
   onChange: (v: InteractivityLevel) => void;
   disabled?: boolean;
+  /**
+   * Slim single-row variant. The full preview cards need ~145px of height and
+   * ~110px of width each to stay legible; on a phone that swallows the top of
+   * the screen and truncates every hint mid-word, so we drop to labelled pills.
+   */
+  compact?: boolean;
 }) {
+  if (compact) {
+    return (
+      <div className="flex items-center rounded-full border border-border p-0.5 w-full">
+        {INTERACTIVITY_LEVELS.map((key) => {
+          const cfg = INTERACTIVITY[key];
+          const selected = value === key;
+          return (
+            <button
+              key={key}
+              type="button"
+              disabled={disabled}
+              onClick={() => onChange(key)}
+              title={cfg.hint}
+              className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1 rounded-full text-[11.5px] transition-colors cursor-pointer disabled:opacity-50 ${
+                selected ? "font-medium" : "text-text-secondary"
+              }`}
+              style={
+                selected
+                  ? { background: `color-mix(in srgb, ${cfg.color} 18%, transparent)`, color: cfg.color }
+                  : undefined
+              }
+            >
+              <span
+                className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                style={{ background: cfg.color }}
+              />
+              {cfg.label}
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
   return (
     <div className="grid grid-cols-3 gap-2">
       {INTERACTIVITY_LEVELS.map((key) => {

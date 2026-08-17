@@ -187,13 +187,13 @@ export function DashboardShell({
         {/* -------------------------------------------------- home view */}
         {view === "home" && (
           <div
-            className={`flex-1 flex flex-col px-6 ${
-              threadActive ? "min-h-0 pb-4" : "items-center justify-center py-12"
+            className={`flex-1 flex flex-col px-4 sm:px-6 ${
+              threadActive ? "min-h-0 pb-4" : "items-center justify-center py-8 sm:py-12"
             }`}
           >
             <div className={`w-full ${threadActive ? "flex-1 min-h-0 flex flex-col max-w-[760px] mx-auto" : "max-w-[680px]"}`}>
               {!threadActive && (
-                <h1 className="text-[26px] font-semibold tracking-tight text-center mb-7 animate-rise">
+                <h1 className="text-[21px] sm:text-[26px] font-semibold tracking-tight text-center text-balance mb-5 sm:mb-7 animate-rise">
                   What do you want to create{firstName ? `, ${firstName}` : ""}?
                 </h1>
               )}
