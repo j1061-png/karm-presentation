@@ -78,12 +78,13 @@ function TextInput({
 }
 
 function TextArea({
-  value, onChange, rows = 3, placeholder,
+  value, onChange, rows = 3, placeholder, mono = false,
 }: {
   value: string;
   onChange: (v: string) => void;
   rows?: number;
   placeholder?: string;
+  mono?: boolean;
 }) {
   return (
     <textarea
@@ -91,7 +92,7 @@ function TextArea({
       rows={rows}
       placeholder={placeholder}
       onChange={(e) => onChange(e.target.value)}
-      className="bg-surface-2 border border-border rounded-md px-2.5 py-2 text-[12.5px] outline-none focus:border-border-strong w-full resize-y leading-relaxed"
+      className={`bg-surface-2 border border-border rounded-md px-2.5 py-2 text-[12.5px] outline-none focus:border-border-strong w-full resize-y leading-relaxed ${mono ? "font-mono text-[11.5px]" : ""}`}
     />
   );
 }
@@ -938,6 +939,21 @@ function ElementPropsEditor({ element, slideId }: { element: SlideElement; slide
                 });
               if (cards.length >= 2) set({ cards });
             }}
+          />
+        </Section>
+      );
+
+    case "embed":
+      return (
+        <Section title="HTML">
+          <div className="text-[11px] text-text-tertiary -mb-1 leading-relaxed">
+            Raw HTML/CSS, rendered in a sandboxed frame — scripts never run, even if pasted in.
+          </div>
+          <TextArea
+            value={element.props.html}
+            rows={10}
+            onChange={(html) => set({ html })}
+            mono
           />
         </Section>
       );

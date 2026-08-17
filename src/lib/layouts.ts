@@ -62,12 +62,12 @@ function blob(id: string, fill: string): SlideElement {
   return {
     id,
     type: "shape",
-    x: 62,
-    y: -22,
-    w: 50,
-    h: 80,
+    x: 66,
+    y: -26,
+    w: 46,
+    h: 76,
     z: 0,
-    opacity: 0.14,
+    opacity: 0.09,
     rotation: 0,
     props: { shape: "circle", fill },
   };

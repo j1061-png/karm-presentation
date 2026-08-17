@@ -2,7 +2,10 @@ import { nanoid } from "nanoid";
 import { chatJson } from "./deepseek";
 import { EFFORT, parseEffort, type Effort } from "./effort";
 import { fallbackSlide, layoutSlide } from "./layouts";
-import { editSystemPrompt, planSystemPrompt, slidesSystemPrompt } from "./prompts";
+import {
+  editSystemPrompt, planSystemPrompt, slidesSystemPrompt,
+  type GenerationMode,
+} from "./prompts";
 import {
   AIEditResponseSchema,
   PlanSchema,
@@ -50,11 +53,16 @@ async function mapPool<T, R>(items: T[], concurrency: number, fn: (item: T, inde
   return out;
 }
 
-export async function generatePlan(prompt: string, files: SourceFile[], effort: Effort): Promise<Plan> {
+export async function generatePlan(
+  prompt: string,
+  files: SourceFile[],
+  effort: Effort,
+  mode: GenerationMode = "creative"
+): Promise<Plan> {
   const cfg = EFFORT[effort];
   const plan = await chatJson(
     [
-      { role: "system", content: planSystemPrompt(cfg.minSlides, cfg.maxSlides) },
+      { role: "system", content: planSystemPrompt(cfg.minSlides, cfg.maxSlides, mode) },
       {
         role: "user",
         content: `Plan a ${cfg.minSlides}–${cfg.maxSlides} slide interactive presentation for:\n\n"${prompt}"${sourceContext(files)}`,
@@ -79,7 +87,8 @@ async function generateSlideBatch(
   batch: { index: number; name: string; goal: string; suggestedComponents: string[] }[],
   prompt: string,
   files: SourceFile[],
-  effort: Effort
+  effort: Effort,
+  mode: GenerationMode = "creative"
 ): Promise<Slide[]> {
   const cfg = EFFORT[effort];
   const briefs = batch
@@ -92,7 +101,7 @@ async function generateSlideBatch(
 
   const parsed = await chatJson(
     [
-      { role: "system", content: slidesSystemPrompt() },
+      { role: "system", content: slidesSystemPrompt(mode) },
       {
         role: "user",
         content: `Presentation: "${plan.title}" — ${plan.description}
@@ -137,10 +146,12 @@ export async function generatePresentation(
   prompt: string,
   files: SourceFile[],
   onStage: (s: GenerationStage) => void,
-  effortInput: unknown = "standard"
+  effortInput: unknown = "standard",
+  modeInput: unknown = "creative"
 ): Promise<Presentation> {
   const effort = parseEffort(effortInput);
   const cfg = EFFORT[effort];
+  const mode: GenerationMode = modeInput === "faithful" ? "faithful" : "creative";
 
   onStage({
     stage: "analysing",
@@ -150,7 +161,7 @@ export async function generatePresentation(
   });
 
   onStage({ stage: "planning", detail: `${cfg.label} pass — structuring the narrative` });
-  const plan = await generatePlan(prompt, files, effort);
+  const plan = await generatePlan(prompt, files, effort, mode);
   const theme = repairTheme(plan.theme);
 
   onStage({
@@ -168,7 +179,7 @@ export async function generatePresentation(
 
   let done = 0;
   const results = await mapPool(batches, cfg.concurrency, async (batch) => {
-    const slides = await generateSlideBatch(plan, batch, prompt, files, effort);
+    const slides = await generateSlideBatch(plan, batch, prompt, files, effort, mode);
     done += batch.length;
     onStage({
       stage: "designing",

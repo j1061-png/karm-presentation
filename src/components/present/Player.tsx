@@ -32,6 +32,7 @@ export function Player({
   const [help, setHelp] = useState(false);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
 
   const slides = presentation.slides;
   const slide = slides[Math.min(index, slides.length - 1)];
@@ -126,6 +127,24 @@ export function Player({
       style={{ background: theme.colors.background }}
       onMouseMove={poke}
       onClick={poke}
+      onTouchStart={(e) => {
+        const t = e.touches[0];
+        touchStart.current = { x: t.clientX, y: t.clientY };
+        poke();
+      }}
+      onTouchEnd={(e) => {
+        const start = touchStart.current;
+        touchStart.current = null;
+        if (!start || overview) return;
+        const t = e.changedTouches[0];
+        const dx = t.clientX - start.x;
+        const dy = t.clientY - start.y;
+        // Horizontal swipe, not a scroll/tap: advance slides like a native deck.
+        if (Math.abs(dx) > 56 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+          if (dx < 0) go(index + 1);
+          else go(index - 1);
+        }
+      }}
     >
       <div className="absolute inset-0 flex items-center justify-center">
         <div
@@ -157,14 +176,18 @@ export function Player({
         />
       </div>
 
-      <div className="absolute bottom-5 left-5 pointer-events-none" style={{ opacity: controlsVisible ? 0.9 : 0.35 }}>
+      <div
+        className="absolute left-5 pointer-events-none hidden sm:block"
+        style={{ bottom: "calc(1.25rem + var(--safe-b))", opacity: controlsVisible ? 0.9 : 0.35 }}
+      >
         <BrandMark size={28} />
       </div>
 
       {notes && slide.notes && (
         <div
-          className="absolute left-5 bottom-20 max-w-md rounded-xl px-4 py-3 text-[13px] leading-relaxed z-20"
+          className="absolute left-3 sm:left-5 right-3 sm:right-auto max-w-md rounded-xl px-4 py-3 text-[13px] leading-relaxed z-20"
           style={{
+            bottom: "calc(5rem + var(--safe-b))",
             background: "rgba(10,11,13,0.88)",
             border: "1px solid rgba(255,255,255,0.12)",
             color: "rgba(255,255,255,0.82)",
@@ -178,8 +201,9 @@ export function Player({
       )}
 
       <div
-        className="absolute bottom-5 left-1/2 -translate-x-1/2 flex items-center gap-1 rounded-full px-2 py-1.5 transition-opacity duration-300 backdrop-blur-md z-20"
+        className="absolute left-1/2 -translate-x-1/2 flex items-center gap-0.5 sm:gap-1 rounded-full px-1.5 sm:px-2 py-1 sm:py-1.5 transition-opacity duration-300 backdrop-blur-md z-20 max-w-[94vw] overflow-x-auto"
         style={{
+          bottom: "calc(1.25rem + var(--safe-b))",
           background: "rgba(10,11,13,0.75)",
           border: "1px solid rgba(255,255,255,0.1)",
           opacity: controlsVisible || overview || help ? 1 : 0,
@@ -187,7 +211,7 @@ export function Player({
         }}
       >
         <button
-          className="p-2 rounded-full hover:bg-white/10 transition-colors text-white/80 disabled:opacity-30 cursor-pointer"
+          className="p-2.5 sm:p-2 rounded-full hover:bg-white/10 transition-colors text-white/80 disabled:opacity-30 cursor-pointer flex-shrink-0"
           onClick={() => go(index - 1)}
           disabled={index === 0}
           aria-label="Previous slide"
@@ -195,23 +219,23 @@ export function Player({
           <ChevronLeft size={16} />
         </button>
         <button
-          className="text-xs text-white/70 tabular-nums px-2 min-w-[52px] text-center cursor-pointer hover:text-white"
+          className="text-xs text-white/70 tabular-nums px-2 min-w-[52px] text-center cursor-pointer hover:text-white flex-shrink-0"
           onClick={() => setOverview((v) => !v)}
           aria-label="Slide overview"
         >
           {index + 1} / {slides.length}
         </button>
         <button
-          className="p-2 rounded-full hover:bg-white/10 transition-colors text-white/80 disabled:opacity-30 cursor-pointer"
+          className="p-2.5 sm:p-2 rounded-full hover:bg-white/10 transition-colors text-white/80 disabled:opacity-30 cursor-pointer flex-shrink-0"
           onClick={() => go(index + 1)}
           disabled={index === slides.length - 1}
           aria-label="Next slide"
         >
           <ChevronRight size={16} />
         </button>
-        <div className="w-px h-4 bg-white/15 mx-1" />
+        <div className="w-px h-4 bg-white/15 mx-1 flex-shrink-0" />
         <button
-          className={`p-2 rounded-full hover:bg-white/10 transition-colors cursor-pointer ${overview ? "text-white" : "text-white/80"}`}
+          className={`p-2.5 sm:p-2 rounded-full hover:bg-white/10 transition-colors cursor-pointer flex-shrink-0 ${overview ? "text-white" : "text-white/80"}`}
           onClick={() => setOverview((v) => !v)}
           aria-label="Grid overview"
           title="Overview (Esc)"
@@ -219,7 +243,7 @@ export function Player({
           <LayoutGrid size={15} />
         </button>
         <button
-          className={`p-2 rounded-full hover:bg-white/10 transition-colors cursor-pointer ${notes ? "text-white" : "text-white/80"}`}
+          className={`p-2.5 sm:p-2 rounded-full hover:bg-white/10 transition-colors cursor-pointer flex-shrink-0 ${notes ? "text-white" : "text-white/80"}`}
           onClick={() => setNotes((v) => !v)}
           aria-label="Presenter notes"
           title="Notes (N)"
@@ -227,7 +251,7 @@ export function Player({
           <StickyNote size={15} />
         </button>
         <button
-          className={`p-2 rounded-full hover:bg-white/10 transition-colors cursor-pointer ${help ? "text-white" : "text-white/80"}`}
+          className={`p-2.5 sm:p-2 rounded-full hover:bg-white/10 transition-colors cursor-pointer flex-shrink-0 hidden sm:inline-flex ${help ? "text-white" : "text-white/80"}`}
           onClick={() => setHelp((v) => !v)}
           aria-label="Keyboard help"
           title="Help (?)"
@@ -235,7 +259,7 @@ export function Player({
           <HelpCircle size={15} />
         </button>
         <button
-          className="p-2 rounded-full hover:bg-white/10 transition-colors text-white/80 cursor-pointer"
+          className="p-2.5 sm:p-2 rounded-full hover:bg-white/10 transition-colors text-white/80 cursor-pointer flex-shrink-0 hidden sm:inline-flex"
           onClick={toggleFullscreen}
           aria-label="Toggle fullscreen"
         >

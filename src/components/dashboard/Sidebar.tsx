@@ -6,7 +6,7 @@ import type { PresentationMeta } from "@/lib/schema";
 import { useTheme } from "@/components/theme/useTheme";
 import {
   Plus, House, Layers, LayoutTemplate, Settings, PanelLeft,
-  LogOut, Moon, SunMedium, FileText, Download,
+  LogOut, Moon, SunMedium, FileText, Download, X,
 } from "lucide-react";
 import { BrandLockup, BrandMark } from "@/components/brand/BrandLogo";
 import { usePwa } from "@/components/pwa/PwaProvider";
@@ -26,6 +26,8 @@ export function Sidebar({
   recents,
   user,
   onSignOut,
+  mobileOpen = false,
+  onMobileClose,
 }: {
   view: DashboardView;
   onNavigate: (v: DashboardView) => void;
@@ -33,6 +35,9 @@ export function Sidebar({
   recents: PresentationMeta[] | null;
   user: { name: string; email: string; avatarUrl: string | null };
   onSignOut: () => void;
+  /** Controls visibility as an off-canvas drawer below the md breakpoint. */
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
 }) {
   const router = useRouter();
   const { theme, toggle } = useTheme();
@@ -41,19 +46,24 @@ export function Sidebar({
   const [userMenu, setUserMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Restore collapse preference; auto-collapse on narrow screens.
+  // Restore collapse preference; auto-collapse on narrow (but not phone-width) screens.
   useEffect(() => {
     try {
       const saved = localStorage.getItem("pk-sidebar");
       if (saved === "collapsed") setCollapsed(true);
     } catch {}
     const onResize = () => {
-      if (window.innerWidth < 900) setCollapsed(true);
+      if (window.innerWidth < 900 && window.innerWidth >= 640) setCollapsed(true);
     };
     onResize();
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
+
+  function navigate(v: DashboardView) {
+    onNavigate(v);
+    onMobileClose?.();
+  }
 
   function toggleCollapsed() {
     setCollapsed((c) => {
@@ -75,69 +85,90 @@ export function Sidebar({
 
   const itemBase =
     "flex items-center rounded-lg text-[13.5px] transition-colors cursor-pointer select-none";
-  const itemPad = collapsed ? "justify-center w-9 h-9 mx-auto" : "gap-2.5 px-2.5 py-[7px] w-full";
+  const itemPad = collapsed ? "md:justify-center md:w-9 md:h-9 md:mx-auto gap-2.5 px-2.5 py-[7px] w-full" : "gap-2.5 px-2.5 py-[7px] w-full";
+  // The drawer is always shown expanded on phones, regardless of the desktop collapse preference.
+  const showCollapsed = collapsed && !mobileOpen;
 
   return (
-    <aside
-      className={`flex-shrink-0 bg-sidebar border-r border-border flex flex-col h-screen sticky top-0 transition-[width] duration-200 ${
-        collapsed ? "w-[56px]" : "w-[248px]"
-      }`}
-    >
-      {/* Header: brand + collapse */}
-      <div className={`flex items-center flex-shrink-0 ${collapsed ? "flex-col justify-center gap-0.5 py-2" : "h-[54px] justify-between pl-3.5 pr-2"}`}>
-        <button
-          className={`flex items-center cursor-pointer ${collapsed ? "justify-center" : "gap-2 min-w-0"}`}
-          onClick={() => onNavigate("home")}
-          aria-label="Home"
-        >
-          {collapsed ? <BrandMark size={22} /> : <BrandLockup markSize={22} />}
-        </button>
-        <button
-          onClick={toggleCollapsed}
-          className="p-2 rounded-lg text-text-tertiary hover:text-text hover:bg-surface-2 transition-colors cursor-pointer"
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
-          <PanelLeft size={16} />
-        </button>
-      </div>
+    <>
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/45 md:hidden pk-backdrop"
+          onClick={onMobileClose}
+        />
+      )}
+      <aside
+        className={`fixed md:sticky inset-y-0 left-0 z-50 md:z-auto flex-shrink-0 bg-sidebar border-r border-border flex flex-col h-screen md:top-0 transition-transform md:transition-[width] duration-200 ease-out w-[82vw] max-w-[280px] md:max-w-none safe-top safe-bottom ${
+          mobileOpen ? "translate-x-0" : "-translate-x-full"
+        } md:translate-x-0 ${collapsed ? "md:w-[56px]" : "md:w-[248px]"}`}
+      >
+        {/* Header: brand + collapse */}
+        <div className={`flex items-center flex-shrink-0 ${collapsed ? "md:flex-col md:justify-center md:gap-0.5 md:py-2 h-[54px] justify-between pl-3.5 pr-2" : "h-[54px] justify-between pl-3.5 pr-2"}`}>
+          <button
+            className={`flex items-center cursor-pointer ${collapsed ? "md:justify-center gap-2 min-w-0" : "gap-2 min-w-0"}`}
+            onClick={() => navigate("home")}
+            aria-label="Home"
+          >
+            <span className={collapsed ? "hidden md:block" : ""}>
+              <BrandMark size={22} />
+            </span>
+            <span className={collapsed ? "md:hidden" : ""}>
+              <BrandLockup markSize={22} />
+            </span>
+          </button>
+          <button
+            onClick={toggleCollapsed}
+            className="hidden md:block p-2 rounded-lg text-text-tertiary hover:text-text hover:bg-surface-2 transition-colors cursor-pointer"
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            <PanelLeft size={16} />
+          </button>
+          <button
+            onClick={onMobileClose}
+            className="md:hidden p-2 rounded-lg text-text-tertiary hover:text-text hover:bg-surface-2 transition-colors cursor-pointer"
+            aria-label="Close menu"
+          >
+            <X size={18} />
+          </button>
+        </div>
 
-      {/* New presentation */}
-      <div className={collapsed ? "px-0 mb-1" : "px-2.5 mb-1"}>
-        <button
-          onClick={onNew}
-          title="New presentation"
-          className={`${itemBase} ${itemPad} font-medium text-text hover:bg-surface-2 border border-border bg-surface`}
-        >
-          <Plus size={16} className="flex-shrink-0" />
-          {!collapsed && "New presentation"}
-        </button>
-      </div>
+        {/* New presentation */}
+        <div className={collapsed ? "md:px-0 px-2.5 mb-1" : "px-2.5 mb-1"}>
+          <button
+            onClick={() => { onNew(); onMobileClose?.(); }}
+            title="New presentation"
+            className={`${itemBase} ${itemPad} font-medium text-text hover:bg-surface-2 border border-border bg-surface`}
+          >
+            <Plus size={16} className="flex-shrink-0" />
+            <span className={collapsed ? "md:hidden" : ""}>New presentation</span>
+          </button>
+        </div>
 
-      {/* Nav */}
-      <nav className={`flex flex-col gap-0.5 ${collapsed ? "px-0" : "px-2.5"} mt-1`}>
-        {NAV.map((item) => {
-          const active = view === item.key;
-          return (
-            <button
-              key={item.key}
-              onClick={() => onNavigate(item.key)}
-              title={item.label}
-              className={`${itemBase} ${itemPad} ${
-                active
-                  ? "bg-surface-2 text-text font-medium"
-                  : "text-text-secondary hover:text-text hover:bg-surface-2"
-              }`}
-            >
-              <item.icon size={16} className="flex-shrink-0" />
-              {!collapsed && item.label}
-            </button>
-          );
-        })}
-      </nav>
+        {/* Nav */}
+        <nav className={`flex flex-col gap-0.5 ${collapsed ? "md:px-0 px-2.5" : "px-2.5"} mt-1`}>
+          {NAV.map((item) => {
+            const active = view === item.key;
+            return (
+              <button
+                key={item.key}
+                onClick={() => navigate(item.key)}
+                title={item.label}
+                className={`${itemBase} ${itemPad} ${
+                  active
+                    ? "bg-surface-2 text-text font-medium"
+                    : "text-text-secondary hover:text-text hover:bg-surface-2"
+                }`}
+              >
+                <item.icon size={16} className="flex-shrink-0" />
+                <span className={collapsed ? "md:hidden" : ""}>{item.label}</span>
+              </button>
+            );
+          })}
+        </nav>
 
       {/* Recents */}
-      {!collapsed && (
+      {!showCollapsed && (
         <div className="flex-1 min-h-0 overflow-y-auto px-2.5 mt-5">
           {recents && recents.length > 0 && (
             <>
@@ -146,7 +177,7 @@ export function Sidebar({
                 {recents.slice(0, 12).map((m) => (
                   <button
                     key={m.id}
-                    onClick={() => router.push(`/editor/${m.id}`)}
+                    onClick={() => { router.push(`/editor/${m.id}`); onMobileClose?.(); }}
                     className="group flex items-center gap-2 px-2.5 py-[6px] rounded-lg text-[13px] text-text-secondary hover:text-text hover:bg-surface-2 transition-colors cursor-pointer text-left"
                     title={m.title}
                   >
@@ -162,10 +193,10 @@ export function Sidebar({
           )}
         </div>
       )}
-      {collapsed && <div className="flex-1" />}
+      {showCollapsed && <div className="flex-1" />}
 
       {/* Bottom: settings, theme, profile */}
-      <div className={`flex flex-col gap-0.5 py-2 border-t border-border ${collapsed ? "px-0" : "px-2.5"}`}>
+      <div className={`flex flex-col gap-0.5 py-2 border-t border-border ${showCollapsed ? "px-0" : "px-2.5"}`}>
         {canInstall && (
           <button
             onClick={() => void install()}
@@ -173,11 +204,11 @@ export function Sidebar({
             className={`${itemBase} ${itemPad} text-text-secondary hover:text-text hover:bg-surface-2`}
           >
             <Download size={16} className="flex-shrink-0" />
-            {!collapsed && "Install app"}
+            {!showCollapsed && "Install app"}
           </button>
         )}
         <button
-          onClick={() => onNavigate("settings")}
+          onClick={() => navigate("settings")}
           title="Settings"
           className={`${itemBase} ${itemPad} ${
             view === "settings"
@@ -186,7 +217,7 @@ export function Sidebar({
           }`}
         >
           <Settings size={16} className="flex-shrink-0" />
-          {!collapsed && "Settings"}
+          {!showCollapsed && "Settings"}
         </button>
 
         <button
@@ -199,7 +230,7 @@ export function Sidebar({
           ) : (
             <Moon size={16} className="flex-shrink-0" />
           )}
-          {!collapsed && (theme === "dark" ? "Light mode" : "Dark mode")}
+          {!showCollapsed && (theme === "dark" ? "Light mode" : "Dark mode")}
         </button>
 
         {/* Profile */}
@@ -207,7 +238,7 @@ export function Sidebar({
           <button
             onClick={() => setUserMenu((o) => !o)}
             title={user.email}
-            className={`${itemBase} ${collapsed ? "justify-center w-9 h-9 mx-auto" : "gap-2.5 px-2 py-1.5 w-full"} hover:bg-surface-2 mt-0.5`}
+            className={`${itemBase} ${showCollapsed ? "justify-center w-9 h-9 mx-auto" : "gap-2.5 px-2 py-1.5 w-full"} hover:bg-surface-2 mt-0.5`}
           >
             {user.avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -222,7 +253,7 @@ export function Sidebar({
                 {user.name.slice(0, 1).toUpperCase()}
               </div>
             )}
-            {!collapsed && (
+            {!showCollapsed && (
               <span className="min-w-0 text-left">
                 <span className="block text-[13px] font-medium truncate">{user.name}</span>
               </span>
@@ -232,7 +263,7 @@ export function Sidebar({
           {userMenu && (
             <div
               className={`absolute bottom-full mb-1.5 z-40 w-52 bg-surface border border-border rounded-xl shadow-lg py-1.5 animate-rise ${
-                collapsed ? "left-full ml-2 bottom-0" : "left-2"
+                showCollapsed ? "left-full ml-2 bottom-0" : "left-2"
               }`}
               style={{ boxShadow: "0 8px 24px var(--shadow-color)" }}
             >
@@ -243,7 +274,7 @@ export function Sidebar({
               <button
                 onClick={() => {
                   setUserMenu(false);
-                  onNavigate("settings");
+                  navigate("settings");
                 }}
                 className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[13px] text-text-secondary hover:text-text hover:bg-surface-2 transition-colors cursor-pointer"
               >
@@ -259,6 +290,7 @@ export function Sidebar({
           )}
         </div>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }

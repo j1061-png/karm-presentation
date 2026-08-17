@@ -9,6 +9,7 @@ import {
   type SlideElement,
   type Theme,
 } from "./schema";
+import { sanitizeEmbedHtml } from "./sanitize-html";
 
 /**
  * Robust validation + repair layer for AI-generated content.
@@ -117,6 +118,9 @@ function sanitiseElement(el: SlideElement): SlideElement {
       ...e.props,
       correctIndex: clamp(Math.round(e.props.correctIndex), 0, e.props.options.length - 1),
     };
+  }
+  if (e.type === "embed") {
+    e.props = { ...e.props, html: sanitizeEmbedHtml(e.props.html) };
   }
   return e;
 }

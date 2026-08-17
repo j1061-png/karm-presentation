@@ -43,6 +43,13 @@
   --shadow-color: rgba(0, 0, 0, 0.35);
 }
 
+:root {
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-r: env(safe-area-inset-right, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-l: env(safe-area-inset-left, 0px);
+}
+
 @theme inline {
   --color-bg: var(--bg);
   --color-sidebar: var(--sidebar);
@@ -75,6 +82,32 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  overscroll-behavior-y: none;
+}
+
+/* iPhone/touch: kill the 300ms tap delay + grey tap flash, keep pinch-zoom */
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+button,
+a,
+[role="button"] {
+  touch-action: manipulation;
+}
+
+/* Safe-area-aware utility paddings for notches / home indicators */
+.safe-top { padding-top: max(env(safe-area-inset-top, 0px), 0px); }
+.safe-bottom { padding-bottom: max(env(safe-area-inset-bottom, 0px), 0px); }
+.safe-left { padding-left: max(env(safe-area-inset-left, 0px), 0px); }
+.safe-right { padding-right: max(env(safe-area-inset-right, 0px), 0px); }
+
+/* iOS zooms into inputs/textareas with font-size below 16px on focus */
+@media (max-width: 640px) {
+  input,
+  textarea,
+  select {
+    font-size: max(16px, 1em);
+  }
 }
 
 ::selection {
@@ -214,6 +247,38 @@ body {
   outline: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
   outline-offset: 1px;
 }
+
+/* ------------------------------------------------------------------ */
+/* Mobile drawers (slides / AI-design panel) + panel-switch transitions */
+/* ------------------------------------------------------------------ */
+
+@keyframes drawer-in-left {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+@keyframes drawer-in-right {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+@keyframes drawer-in-bottom {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+@keyframes backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.pk-drawer-left { animation: drawer-in-left 0.26s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.pk-drawer-right { animation: drawer-in-right 0.26s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.pk-drawer-bottom { animation: drawer-in-bottom 0.26s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.pk-backdrop { animation: backdrop-in 0.2s ease both; }
+
+/* Crossfade+lift used when switching the AI/Design tab or Edit/Preview mode */
+@keyframes panel-swap {
+  from { opacity: 0; transform: translateY(4px) scale(0.995); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.pk-panel-swap { animation: panel-swap 0.22s cubic-bezier(0.22, 1, 0.36, 1) both; }
 
 /* Hide number input arrows in inspector */
 input[type="number"]::-webkit-outer-spin-button,

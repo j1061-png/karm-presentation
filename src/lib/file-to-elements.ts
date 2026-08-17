@@ -1,6 +1,7 @@
 import { nanoid } from "nanoid";
 import type { SlideElement } from "./schema";
 import type { UploadedSource } from "./api";
+import { sanitizeEmbedHtml } from "./sanitize-html";
 
 function parseDelimited(content: string): string[][] {
   const lines = content
@@ -42,6 +43,23 @@ export function elementsFromUpload(
         h: 38,
         ...base,
         props: { src: source.imageUrl, alt: source.name, fit: "cover" },
+      } as SlideElement,
+    ];
+  }
+
+  if (source.kind === "html") {
+    // The user's own HTML, kept byte-for-byte (minus the usual script/handler
+    // strip) inside a sandboxed embed rather than decomposed into elements.
+    return [
+      {
+        id: nanoid(8),
+        type: "embed",
+        x: ox,
+        y: Math.max(4, oy - 6),
+        w: 70,
+        h: 60,
+        ...base,
+        props: { html: sanitizeEmbedHtml(source.content) },
       } as SlideElement,
     ];
   }

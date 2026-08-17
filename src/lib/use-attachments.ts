@@ -4,7 +4,7 @@ import { useCallback, useRef, useState } from "react";
 import { extractFile, type UploadedSource } from "@/lib/api";
 
 export const ATTACH_ACCEPT =
-  ".pdf,.docx,.pptx,.csv,.tsv,.txt,.md,.json,.png,.jpg,.jpeg,.gif,.webp";
+  ".pdf,.docx,.pptx,.csv,.tsv,.txt,.md,.json,.png,.jpg,.jpeg,.gif,.webp,.html,.htm";
 
 export interface PendingFile {
   id: string;

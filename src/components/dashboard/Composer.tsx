@@ -4,9 +4,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowUp, Plus, UploadCloud, AlertCircle, Check, Loader2, PencilRuler, Play, PlusCircle,
+  Wand2, FileStack,
 } from "lucide-react";
 import { aiEdit, getPresentation } from "@/lib/api";
 import { EFFORT, EFFORT_LEVELS, parseEffort, type Effort } from "@/lib/effort";
+import type { GenerationMode } from "@/lib/prompts";
 import { ATTACH_ACCEPT, useAttachments } from "@/lib/use-attachments";
 import { FileChips } from "@/components/chat/FileChips";
 import { SlideRenderer } from "@/components/renderer/SlideRenderer";
@@ -54,6 +56,7 @@ export function Composer({
   const [generating, setGenerating] = useState<GenProgress | null>(null);
   const [editing, setEditing] = useState(false);
   const [effort, setEffort] = useState<Effort>("standard");
+  const [importMode, setImportMode] = useState<GenerationMode>("creative");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [activeDoc, setActiveDoc] = useState<Presentation | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -176,7 +179,12 @@ export function Composer({
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: text, files: attached, effort }),
+        body: JSON.stringify({
+          prompt: text,
+          files: attached,
+          effort,
+          mode: attached.length > 0 ? importMode : "creative",
+        }),
         signal: controller.signal,
       });
       if (!res.ok || !res.body) {
@@ -378,6 +386,35 @@ export function Composer({
         }`}
         style={{ boxShadow: "0 2px 12px var(--shadow-color)" }}
       >
+        {!activeDoc && files.length > 0 && (
+          <div className="flex items-center gap-2 px-4 pt-3.5">
+            <span className="text-[11px] text-text-tertiary flex-shrink-0">From these files:</span>
+            <div className="flex items-center rounded-full border border-border p-0.5">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => setImportMode("creative")}
+                title="Restructure the source into the strongest possible interactive deck"
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11.5px] transition-colors cursor-pointer disabled:opacity-50 ${
+                  importMode === "creative" ? "bg-text text-bg font-medium" : "text-text-secondary hover:text-text"
+                }`}
+              >
+                <Wand2 size={11} /> Reimagine it
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => setImportMode("faithful")}
+                title="Keep the same slides, order and wording as the source — just cleaned up and made interactive"
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11.5px] transition-colors cursor-pointer disabled:opacity-50 ${
+                  importMode === "faithful" ? "bg-text text-bg font-medium" : "text-text-secondary hover:text-text"
+                }`}
+              >
+                <FileStack size={11} /> Keep it close to the original
+              </button>
+            </div>
+          </div>
+        )}
         <FileChips files={files} onRemove={removeFile} />
 
         <textarea

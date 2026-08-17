@@ -13,7 +13,7 @@ const MAX_CHARS = 20000;
 
 export const ACCEPTED_EXTENSIONS = [
   ".pdf", ".docx", ".pptx", ".csv", ".tsv", ".txt", ".md", ".json",
-  ".png", ".jpg", ".jpeg", ".gif", ".webp",
+  ".png", ".jpg", ".jpeg", ".gif", ".webp", ".html", ".htm",
 ];
 
 export const MAX_FILE_BYTES = 20 * 1024 * 1024;
@@ -29,6 +29,8 @@ export function fileKind(name: string): string {
     case ".txt":
     case ".md": return "text";
     case ".json": return "data";
+    case ".html":
+    case ".htm": return "html";
     case ".png":
     case ".jpg":
     case ".jpeg":
@@ -112,6 +114,7 @@ export async function extractContent(
         content = extractCsv(new TextDecoder().decode(bytes));
         break;
       case "text":
+      case "html":
         content = new TextDecoder().decode(bytes);
         break;
       case "image":

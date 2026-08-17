@@ -134,8 +134,8 @@ export function PresentationItem({
         </span>
       )}
 
-      {/* Quick actions */}
-      <div className="flex items-center gap-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+      {/* Quick actions — always visible on touch devices, hover-revealed on desktop */}
+      <div className="flex items-center gap-0.5 flex-shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
         <button
           onClick={() => window.open(`/presentations/${meta.id}`, "_blank")}
           className="p-2 rounded-lg text-text-tertiary hover:text-text hover:bg-surface-3 transition-colors cursor-pointer"

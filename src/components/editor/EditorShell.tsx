@@ -5,9 +5,11 @@ import Link from "next/link";
 import type { Presentation } from "@/lib/schema";
 import { savePresentation } from "@/lib/api";
 import { useEditorStore, type SaveState } from "@/state/editorStore";
+import { useIsMobile } from "@/lib/use-media";
 import { SlidesPanel } from "./SlidesPanel";
 import { Canvas } from "./Canvas";
 import { RightPanel } from "./RightPanel";
+import { MobileDrawer } from "./MobileDrawer";
 import { ResizeHandle, beginPanelResize } from "./ResizeHandle";
 import { Player } from "@/components/present/Player";
 import { ShareModal } from "@/components/share/ShareModal";
@@ -15,10 +17,11 @@ import { NotificationsBell } from "@/components/dashboard/NotificationsBell";
 import { BrandMark } from "@/components/brand/BrandLogo";
 import {
   Undo2, Redo2, Play, Eye, PencilRuler, Share2,
-  Check, Loader2, AlertTriangle, ArrowLeft,
+  Check, Loader2, AlertTriangle, ArrowLeft, Layers, Sparkles,
 } from "lucide-react";
 
 type EditorMode = "edit" | "preview" | "present";
+type PanelSide = "left" | "right";
 
 export function EditorShell({
   initial,
@@ -36,6 +39,9 @@ export function EditorShell({
   const [titleDraft, setTitleDraft] = useState(initial.title);
   const [slidesWidth, setSlidesWidth] = useState(200);
   const [rightWidth, setRightWidth] = useState(320);
+  const [panelSide, setPanelSide] = useState<PanelSide>("right");
+  const [mobileDrawer, setMobileDrawer] = useState<"slides" | "panel" | null>(null);
+  const isMobile = useIsMobile();
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestDoc = useRef<Presentation | null>(null);
   const savedDoc = useRef<Presentation>(initial);
@@ -51,8 +57,10 @@ export function EditorShell({
     try {
       const left = Number(localStorage.getItem("pk-panel-slides"));
       const right = Number(localStorage.getItem("pk-panel-right"));
+      const side = localStorage.getItem("pk-panel-side");
       if (left >= 140 && left <= 420) setSlidesWidth(left);
       if (right >= 240 && right <= 640) setRightWidth(right);
+      if (side === "left" || side === "right") setPanelSide(side);
     } catch {
       /* ignore */
     }
@@ -66,6 +74,15 @@ export function EditorShell({
       /* ignore */
     }
   }, [slidesWidth, rightWidth]);
+
+  const setPanelSidePersist = useCallback((side: PanelSide) => {
+    setPanelSide(side);
+    try {
+      localStorage.setItem("pk-panel-side", side);
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   useEffect(() => {
     if (presentation) setTitleDraft(presentation.title);
@@ -199,18 +216,18 @@ export function EditorShell({
   return (
     <div className="h-screen flex flex-col bg-bg overflow-hidden">
       {/* ------------------------------------------------------- top bar */}
-      <header className="h-[52px] flex items-center gap-2 px-3 border-b border-border bg-bg flex-shrink-0 z-30">
+      <header className="min-h-[52px] flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 border-b border-border bg-bg flex-shrink-0 z-30 safe-top">
         <Link
           href="/dashboard"
-          className="p-2 rounded-lg text-text-secondary hover:text-text hover:bg-surface-2 transition-colors"
+          className="p-2 rounded-lg text-text-secondary hover:text-text hover:bg-surface-2 transition-colors flex-shrink-0"
           aria-label="Back to dashboard"
           title="Back to dashboard"
         >
           <ArrowLeft size={16} />
         </Link>
-        <BrandMark size={22} />
+        <BrandMark size={22} className="hidden sm:block flex-shrink-0" />
 
-        <div className="flex items-center gap-3 min-w-0">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 sm:flex-initial">
           <input
             value={titleDraft}
             onChange={(e) => setTitleDraft(e.target.value)}
@@ -220,21 +237,23 @@ export function EditorShell({
               if (t !== presentation.title) setTitle(t);
             }}
             onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-            className="bg-transparent text-[13.5px] font-medium outline-none rounded-md px-2 py-1 hover:bg-surface-2 focus:bg-surface-2 transition-colors max-w-[280px] truncate"
+            className="bg-transparent text-[13.5px] font-medium outline-none rounded-md px-2 py-1 hover:bg-surface-2 focus:bg-surface-2 transition-colors min-w-0 flex-1 sm:flex-initial sm:max-w-[280px] truncate"
             aria-label="Presentation title"
           />
-          <SaveIndicator />
+          <span className="hidden sm:inline">
+            <SaveIndicator />
+          </span>
           {role === "editor" && (
-            <span className="text-[11px] font-medium text-text-tertiary bg-surface-2 rounded-full px-2 py-0.5">
+            <span className="hidden md:inline text-[11px] font-medium text-text-tertiary bg-surface-2 rounded-full px-2 py-0.5">
               Shared with you
             </span>
           )}
         </div>
 
-        <div className="flex-1" />
+        <div className="flex-1 hidden sm:block" />
 
         {/* Undo / redo */}
-        <div className="flex items-center gap-0.5 mr-1">
+        <div className="hidden sm:flex items-center gap-0.5 mr-1">
           <button
             onClick={() => useEditorStore.temporal.getState().undo()}
             className="p-2 rounded-lg text-text-secondary hover:text-text hover:bg-surface-2 transition-colors cursor-pointer"
@@ -254,7 +273,7 @@ export function EditorShell({
         </div>
 
         {/* Mode switch */}
-        <div className="flex items-center bg-surface-2 border border-border rounded-lg p-0.5">
+        <div className="flex items-center bg-surface-2 border border-border rounded-lg p-0.5 flex-shrink-0">
           {(
             [
               { key: "edit", label: "Edit", icon: PencilRuler },
@@ -264,34 +283,43 @@ export function EditorShell({
             <button
               key={m.key}
               onClick={() => setMode(m.key)}
-              className={`flex items-center gap-1.5 text-[12.5px] px-3 py-1.5 rounded-[6px] transition-colors cursor-pointer ${
+              className={`flex items-center gap-1.5 text-[12.5px] px-2 sm:px-3 py-1.5 rounded-[6px] transition-colors cursor-pointer ${
                 mode === m.key ? "bg-surface-3 text-text font-medium" : "text-text-secondary hover:text-text"
               }`}
             >
               <m.icon size={13} />
-              {m.label}
+              <span className="hidden sm:inline">{m.label}</span>
             </button>
           ))}
         </div>
 
-        <NotificationsBell />
+        <span className="hidden sm:inline-flex">
+          <NotificationsBell />
+        </span>
 
         <button
           onClick={() => setShareOpen(true)}
-          className="flex items-center gap-1.5 text-[12.5px] font-medium bg-surface-2 border border-border rounded-lg px-3.5 py-2 hover:border-border-strong hover:bg-surface-3 transition-colors cursor-pointer"
+          className="flex items-center gap-1.5 text-[12.5px] font-medium bg-surface-2 border border-border rounded-lg px-2.5 sm:px-3.5 py-2 hover:border-border-strong hover:bg-surface-3 transition-colors cursor-pointer flex-shrink-0"
+          aria-label="Share"
         >
           <Share2 size={13} className="text-accent" />
-          Share
+          <span className="hidden md:inline">Share</span>
         </button>
 
         <button
           onClick={() => setMode("present")}
-          className="flex items-center gap-1.5 text-[12.5px] font-medium bg-accent text-accent-text rounded-lg px-3.5 py-2 hover:bg-accent-hover transition-colors cursor-pointer"
+          className="flex items-center gap-1.5 text-[12.5px] font-medium bg-accent text-accent-text rounded-lg px-2.5 sm:px-3.5 py-2 hover:bg-accent-hover transition-colors cursor-pointer flex-shrink-0"
+          aria-label="Present"
         >
           <Play size={13} />
-          Present
+          <span className="hidden md:inline">Present</span>
         </button>
       </header>
+
+      {/* Save indicator strip — shown under the header only on phones, where it was hidden above */}
+      <div className="sm:hidden px-3 py-1 border-b border-border flex-shrink-0">
+        <SaveIndicator />
+      </div>
 
       {shareOpen && (
         <ShareModal
@@ -304,20 +332,72 @@ export function EditorShell({
 
       {/* --------------------------------------------------- main layout */}
       {mode === "preview" ? (
-        <div className="flex-1 min-h-0">
+        <div key="preview" className="flex-1 min-h-0 pk-panel-swap">
           <Player presentation={presentation} onExit={() => setMode("edit")} embedded />
         </div>
+      ) : isMobile ? (
+        <div key="edit-mobile" className="flex-1 min-h-0 flex flex-col pk-panel-swap">
+          <Canvas />
+
+          {/* Bottom toolbar: open Slides / AI+Design as drawers */}
+          <div className="flex items-stretch border-t border-border bg-bg flex-shrink-0 safe-bottom">
+            <button
+              onClick={() => setMobileDrawer("slides")}
+              className="flex-1 flex items-center justify-center gap-2 py-3 text-[13px] font-medium text-text-secondary hover:text-text active:bg-surface-2 transition-colors cursor-pointer"
+            >
+              <Layers size={15} />
+              Slides
+            </button>
+            <div className="w-px bg-border" />
+            <button
+              onClick={() => setMobileDrawer("panel")}
+              className="flex-1 flex items-center justify-center gap-2 py-3 text-[13px] font-medium text-text-secondary hover:text-text active:bg-surface-2 transition-colors cursor-pointer"
+            >
+              <Sparkles size={15} />
+              AI &amp; Design
+            </button>
+          </div>
+
+          <MobileDrawer
+            open={mobileDrawer === "slides"}
+            onClose={() => setMobileDrawer(null)}
+            side="left"
+            title="Slides"
+          >
+            <SlidesPanel width="100%" />
+          </MobileDrawer>
+          <MobileDrawer
+            open={mobileDrawer === "panel"}
+            onClose={() => setMobileDrawer(null)}
+            side="right"
+            title="AI & Design"
+          >
+            <RightPanel width="100%" />
+          </MobileDrawer>
+        </div>
       ) : (
-        <div className="flex-1 flex min-h-0">
+        <div key="edit-desktop" data-editor-main className="flex-1 flex min-h-0 pk-panel-swap">
+          {panelSide === "left" && (
+            <>
+              <RightPanel width={rightWidth} side="left" onSideChange={setPanelSidePersist} />
+              <ResizeHandle
+                onBegin={(x) => beginPanelResize(x, rightWidth, 1, 240, 640, setRightWidth)}
+              />
+            </>
+          )}
           <SlidesPanel width={slidesWidth} />
           <ResizeHandle
             onBegin={(x) => beginPanelResize(x, slidesWidth, 1, 140, 420, setSlidesWidth)}
           />
           <Canvas />
-          <ResizeHandle
-            onBegin={(x) => beginPanelResize(x, rightWidth, -1, 240, 640, setRightWidth)}
-          />
-          <RightPanel width={rightWidth} />
+          {panelSide === "right" && (
+            <>
+              <ResizeHandle
+                onBegin={(x) => beginPanelResize(x, rightWidth, -1, 240, 640, setRightWidth)}
+              />
+              <RightPanel width={rightWidth} side="right" onSideChange={setPanelSidePersist} />
+            </>
+          )}
         </div>
       )}
     </div>

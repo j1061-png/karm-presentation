@@ -390,7 +390,7 @@ export function Canvas() {
 
       {/* Zoom controls */}
       <div
-        className="absolute bottom-11 right-4 z-30 flex items-center gap-0.5 bg-surface border border-border rounded-lg p-0.5"
+        className="absolute bottom-2.5 sm:bottom-11 right-2.5 sm:right-4 z-30 flex items-center gap-0.5 bg-surface border border-border rounded-lg p-0.5"
         style={{ boxShadow: "0 4px 16px var(--shadow-color)" }}
       >
         <button
@@ -421,7 +421,7 @@ export function Canvas() {
       </div>
 
       {/* Hint bar */}
-      <div className="h-8 flex items-center justify-center gap-5 text-[11px] text-text-tertiary border-t border-border flex-shrink-0 overflow-hidden whitespace-nowrap px-3">
+      <div className="hidden sm:flex h-8 items-center justify-center gap-5 text-[11px] text-text-tertiary border-t border-border flex-shrink-0 overflow-hidden whitespace-nowrap px-3">
         <span>Double-click text to edit</span>
         <span className="hidden md:inline">⌘D duplicate</span>
         <span className="hidden md:inline">⌫ delete</span>
