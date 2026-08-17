@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { useEditorStore, useSelectedSlide, useSelectedElement } from "@/state/editorStore";
 import type { SlideElement } from "@/lib/schema";
 import { extractFile } from "@/lib/api";
+import { parseInteractivity } from "@/lib/interactivity";
+import { InteractivityPicker } from "@/components/dashboard/InteractivityPicker";
 import {
   Copy, Trash2, ArrowUpToLine, ArrowDownToLine, AlignLeft, AlignCenter,
   AlignRight, Upload, Loader2, MousePointerClick,
@@ -172,6 +174,7 @@ function SlideInspector() {
   const slide = useSelectedSlide();
   const updateSlide = useEditorStore((s) => s.updateSlide);
   const updateTheme = useEditorStore((s) => s.updateTheme);
+  const setInteractivity = useEditorStore((s) => s.setInteractivity);
   if (!presentation || !slide) return null;
   const theme = presentation.theme;
   const bg = slide.background;
@@ -184,6 +187,13 @@ function SlideInspector() {
           Select an element on the canvas to edit it
         </div>
       </div>
+
+      <Section title="Interactivity">
+        <InteractivityPicker
+          value={parseInteractivity(presentation.interactivity)}
+          onChange={setInteractivity}
+        />
+      </Section>
 
       <Section title="Slide">
         <Row label="Name">
