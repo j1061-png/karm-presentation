@@ -109,7 +109,10 @@ export function Sidebar({
             onClick={() => navigate("home")}
             aria-label="Home"
           >
-            <span className={collapsed ? "hidden md:block" : ""}>
+            {/* The wordmark PNG already contains the painted mark — never render
+                BrandMark next to it or the logo shows twice. The bare mark is
+                only for the collapsed desktop rail. */}
+            <span className={collapsed ? "hidden md:block" : "hidden"}>
               <BrandMark size={22} />
             </span>
             <span className={collapsed ? "md:hidden" : ""}>
