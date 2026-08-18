@@ -5,6 +5,7 @@ import { useEditorStore, useSelectedSlide } from "@/state/editorStore";
 import { SlideRenderer, SLIDE_W } from "@/components/renderer/SlideRenderer";
 import type { SlideElement } from "@/lib/schema";
 import { extractFile } from "@/lib/api";
+import { useIsMobile } from "@/lib/use-media";
 import { elementsFromUpload } from "@/lib/file-to-elements";
 import { InsertBar, createDefaultElement } from "./InsertBar";
 import { Loader2, Minus, Plus, Maximize, UploadCloud } from "lucide-react";
@@ -52,20 +53,23 @@ export function Canvas() {
   const viewportRef = useRef<HTMLDivElement>(null);
   const [fitWidth, setFitWidth] = useState(960);
   const [zoom, setZoom] = useState(1); // 1 = fit to viewport
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const vp = viewportRef.current;
     if (!vp) return;
     const measure = () => {
       const rect = vp.getBoundingClientRect();
-      const w = Math.min(rect.width - 56, ((rect.height - 56) * 16) / 9);
-      setFitWidth(Math.max(280, Math.floor(w)));
+      // Breathing room around the frame — a phone cannot spare 28px a side.
+      const inset = isMobile ? 20 : 56;
+      const w = Math.min(rect.width - inset, ((rect.height - inset) * 16) / 9);
+      setFitWidth(Math.max(240, Math.floor(w)));
     };
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(vp);
     return () => ro.disconnect();
-  }, []);
+  }, [isMobile]);
 
   const frameWidth = Math.round(fitWidth * zoom);
   const zoomPct = Math.round((frameWidth / SLIDE_W) * 100);
@@ -231,7 +235,7 @@ export function Canvas() {
         }}
       >
         {/* Grid wrapper centers the frame when it fits and scrolls when zoomed in */}
-        <div className="min-w-full min-h-full grid place-items-center p-7">
+        <div className="min-w-full min-h-full grid place-items-center p-2.5 sm:p-7">
           <div
             className={`relative flex-shrink-0 ${dropHover ? "ring-2 ring-accent rounded-lg" : ""}`}
             style={{ width: frameWidth, aspectRatio: "16/9" }}

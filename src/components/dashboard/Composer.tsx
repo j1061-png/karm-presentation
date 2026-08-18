@@ -10,6 +10,7 @@ import { aiEdit, getPresentation } from "@/lib/api";
 import { EFFORT, EFFORT_LEVELS, parseEffort, type Effort } from "@/lib/effort";
 import type { GenerationMode } from "@/lib/prompts";
 import { parseInteractivity, type InteractivityLevel } from "@/lib/interactivity";
+import { useIsMobile } from "@/lib/use-media";
 import { ATTACH_ACCEPT, useAttachments } from "@/lib/use-attachments";
 import { FileChips } from "@/components/chat/FileChips";
 import { InteractivityPicker } from "./InteractivityPicker";
@@ -62,6 +63,7 @@ export function Composer({
   const [interactivity, setInteractivity] = useState<InteractivityLevel>("balanced");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [activeDoc, setActiveDoc] = useState<Presentation | null>(null);
+  const isMobile = useIsMobile();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const dragDepth = useRef(0);
@@ -393,8 +395,11 @@ export function Composer({
       >
         {!activeDoc && !busy && (
           <div className="px-4 pt-3.5">
-            <div className="text-[11px] text-text-tertiary mb-1.5">How interactive should it feel?</div>
+            <div className="text-[11px] text-text-tertiary mb-1.5 hidden sm:block">
+              How interactive should it feel?
+            </div>
             <InteractivityPicker
+              compact={isMobile}
               value={interactivity}
               onChange={(v) => {
                 setInteractivity(v);
@@ -454,8 +459,15 @@ export function Composer({
           }}
           placeholder={
             activeDoc
-              ? "Ask for a change, or attach a file..."
-              : "Describe the presentation you want to create..."
+              ? isMobile
+                ? "Ask for a change..."
+                : "Ask for a change, or attach a file..."
+              : isMobile
+                ? // The long copy wraps to two lines at phone width, but the
+                  // textarea is a single row until autoGrow runs on input — so
+                  // the second line was being clipped in half.
+                  "Describe your presentation..."
+                : "Describe the presentation you want to create..."
           }
           rows={1}
           className="w-full bg-transparent resize-none outline-none px-5 pt-4 pb-1 text-[15px] leading-relaxed placeholder:text-text-tertiary disabled:opacity-60"
