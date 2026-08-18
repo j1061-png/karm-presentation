@@ -3,6 +3,7 @@ import { chatJson } from "./deepseek";
 import { EFFORT, parseEffort, type Effort } from "./effort";
 import { fallbackSlide, layoutSlide } from "./layouts";
 import { parseInteractivity, type InteractivityLevel } from "./interactivity";
+import { directImport } from "./direct-import";
 import {
   editSystemPrompt, planSystemPrompt, slidesSystemPrompt,
   type GenerationMode,
@@ -30,6 +31,8 @@ export interface SourceFile {
   name: string;
   kind: string;
   content: string;
+  /** Set for uploaded images — the public storage URL to place on a slide. */
+  imageUrl?: string;
 }
 
 function sourceContext(files: SourceFile[]): string {
@@ -155,7 +158,8 @@ export async function generatePresentation(
 ): Promise<Presentation> {
   const effort = parseEffort(effortInput);
   const cfg = EFFORT[effort];
-  const mode: GenerationMode = modeInput === "faithful" ? "faithful" : "creative";
+  const mode: GenerationMode =
+    modeInput === "faithful" || modeInput === "verbatim" ? modeInput : "creative";
   const interactivity = parseInteractivity(interactivityInput);
 
   onStage({
@@ -164,6 +168,19 @@ export async function generatePresentation(
       ? `Reading ${files.length} source file${files.length > 1 ? "s" : ""}`
       : "Understanding your request",
   });
+
+  // "Convert as-is" never touches the model: the user already has a finished
+  // deck and just wants it playable. Skipping the plan + design calls also
+  // skips every way those calls can fail.
+  if (mode === "verbatim") {
+    if (files.length === 0) {
+      throw new Error("Attach a presentation or document to convert it as-is.");
+    }
+    onStage({ stage: "designing", detail: "Converting your slides" });
+    const doc = directImport(files, interactivity, prompt);
+    onStage({ stage: "finalising", detail: "Building the interactive deck" });
+    return doc;
+  }
 
   onStage({ stage: "planning", detail: `${cfg.label} pass — structuring the narrative` });
   const plan = await generatePlan(prompt, files, effort, mode, interactivity);

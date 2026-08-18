@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowUp, Plus, UploadCloud, AlertCircle, Check, Loader2, PencilRuler, Play, PlusCircle,
-  Wand2, FileStack,
+  Wand2, FileStack, FileCode2,
 } from "lucide-react";
 import { aiEdit, getPresentation } from "@/lib/api";
 import { EFFORT, EFFORT_LEVELS, parseEffort, type Effort } from "@/lib/effort";
@@ -413,31 +413,48 @@ export function Composer({
           </div>
         )}
         {!activeDoc && files.length > 0 && (
-          <div className="flex items-center gap-2 px-4 pt-3.5">
-            <span className="text-[11px] text-text-tertiary flex-shrink-0">From these files:</span>
-            <div className="flex items-center rounded-full border border-border p-0.5">
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => setImportMode("creative")}
-                title="Restructure the source into the strongest possible interactive deck"
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11.5px] transition-colors cursor-pointer disabled:opacity-50 ${
-                  importMode === "creative" ? "bg-text text-bg font-medium" : "text-text-secondary hover:text-text"
-                }`}
-              >
-                <Wand2 size={11} /> Reimagine it
-              </button>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => setImportMode("faithful")}
-                title="Keep the same slides, order and wording as the source — just cleaned up and made interactive"
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11.5px] transition-colors cursor-pointer disabled:opacity-50 ${
-                  importMode === "faithful" ? "bg-text text-bg font-medium" : "text-text-secondary hover:text-text"
-                }`}
-              >
-                <FileStack size={11} /> Keep it close to the original
-              </button>
+          <div className="px-4 pt-3.5">
+            <div className="text-[11px] text-text-tertiary mb-1.5">From these files:</div>
+            <div className="flex flex-wrap items-center gap-1 rounded-2xl border border-border p-1">
+              {(
+                [
+                  {
+                    key: "creative",
+                    icon: Wand2,
+                    label: "Reimagine it",
+                    title: "Restructure the source into the strongest possible interactive deck",
+                  },
+                  {
+                    key: "faithful",
+                    icon: FileStack,
+                    label: "Keep it close",
+                    title:
+                      "Keep the same slides, order and wording as the source — just cleaned up and made interactive",
+                  },
+                  {
+                    key: "verbatim",
+                    icon: FileCode2,
+                    label: "Convert as-is (no AI)",
+                    title:
+                      "Turn the file straight into an interactive deck, slide for slide. The AI is not used at all — nothing is reworded and it cannot fail.",
+                  },
+                ] as const
+              ).map((m) => (
+                <button
+                  key={m.key}
+                  type="button"
+                  disabled={busy}
+                  onClick={() => setImportMode(m.key)}
+                  title={m.title}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11.5px] transition-colors cursor-pointer disabled:opacity-50 ${
+                    importMode === m.key
+                      ? "bg-text text-bg font-medium"
+                      : "text-text-secondary hover:text-text"
+                  }`}
+                >
+                  <m.icon size={11} /> {m.label}
+                </button>
+              ))}
             </div>
           </div>
         )}

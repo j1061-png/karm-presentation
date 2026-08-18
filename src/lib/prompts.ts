@@ -87,7 +87,7 @@ RULES — this deck is judged like a designed keynote, not a slideshow template:
  *                 close to the original: same slide order, wording, and
  *                 emphasis, just cleaned up and made interactive.
  */
-export type GenerationMode = "creative" | "faithful";
+export type GenerationMode = "creative" | "faithful" | "verbatim";
 
 function interactivityInstructions(interactivity: "calm" | "balanced" | "vivid"): string {
   if (interactivity === "calm") {
@@ -102,7 +102,9 @@ INTERACTIVITY — VIVID: the user wants a lively, playful deck. Favor the most i
 }
 
 function modeInstructions(mode: GenerationMode): string {
-  if (mode === "faithful") {
+  // "verbatim" is handled entirely by lib/direct-import.ts and never reaches a
+  // prompt; treat it as faithful if it somehow does.
+  if (mode === "faithful" || mode === "verbatim") {
     return `
 IMPORT MODE — FAITHFUL: the user attached their own presentation/document and wants it preserved, not reimagined.
 - Keep the same slide count, order, and wording as the source as closely as the layouts allow. Do not invent new arguments, sections, or numbers that are not in the source.
