@@ -82,8 +82,11 @@ function classify(slide: Slide, index: number, total: number): "title" | "stats-
   const last = index === total - 1;
   const first = index === 0;
 
-  if (first && (stats >= 2 || types.includes("button"))) return "title";
-  if (last && (types.includes("cards") || types.includes("quiz") || types.includes("list"))) return "close";
+  // Bookends are structural, not content-dependent. Previously an opening
+  // slide only got the title treatment if it happened to carry two stats or a
+  // button, so most decks opened on a generic content slide.
+  if (first) return "title";
+  if (last) return "close";
   if (stats >= 2 && charts >= 1) return "stats-chart";
   if (widgets.length >= 2) return "split";
   return "widget";
@@ -249,11 +252,19 @@ export function layoutSlide(
       box(heading, { x: 6, y: 10, w: 88, h: 8 })
     );
     const hero = widgets[0] ?? charts[0] ?? lists[0] ?? fallbackCards(slide);
+    // A supporting sentence used to be discarded outright, leaving every
+    // content slide as bare heading + one big box. Giving it a fixed deck
+    // between the heading and the hero keeps the writing and the hierarchy.
+    const sub = texts[0];
+    const heroTop = sub ? 29 : 22;
+    if (sub) {
+      placed.push(box(sub, { x: 6, y: 19.5, w: 78, h: 8 }));
+    }
     if (callouts[0]) {
-      placed.push(box(hero, { x: 6, y: 22, w: 88, h: 52 }));
+      placed.push(box(hero, { x: 6, y: heroTop, w: 88, h: 74 - heroTop }));
       placed.push(box(callouts[0], { x: 6, y: 78, w: 88, h: 16 }));
     } else {
-      placed.push(box(hero, { x: 6, y: 22, w: 88, h: 70 }));
+      placed.push(box(hero, { x: 6, y: heroTop, w: 88, h: 92 - heroTop }));
     }
   }
 

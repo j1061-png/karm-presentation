@@ -180,8 +180,12 @@ export function DashboardShell({
           >
             <Menu size={18} />
           </button>
-          <span className="flex-1 md:hidden" />
-          <NotificationsBell onChanged={() => void refresh()} />
+          {/* ml-auto, not justify-between: on desktop the menu button and the
+              spacer are both hidden, which would leave the bell as the only
+              child and pin it to the left edge. */}
+          <span className="ml-auto">
+            <NotificationsBell onChanged={() => void refresh()} />
+          </span>
         </div>
 
         {/* -------------------------------------------------- home view */}
