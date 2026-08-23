@@ -17,6 +17,27 @@ interface ChatBody {
   messages?: { role?: string; text?: string }[];
   hasProject?: boolean;
   kind?: string;
+  /** Notebook sources: when present, answers are grounded in this material. */
+  sources?: { name?: string; content?: string }[];
+}
+
+const MAX_SOURCE_CHARS = 9000;
+const MAX_TOTAL_SOURCE_CHARS = 27000;
+
+function sourcesContext(sources: ChatBody["sources"]): string {
+  if (!Array.isArray(sources) || sources.length === 0) return "";
+  let total = 0;
+  const parts: string[] = [];
+  for (const s of sources.slice(0, 10)) {
+    if (typeof s?.content !== "string" || !s.content.trim()) continue;
+    const room = Math.min(MAX_SOURCE_CHARS, MAX_TOTAL_SOURCE_CHARS - total);
+    if (room <= 0) break;
+    const body = s.content.slice(0, room);
+    total += body.length;
+    parts.push(`--- SOURCE: ${typeof s.name === "string" ? s.name : "untitled"} ---\n${body}`);
+  }
+  if (parts.length === 0) return "";
+  return `\n\nThe user has added source material. Ground your answers in it — quote figures and facts from the sources, say which source they came from when useful, and say clearly when the sources do not contain the answer.\n\n${parts.join("\n\n")}`;
 }
 
 function systemPrompt(hasProject: boolean, kind: string): string {
@@ -48,7 +69,12 @@ export async function POST(request: Request) {
   if (turns.length === 0) return NextResponse.json({ error: "No message." }, { status: 400 });
 
   const messages = [
-    { role: "system" as const, content: systemPrompt(body.hasProject === true, body.kind ?? "project") },
+    {
+      role: "system" as const,
+      content:
+        systemPrompt(body.hasProject === true, body.kind ?? "project") +
+        sourcesContext(body.sources),
+    },
     ...turns.map((t) => ({
       role: t.role === "assistant" ? ("assistant" as const) : ("user" as const),
       content: (t.text ?? "").slice(0, 4000),

@@ -263,6 +263,59 @@ export async function aiEdit(input: {
 }
 
 // ---------------------------------------------------------------------------
+// Generation (SSE)
+// ---------------------------------------------------------------------------
+
+export interface GenStageEvent {
+  stage: string;
+  detail?: string;
+  done?: number;
+  total?: number;
+}
+
+/** Run the generation pipeline and resolve with the new project's id. */
+export async function generateProject(
+  input: { prompt: string; files?: UploadedSource[]; kind?: string; effort?: string },
+  onStage?: (s: GenStageEvent) => void,
+  signal?: AbortSignal
+): Promise<string> {
+  const res = await fetch("/api/generate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+    signal,
+  });
+  if (!res.ok || !res.body) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? "Generation failed to start.");
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let finishedId: string | null = null;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const events = buffer.split("\n\n");
+    buffer = events.pop() ?? "";
+    for (const evt of events) {
+      const line = evt.split("\n").find((l) => l.startsWith("data: "));
+      if (!line) continue;
+      const data = JSON.parse(line.slice(6));
+      if (data.stage === "complete") finishedId = data.presentationId;
+      else if (data.stage === "error") throw new Error(data.message);
+      else onStage?.({ stage: data.stage, detail: data.detail, done: data.done, total: data.total });
+    }
+  }
+
+  if (!finishedId) throw new Error("Generation ended unexpectedly. Please try again.");
+  return finishedId;
+}
+
+// ---------------------------------------------------------------------------
 // Conversational chat
 // ---------------------------------------------------------------------------
 
@@ -276,6 +329,7 @@ export async function chatWithAI(input: {
   messages: { role: "user" | "assistant"; text: string }[];
   hasProject: boolean;
   kind?: string;
+  sources?: { name: string; content: string }[];
 }): Promise<ChatDecision> {
   return json<ChatDecision>(
     await fetch("/api/chat", {
