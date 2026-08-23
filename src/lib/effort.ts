@@ -42,7 +42,7 @@ export const EFFORT: Record<Effort, EffortConfig> = {
   fast: {
     label: "Fast",
     hint: "Quick draft",
-    detail: "Shorter deck, still interactive. Good for a first look.",
+    detail: "Smaller scope, still interactive. Good for a first look.",
     eta: "~40s",
     model: "deepseek-chat",
     temperature: 0.4,
@@ -57,7 +57,7 @@ export const EFFORT: Record<Effort, EffortConfig> = {
   standard: {
     label: "Standard",
     hint: "Balanced",
-    detail: "The everyday setting. Solid narrative, mixed layouts.",
+    detail: "The everyday setting. Solid structure and detail.",
     eta: "~1 min",
     model: "deepseek-chat",
     temperature: 0.35,
@@ -72,7 +72,7 @@ export const EFFORT: Record<Effort, EffortConfig> = {
   think: {
     label: "Think",
     hint: "More careful",
-    detail: "Slower pass. Tighter argument, better numbers, fewer generic slides.",
+    detail: "Slower pass. Tighter reasoning, better content, less filler.",
     eta: "~2 min",
     model: "deepseek-reasoner",
     temperature: 0.3,
@@ -87,7 +87,7 @@ export const EFFORT: Record<Effort, EffortConfig> = {
   max: {
     label: "Max",
     hint: "Full treatment",
-    detail: "Longest run. More slides, more interactivity, built to present live.",
+    detail: "Longest run. Bigger, more interactive, built to ship.",
     eta: "~3 min",
     model: "deepseek-reasoner",
     temperature: 0.28,

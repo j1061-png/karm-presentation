@@ -45,7 +45,7 @@ export function DashboardShell({
       setMetas(await api.listPresentations());
     } catch {
       setMetas([]);
-      setToast("Could not load presentations.");
+      setToast("Could not load projects.");
     }
   }, []);
 
@@ -108,20 +108,20 @@ export function DashboardShell({
 
   async function handleLeave(id: string) {
     const meta = metas?.find((m) => m.id === id);
-    if (!confirm(`Leave “${meta?.title ?? "this presentation"}”? You will lose access until invited again.`)) return;
+    if (!confirm(`Leave “${meta?.title ?? "this project"}”? You will lose access until invited again.`)) return;
     setMetas((prev) => prev?.filter((m) => m.id !== id) ?? null);
     try {
       await api.leavePresentation(id);
-      setToast("Left presentation");
+      setToast("Left project");
     } catch {
-      setToast("Could not leave presentation");
+      setToast("Could not leave project");
       void refresh();
     }
   }
 
   async function handleDelete(id: string) {
     const meta = metas?.find((m) => m.id === id);
-    if (!confirm(`Delete “${meta?.title ?? "this presentation"}”? This cannot be undone.`)) return;
+    if (!confirm(`Delete “${meta?.title ?? "this project"}”? This cannot be undone.`)) return;
     setMetas((prev) => prev?.filter((m) => m.id !== id) ?? null);
     try {
       await api.deletePresentation(id);
@@ -224,11 +224,11 @@ export function DashboardShell({
           </div>
         )}
 
-        {/* ----------------------------------------- presentations view */}
+        {/* ---------------------------------------------- projects view */}
         {view === "presentations" && (
           <div className="w-full max-w-3xl mx-auto px-6 py-10">
             <div className="flex items-center justify-between mb-5 gap-3 flex-wrap">
-              <h1 className="text-[17px] font-semibold tracking-tight">Presentations</h1>
+              <h1 className="text-[17px] font-semibold tracking-tight">Projects</h1>
               <div className="flex items-center gap-2">
                 <div className="relative">
                   <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary" />
@@ -286,19 +286,19 @@ export function DashboardShell({
                   <Presentation size={20} className="text-text-tertiary" />
                 </div>
                 <div className="font-medium text-[14.5px] mb-1">
-                  {query ? "No presentations match your search" : "No presentations yet"}
+                  {query ? "No projects match your search" : "No projects yet"}
                 </div>
                 <div className="text-[13px] text-text-secondary mb-5 max-w-xs">
                   {query
                     ? "Try a different search term."
-                    : "Create your first interactive presentation."}
+                    : "Create your first presentation, website, game, or app."}
                 </div>
                 {!query && (
                   <button
                     onClick={() => setView("home")}
                     className="flex items-center gap-1.5 text-[13px] font-medium bg-accent text-accent-text rounded-lg px-3.5 py-2 hover:bg-accent-hover transition-colors cursor-pointer"
                   >
-                    <Plus size={13} /> Create presentation
+                    <Plus size={13} /> Create project
                   </button>
                 )}
               </div>

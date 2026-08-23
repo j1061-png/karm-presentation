@@ -330,6 +330,8 @@ export async function chatWithAI(input: {
   hasProject: boolean;
   kind?: string;
   sources?: { name: string; content: string }[];
+  /** Always answer conversationally — never signal a build. */
+  forceChat?: boolean;
 }): Promise<ChatDecision> {
   return json<ChatDecision>(
     await fetch("/api/chat", {

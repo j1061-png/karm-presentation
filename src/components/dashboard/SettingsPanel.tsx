@@ -119,7 +119,7 @@ export function SettingsPanel({
 
         <div className="flex items-center justify-between px-4 py-3.5">
           <div>
-            <div className="text-[13px] font-medium">Presentations</div>
+            <div className="text-[13px] font-medium">Projects</div>
             <div className="text-[12px] text-text-tertiary">Stored privately in your workspace</div>
           </div>
           <div className="flex items-center gap-1.5 text-[13px] text-text-secondary">
@@ -212,7 +212,7 @@ export function SettingsPanel({
       <section className="border border-danger/25 rounded-xl bg-surface px-4 py-3.5">
         <div className="text-[13px] font-medium text-danger mb-0.5">Delete account</div>
         <div className="text-[12px] text-text-tertiary mb-3">
-          Permanently delete your account, presentations, and collaborator access. This cannot be undone.
+          Permanently delete your account, projects, and collaborator access. This cannot be undone.
         </div>
         {!deleteOpen ? (
           <button

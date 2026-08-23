@@ -351,23 +351,39 @@ export async function generateWebProject(
   prompt: string,
   files: SourceFile[],
   kind: WebKind,
-  onStage: (s: GenerationStage) => void
+  onStage: (s: GenerationStage) => void,
+  effortInput?: unknown
 ): Promise<Presentation> {
   const label = WEB_KIND_LABEL[kind];
+  const effort = parseEffort(effortInput);
+  const cfg = EFFORT[effort];
+  const isReasoner = cfg.model === "deepseek-reasoner";
+  const effortHint =
+    effort === "instant" || effort === "fast"
+      ? "\nKeep it lean: nail the core experience, skip nice-to-haves."
+      : effort === "think" || effort === "max"
+        ? "\nTake your time: production quality, extra polish, more features, delightful details."
+        : "";
+
   onStage({ stage: "analysing", detail: `Understanding your ${label}` });
   onStage({ stage: "planning", detail: `Sketching the ${label}` });
   onStage({ stage: "designing", detail: `Writing the ${label} code` });
 
   const parsed = await chatJson(
     [
-      { role: "system", content: webSystemPrompt(kind) },
+      { role: "system", content: webSystemPrompt(kind) + effortHint },
       {
         role: "user",
         content: `Build this ${label}:\n\n"${prompt}"${sourceContext(files)}`,
       },
     ],
     (raw) => parseWebResponse(extractJson(raw), raw),
-    { maxTokens: 8000, temperature: 0.6, model: "deepseek-chat", json: true }
+    {
+      maxTokens: isReasoner ? 16000 : 8000,
+      temperature: cfg.temperature + 0.2,
+      model: cfg.model,
+      json: cfg.jsonMode,
+    }
   );
 
   onStage({ stage: "interactive", detail: "Wiring interactions" });

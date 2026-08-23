@@ -19,6 +19,8 @@ interface ChatBody {
   kind?: string;
   /** Notebook sources: when present, answers are grounded in this material. */
   sources?: { name?: string; content?: string }[];
+  /** Pure chat mode: always answer conversationally, never signal a build. */
+  forceChat?: boolean;
 }
 
 const MAX_SOURCE_CHARS = 9000;
@@ -38,6 +40,20 @@ function sourcesContext(sources: ChatBody["sources"]): string {
   }
   if (parts.length === 0) return "";
   return `\n\nThe user has added source material. Ground your answers in it — quote figures and facts from the sources, say which source they came from when useful, and say clearly when the sources do not contain the answer.\n\n${parts.join("\n\n")}`;
+}
+
+function chatOnlyPrompt(): string {
+  return `You are Studio, a friendly AI assistant inside an AI workspace that builds presentations, websites, games, and apps.
+
+You are in pure chat mode. ALWAYS respond with ONLY: {"mode":"chat","reply":"<your answer>"}
+
+Rules for "reply":
+- Be warm, helpful, and concise (a short paragraph or a few bullet points; never a wall of text).
+- Help with anything: brainstorming, explanations, feedback, planning, general questions.
+- If the user asks you to build something, explain what you'd make and tell them to switch the picker to Presentation, Website, Game, or App to generate it.
+- Plain text only, no markdown headers.
+
+Respond with ONLY the JSON object. No other text.`;
 }
 
 function systemPrompt(hasProject: boolean, kind: string): string {
@@ -72,7 +88,9 @@ export async function POST(request: Request) {
     {
       role: "system" as const,
       content:
-        systemPrompt(body.hasProject === true, body.kind ?? "project") +
+        (body.forceChat === true
+          ? chatOnlyPrompt()
+          : systemPrompt(body.hasProject === true, body.kind ?? "project")) +
         sourcesContext(body.sources),
     },
     ...turns.map((t) => ({

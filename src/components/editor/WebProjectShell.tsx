@@ -8,7 +8,7 @@ import { assemblePreviewHtml } from "@/lib/web-preview";
 import { ShareModal } from "@/components/share/ShareModal";
 import { BrandMark } from "@/components/brand/BrandLogo";
 import {
-  ArrowLeft, ArrowUp, AlertCircle, Check, Code2, ExternalLink, Loader2,
+  ArrowLeft, ArrowUp, AlertCircle, Check, Code2, Download, ExternalLink, Loader2,
   AlertTriangle, RefreshCw, Share2, X,
 } from "lucide-react";
 
@@ -147,6 +147,18 @@ export function WebProjectShell({
   const file = doc.files?.find((f) => f.path === activeFile) ?? doc.files?.[0];
   const kindLabel = isWebKind(doc.kind) ? doc.kind : "website";
 
+  async function downloadCode() {
+    const { default: JSZip } = await import("jszip");
+    const zip = new JSZip();
+    for (const f of doc.files ?? []) zip.file(f.path, f.content);
+    const blob = await zip.generateAsync({ type: "blob" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `${doc.title.replace(/[^\w-]+/g, "-").toLowerCase() || "project"}.zip`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
   const SaveIndicator = () => {
     if (saveState === "saving")
       return (
@@ -283,6 +295,14 @@ export function WebProjectShell({
                 </button>
               ))}
               <div className="flex-1" />
+              <button
+                onClick={() => void downloadCode()}
+                className="p-1.5 rounded-md text-text-tertiary hover:text-text cursor-pointer"
+                title="Download code as ZIP"
+                aria-label="Download code"
+              >
+                <Download size={13} />
+              </button>
               <button
                 onClick={() => setCodeOpen(false)}
                 className="p-1.5 rounded-md text-text-tertiary hover:text-text cursor-pointer"

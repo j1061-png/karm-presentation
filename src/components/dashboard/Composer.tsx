@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowUp, Plus, UploadCloud, AlertCircle, Check, Loader2, PencilRuler, Play, PlusCircle,
-  Presentation as PresentationIcon, Globe, Gamepad2, AppWindow,
+  Presentation as PresentationIcon, Globe, Gamepad2, AppWindow, MessageCircle,
 } from "lucide-react";
 import { aiEdit, chatWithAI, getPresentation, savePresentation } from "@/lib/api";
 import { parseEffort, type Effort } from "@/lib/effort";
@@ -38,21 +38,32 @@ const GEN_STAGES: { key: string; label: string }[] = [
   { key: "finalising", label: "Finalising" },
 ];
 
-const KIND_OPTIONS: { kind: ProjectKind; label: string; icon: typeof Globe }[] = [
+/** What the composer is set to make — a project kind, or plain conversation. */
+type ComposerMode = ProjectKind | "chat";
+
+const KIND_OPTIONS: { kind: ComposerMode; label: string; icon: typeof Globe }[] = [
+  { kind: "chat", label: "Chat", icon: MessageCircle },
   { kind: "presentation", label: "Presentation", icon: PresentationIcon },
   { kind: "website", label: "Website", icon: Globe },
   { kind: "game", label: "Game", icon: Gamepad2 },
   { kind: "app", label: "App", icon: AppWindow },
 ];
 
-const KIND_PLACEHOLDER: Record<ProjectKind, string> = {
+const KIND_PLACEHOLDER: Record<ComposerMode, string> = {
+  chat: "Chat with Studio about anything...",
   presentation: "Chat, or describe the presentation you want to create...",
   website: "Chat, or describe the website you want to build...",
   game: "Chat, or describe the game you want to play...",
   app: "Chat, or describe the app you want to build...",
 };
 
-const SUGGESTIONS: Record<ProjectKind, string[]> = {
+const SUGGESTIONS: Record<ComposerMode, string[]> = {
+  chat: [
+    "Help me brainstorm ideas",
+    "What can you build for me?",
+    "Explain something to me",
+    "Give me feedback on a plan",
+  ],
   presentation: [
     "Company overview deck",
     "Q3 performance review",
@@ -119,7 +130,7 @@ export function Composer({
   const [editing, setEditing] = useState(false);
   const [chatting, setChatting] = useState(false);
   const [effort, setEffort] = useState<Effort>("standard");
-  const [kind, setKind] = useState<ProjectKind>("presentation");
+  const [kind, setKind] = useState<ComposerMode>("presentation");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [activeDoc, setActiveDoc] = useState<Presentation | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -285,7 +296,12 @@ export function Composer({
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: text, files: attached, effort, kind }),
+        body: JSON.stringify({
+          prompt: text,
+          files: attached,
+          effort,
+          kind: kind === "chat" ? "presentation" : kind,
+        }),
         signal: controller.signal,
       });
       if (!res.ok || !res.body) {
@@ -413,8 +429,10 @@ export function Composer({
 
   function send() {
     if (!canSend) return;
-    // Attached files always mean "build/edit with these".
-    if (readySources.length > 0) {
+    const chatMode = kind === "chat" && !activeDoc;
+    // Attached files mean "build/edit with these" — except in pure chat mode,
+    // where they become conversation sources.
+    if (readySources.length > 0 && !chatMode) {
       if (activeDoc) void editDeck();
       else void generate();
       return;
@@ -424,11 +442,18 @@ export function Composer({
 
   /** Let the assistant decide: answer conversationally, or kick off a build/edit. */
   async function routeMessage() {
-    const text = prompt.trim();
+    const chatMode = kind === "chat" && !activeDoc;
+    const text =
+      prompt.trim() || (chatMode && readySources.length > 0 ? "What do you make of these files?" : "");
     if (!text) return;
+    const sources = chatMode ? readySources : undefined;
+    const attachedNames = chatMode
+      ? files.filter((f) => f.status === "done").map((f) => f.name)
+      : [];
     setPrompt("");
+    if (chatMode) clearFiles();
     if (textareaRef.current) textareaRef.current.style.height = "auto";
-    pushUser(text);
+    pushUser(text, attachedNames);
     setChatting(true);
 
     const history: { role: "user" | "assistant"; text: string }[] = [];
@@ -442,9 +467,25 @@ export function Composer({
       decision = await chatWithAI({
         messages: [...history.slice(-12), { role: "user", text }],
         hasProject: !!activeDoc,
-        kind: activeDoc?.kind ?? kind,
+        kind: activeDoc?.kind ?? (kind === "chat" ? undefined : kind),
+        forceChat: chatMode,
+        sources,
       });
-    } catch {
+    } catch (e) {
+      if (chatMode) {
+        // Pure chat has no build fallback — surface the error.
+        setChatting(false);
+        setMessages((m) => [
+          ...m,
+          {
+            id: `e${Date.now()}`,
+            role: "assistant",
+            kind: "error",
+            text: e instanceof Error ? e.message : "Something went wrong. Please try again.",
+          },
+        ]);
+        return;
+      }
       // If the router fails, fall back to the build path so nothing is lost.
       decision = { mode: "build", reply: "" };
     }
@@ -640,7 +681,7 @@ export function Composer({
           />
 
           <div className="flex items-center gap-2.5">
-            {!activeDoc && kind === "presentation" && (
+            {!activeDoc && kind !== "chat" && (
               <EffortPicker
                 value={effort}
                 disabled={busy}

@@ -61,7 +61,8 @@ export async function POST(request: Request) {
                 prompt || `A ${kind} based on the attached source material.`,
                 files,
                 kind,
-                send
+                send,
+                body?.effort
               );
         await savePresentation(user.id, presentation);
         send({ stage: "complete", presentationId: presentation.id });
