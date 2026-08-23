@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import type { Presentation } from "@/lib/schema";
 import { SlideRenderer } from "@/components/renderer/SlideRenderer";
 import {
@@ -127,12 +127,11 @@ export function Player({
       onMouseMove={poke}
       onClick={poke}
     >
-      <div className="absolute inset-0 flex items-center justify-center">
+      <FitStage>
         <div
           key={slide.id}
-          className="w-full max-h-full"
+          className="w-full h-full"
           style={{
-            maxWidth: "calc(100vh * 16 / 9)",
             animation: animName ? `${animName} 0.5s cubic-bezier(0.22, 1, 0.36, 1) both` : undefined,
           }}
         >
@@ -141,6 +140,8 @@ export function Player({
             theme={theme}
             mode="live"
             animateKey={slide.id}
+            rounded
+            className="overflow-hidden"
             onAction={(a) => {
               if (a.type === "next-slide") go(index + 1);
               else if (a.type === "prev-slide") go(index - 1);
@@ -148,7 +149,7 @@ export function Player({
             }}
           />
         </div>
-      </div>
+      </FitStage>
 
       <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-white/5">
         <div
@@ -264,13 +265,13 @@ export function Player({
       {!overview && (
         <>
           <button
-            className="absolute left-0 top-0 bottom-10 w-[8%] cursor-w-resize opacity-0"
+            className="absolute left-0 top-0 bottom-10 w-[3%] cursor-w-resize opacity-0"
             onClick={() => go(index - 1)}
             aria-label="Previous"
             tabIndex={-1}
           />
           <button
-            className="absolute right-0 top-0 bottom-10 w-[8%] cursor-e-resize opacity-0"
+            className="absolute right-0 top-0 bottom-10 w-[3%] cursor-e-resize opacity-0"
             onClick={() => go(index + 1)}
             aria-label="Next"
             tabIndex={-1}
@@ -328,6 +329,44 @@ export function Player({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/** Letterbox a 16:9 slide into whatever space the player actually has. */
+function FitStage({ children }: { children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState({ w: 0, h: 0 });
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    const update = () => {
+      const pad = 24;
+      const cw = Math.max(0, node.clientWidth - pad);
+      const ch = Math.max(0, node.clientHeight - pad);
+      if (cw < 2 || ch < 2) return;
+      if (cw / ch > 16 / 9) setSize({ w: (ch * 16) / 9, h: ch });
+      else setSize({ w: cw, h: (cw * 9) / 16 });
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(node);
+    return () => ro.disconnect();
+  }, []);
+
+  return (
+    <div ref={ref} className="absolute inset-0 flex items-center justify-center p-3">
+      <div
+        className="relative flex-shrink-0 overflow-hidden rounded-lg"
+        style={
+          size.w > 0
+            ? { width: size.w, height: size.h }
+            : { width: "min(100%, calc((100vh - 120px) * 16 / 9))", aspectRatio: "16 / 9", maxHeight: "100%" }
+        }
+      >
+        {children}
+      </div>
     </div>
   );
 }

@@ -5,12 +5,13 @@ import Link from "next/link";
 import {
   ArrowUp, Plus, UploadCloud, AlertCircle, Check, Loader2, PencilRuler, Play, PlusCircle,
 } from "lucide-react";
-import { aiEdit, getPresentation } from "@/lib/api";
-import { EFFORT, EFFORT_LEVELS, parseEffort, type Effort } from "@/lib/effort";
+import { aiEdit, getPresentation, savePresentation } from "@/lib/api";
+import { parseEffort, type Effort } from "@/lib/effort";
 import { ATTACH_ACCEPT, useAttachments } from "@/lib/use-attachments";
+import { EffortPicker } from "@/components/chat/EffortPicker";
 import { FileChips } from "@/components/chat/FileChips";
 import { SlideRenderer } from "@/components/renderer/SlideRenderer";
-import type { Presentation } from "@/lib/schema";
+import type { ChatTurn, Presentation } from "@/lib/schema";
 
 interface GenProgress {
   stage: string;
@@ -42,12 +43,39 @@ const SUGGESTIONS = [
   "Microgrid safety training",
 ];
 
+function toChatTurns(messages: ChatMessage[]): ChatTurn[] {
+  return messages
+    .filter((m): m is Exclude<ChatMessage, { kind: "progress" }> => m.role === "user" || m.kind !== "progress")
+    .map((m) => {
+      if (m.role === "user") return { id: m.id, role: "user" as const, text: m.text, files: m.files };
+      return {
+        id: m.id,
+        role: "assistant" as const,
+        text: m.kind === "result" ? "Created the presentation. Click around — then ask for a change." : m.text,
+        kind: m.kind === "error" ? "error" : m.kind === "edit" ? "edit" : "result",
+      };
+    });
+}
+
+function fromChatTurns(turns: ChatTurn[], presentationId: string): ChatMessage[] {
+  return turns.map((t) => {
+    if (t.role === "user") return { id: t.id, role: "user" as const, text: t.text, files: t.files };
+    if (t.kind === "error") return { id: t.id, role: "assistant" as const, kind: "error" as const, text: t.text };
+    if (t.kind === "edit") return { id: t.id, role: "assistant" as const, kind: "edit" as const, text: t.text };
+    return { id: t.id, role: "assistant" as const, kind: "result" as const, presentationId };
+  });
+}
+
 export function Composer({
+  continueId,
   onThreadChange,
   onCreated,
+  onReset,
 }: {
+  continueId?: string | null;
   onThreadChange?: (active: boolean) => void;
   onCreated?: () => void;
+  onReset?: () => void;
 }) {
   const [prompt, setPrompt] = useState("");
   const [dragging, setDragging] = useState(false);
@@ -62,8 +90,45 @@ export function Composer({
   const scrollRef = useRef<HTMLDivElement>(null);
   const { files, addFiles, removeFile, clearFiles, readySources, uploading, inputRef } =
     useAttachments();
+  const loadedId = useRef<string | null>(null);
 
   const threadActive = messages.length > 0;
+
+  useEffect(() => {
+    if (!continueId || loadedId.current === continueId) return;
+    loadedId.current = continueId;
+    abortRef.current?.abort();
+    setGenerating(null);
+    setEditing(false);
+    void (async () => {
+      try {
+        const doc = await getPresentation(continueId);
+        setActiveDoc(doc);
+        setMessages(
+          doc.chatThread?.length
+            ? fromChatTurns(doc.chatThread, doc.id)
+            : [{ id: `r-${doc.id}`, role: "assistant", kind: "result", presentationId: doc.id }]
+        );
+      } catch {
+        setMessages([
+          {
+            id: "e-load",
+            role: "assistant",
+            kind: "error",
+            text: "Couldn't reopen that presentation. Try again from Recents.",
+          },
+        ]);
+      }
+    })();
+  }, [continueId]);
+
+  async function persistThread(doc: Presentation, msgs: ChatMessage[]) {
+    try {
+      await savePresentation({ ...doc, chatThread: toChatTurns(msgs) });
+    } catch {
+      /* keep chatting even if history fails to save */
+    }
+  }
 
   useEffect(() => {
     onThreadChange?.(threadActive);
@@ -130,8 +195,10 @@ export function Composer({
     setEditing(false);
     setPrompt("");
     clearFiles();
+    loadedId.current = null;
     onThreadChange?.(false);
-  }, [clearFiles, onThreadChange]);
+    onReset?.();
+  }, [clearFiles, onThreadChange, onReset]);
 
   function pushUser(text: string, attachedNames: string[] = []) {
     setMessages((m) => [
@@ -217,15 +284,19 @@ export function Composer({
       if (!finishedId) throw new Error("Generation ended unexpectedly. Please try again.");
       updateProgress({ stage: "finalising", detail: "Saving your presentation" });
       const doc = await getPresentation(finishedId);
-      setActiveDoc(doc);
       setGenerating(null);
-      setMessages((m) =>
-        m.map((msg) =>
+      loadedId.current = doc.id;
+      setMessages((m) => {
+        const next = m.map((msg) =>
           msg.id === progressId
-            ? { id: progressId, role: "assistant", kind: "result", presentationId: finishedId }
+            ? { id: progressId, role: "assistant" as const, kind: "result" as const, presentationId: finishedId }
             : msg
-        )
-      );
+        );
+        const withThread = { ...doc, chatThread: toChatTurns(next) };
+        setActiveDoc(withThread);
+        void persistThread(withThread, next);
+        return next;
+      });
       onCreated?.();
     } catch (e) {
       if (controller.signal.aborted) {
@@ -265,22 +336,30 @@ export function Composer({
         presentation: activeDoc,
         files: attached,
       });
-      if (result.changed) setActiveDoc(result.presentation);
-      setMessages((m) => [
-        ...m,
-        { id: `a${Date.now()}`, role: "assistant", kind: "edit", text: result.summary },
-      ]);
+      const nextDoc = result.changed ? result.presentation : activeDoc;
+      const editMsg = { id: `a${Date.now()}`, role: "assistant" as const, kind: "edit" as const, text: result.summary };
+      setMessages((m) => {
+        const next = [...m, editMsg];
+        const withThread = { ...nextDoc, chatThread: toChatTurns(next) };
+        setActiveDoc(withThread);
+        void persistThread(withThread, next);
+        return next;
+      });
       onCreated?.();
     } catch (e) {
-      setMessages((m) => [
-        ...m,
-        {
-          id: `e${Date.now()}`,
-          role: "assistant",
-          kind: "error",
-          text: e instanceof Error ? e.message : "Something went wrong. Please try again.",
-        },
-      ]);
+      setMessages((m) => {
+        const next: ChatMessage[] = [
+          ...m,
+          {
+            id: `e${Date.now()}`,
+            role: "assistant",
+            kind: "error",
+            text: e instanceof Error ? e.message : "Something went wrong. Please try again.",
+          },
+        ];
+        void persistThread(activeDoc, next);
+        return next;
+      });
     } finally {
       setEditing(false);
     }
@@ -428,34 +507,18 @@ export function Composer({
 
           <div className="flex items-center gap-2.5">
             {!activeDoc && (
-              <div
-                className="flex items-center rounded-full border border-border p-0.5"
-                title="How hard the model should work"
-              >
-                {EFFORT_LEVELS.map((key) => (
-                  <button
-                    key={key}
-                    type="button"
-                    disabled={busy}
-                    onClick={() => {
-                      setEffort(key);
-                      try {
-                        localStorage.setItem("pk-effort", key);
-                      } catch {
-                        /* ignore */
-                      }
-                    }}
-                    className={`px-2.5 py-1 rounded-full text-[11.5px] transition-colors cursor-pointer disabled:opacity-50 ${
-                      effort === key
-                        ? "bg-text text-bg font-medium"
-                        : "text-text-secondary hover:text-text"
-                    }`}
-                    title={EFFORT[key].hint}
-                  >
-                    {EFFORT[key].label}
-                  </button>
-                ))}
-              </div>
+              <EffortPicker
+                value={effort}
+                disabled={busy}
+                onChange={(next) => {
+                  setEffort(next);
+                  try {
+                    localStorage.setItem("pk-effort", next);
+                  } catch {
+                    /* ignore */
+                  }
+                }}
+              />
             )}
             <button
               onClick={send}
@@ -538,27 +601,58 @@ function ThreadMessage({
     );
   }
 
+  return <LiveDeckCard doc={doc} />;
+}
+
+function LiveDeckCard({ doc }: { doc: Presentation }) {
+  const [index, setIndex] = useState(0);
+  const slide = doc.slides[Math.min(index, doc.slides.length - 1)];
   return (
     <div className="self-stretch bg-surface border border-border rounded-2xl overflow-hidden">
       <div className="px-4 pt-3.5 pb-2">
         <div className="text-[14px] font-medium">{doc.title}</div>
         <div className="text-[12px] text-text-tertiary mt-0.5">
-          {doc.slides.length} slides · stay here to keep editing, or open the canvas
+          Click the slide — flip cards, tabs, quizzes, and buttons work. Then type a change below.
         </div>
       </div>
-      <div className="px-4 pb-4 grid grid-cols-2 sm:grid-cols-3 gap-2">
-        {doc.slides.slice(0, 6).map((slide) => (
-          <SlideRenderer
-            key={slide.id}
-            slide={slide}
-            theme={doc.theme}
-            mode="thumb"
-            rounded
-            className="border border-border"
-          />
-        ))}
+      <div className="px-4 pb-3">
+        <SlideRenderer
+          slide={slide}
+          theme={doc.theme}
+          mode="live"
+          animateKey={slide.id}
+          rounded
+          className="border border-border"
+          onAction={(a) => {
+            if (a.type === "next-slide") setIndex((i) => Math.min(doc.slides.length - 1, i + 1));
+            if (a.type === "prev-slide") setIndex((i) => Math.max(0, i - 1));
+            if (a.type === "goto-slide" && a.targetSlide !== undefined) {
+              setIndex(Math.max(0, Math.min(doc.slides.length - 1, a.targetSlide)));
+            }
+          }}
+        />
       </div>
-      <div className="px-4 pb-3.5 flex items-center gap-2">
+      <div className="px-4 pb-3 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setIndex((i) => Math.max(0, i - 1))}
+          disabled={index === 0}
+          className="text-[12px] text-text-secondary hover:text-text disabled:opacity-30 cursor-pointer"
+        >
+          Previous
+        </button>
+        <span className="text-[12px] text-text-tertiary tabular-nums">
+          {index + 1} / {doc.slides.length}
+        </span>
+        <button
+          type="button"
+          onClick={() => setIndex((i) => Math.min(doc.slides.length - 1, i + 1))}
+          disabled={index === doc.slides.length - 1}
+          className="text-[12px] text-text-secondary hover:text-text disabled:opacity-30 cursor-pointer"
+        >
+          Next
+        </button>
+        <div className="flex-1" />
         <Link
           href={`/editor/${doc.id}`}
           className="flex items-center gap-1.5 text-[12.5px] font-medium border border-border rounded-lg px-3 py-1.5 hover:bg-surface-2 transition-colors"

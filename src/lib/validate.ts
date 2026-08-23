@@ -1,9 +1,11 @@
 import { nanoid } from "nanoid";
 import {
+  ChatTurnSchema,
   ElementSchema,
   PresentationSchema,
   SlideSchema,
   ThemeSchema,
+  type ChatTurn,
   type Presentation,
   type Slide,
   type SlideElement,
@@ -270,7 +272,17 @@ export function repairPresentation(input: unknown, existing?: Partial<Presentati
     version: 1,
     createdAt: existing?.createdAt ?? now,
     updatedAt: now,
+    chatThread: repairChatThread(raw.chatThread) ?? existing?.chatThread,
   };
 
   return PresentationSchema.parse(doc);
+}
+
+function repairChatThread(input: unknown): ChatTurn[] | undefined {
+  if (!Array.isArray(input)) return undefined;
+  const turns = input
+    .map((item) => ChatTurnSchema.safeParse(item))
+    .filter((r): r is { success: true; data: ChatTurn } => r.success)
+    .map((r) => r.data);
+  return turns.length > 0 ? turns : undefined;
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useEditorStore } from "@/state/editorStore";
-import { aiEdit } from "@/lib/api";
+import { aiEdit, savePresentation } from "@/lib/api";
 import { ATTACH_ACCEPT, useAttachments } from "@/lib/use-attachments";
 import { FileChips } from "@/components/chat/FileChips";
 import { ArrowUp, Paperclip, Sparkles, AlertCircle, Loader2, UploadCloud } from "lucide-react";
@@ -42,6 +42,19 @@ export function AIChat() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, busy]);
 
+  useEffect(() => {
+    if (!presentation?.chatThread?.length) return;
+    setMessages(
+      presentation.chatThread.map((t) => ({
+        id: t.id,
+        role: t.role,
+        text: t.text,
+        files: t.files,
+        error: t.kind === "error",
+      }))
+    );
+  }, [presentation?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const selection = (() => {
     if (!presentation || !selectedSlideId) return null;
     const idx = presentation.slides.findIndex((s) => s.id === selectedSlideId);
@@ -79,21 +92,45 @@ export function AIChat() {
         selectedElementId: selectedElementId ?? undefined,
         files: attached,
       });
-      if (result.changed) replacePresentation(result.presentation);
-      setMessages((m) => [
-        ...m,
-        { id: `a${Date.now()}`, role: "assistant", text: result.summary },
-      ]);
+      const reply: Message = { id: `a${Date.now()}`, role: "assistant", text: result.summary };
+      const base = result.changed ? result.presentation : presentation;
+      setMessages((m) => {
+        const next: Message[] = [...m, reply];
+        const chatThread = next.map((msg) => ({
+          id: msg.id,
+          role: msg.role,
+          text: msg.text,
+          files: msg.files,
+          kind: msg.error ? ("error" as const) : msg.role === "assistant" ? ("edit" as const) : undefined,
+        }));
+        const doc = { ...base, chatThread };
+        replacePresentation(doc);
+        void savePresentation(doc);
+        return next;
+      });
     } catch (e) {
-      setMessages((m) => [
-        ...m,
-        {
-          id: `e${Date.now()}`,
-          role: "assistant",
-          text: e instanceof Error ? e.message : "Something went wrong. Please try again.",
-          error: true,
-        },
-      ]);
+      setMessages((m) => {
+        const next: Message[] = [
+          ...m,
+          {
+            id: `e${Date.now()}`,
+            role: "assistant",
+            text: e instanceof Error ? e.message : "Something went wrong. Please try again.",
+            error: true,
+          },
+        ];
+        void savePresentation({
+          ...presentation,
+          chatThread: next.map((msg) => ({
+            id: msg.id,
+            role: msg.role,
+            text: msg.text,
+            files: msg.files,
+            kind: msg.error ? ("error" as const) : msg.role === "assistant" ? ("edit" as const) : undefined,
+          })),
+        });
+        return next;
+      });
     } finally {
       setBusy(false);
     }

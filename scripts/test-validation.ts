@@ -181,7 +181,7 @@ test("promotes a heading-only slide into an interactive layout", () => {
   const raw = repairSlide({ name: "Empty", elements: [{ type: "heading", props: { text: "Empty", level: 2 } }] }, 1)!;
   const laid = layoutSlide(raw, 1, 4, theme);
   expect(
-    laid.elements.some((e) => ["cards", "stat", "chart", "flipcards"].includes(e.type)),
+    laid.elements.some((e) => ["cards", "stat", "chart", "flipcards", "flow"].includes(e.type)),
     "should inject an interactive widget"
   );
 });

@@ -9,7 +9,7 @@ Canvas is 1280×16:9. Use the EXACT coordinates from the layout you pick. Do not
 
 LAYOUTS — pick one per slide and copy its boxes:
 - "title": kicker text (6,12,50,5), heading (6,20,54,26), stake text (6,50,50,12), button (6,78,22,9), three stats at (64,22,30,22) (64,47,30,22) (64,72,30,20)
-- "stats-chart": kicker (6,5,50,4), heading (6,10,88,8), three stats (6,22,28,24) (36,22,28,24) (66,22,28,24), chart (6,50,88,44)
+- "stats-chart": kicker (6,4,50,4), heading (6,8.5,88,7), three stats (6,17,28,20) (36,17,28,20) (66,17,28,20), chart (6,40,88,54)
 - "widget": kicker (6,5,50,4), heading (6,10,88,8), ONE big interactive (6,22,88,70) — chart, tabs, flipcards, quiz, flow, cards, timeline, comparison, accordion, or map
 - "split": kicker + heading as widget, left widget (6,22,54,70), right widget (64,22,30,70)
 - "close": kicker (6,8,50,5), heading (6,14,88,12), cards or quiz (6,30,88,52)
@@ -64,13 +64,14 @@ EXAMPLE (copy this structure, change the words and numbers):
 export const DESIGN_RULES = `
 RULES:
 - One layout per slide. Copy its coordinates exactly. 4-8 elements. Never pile widgets on top of each other.
-- Every content slide has exactly one hero interactive (chart, stats row, flipcards, tabs, quiz, flow, cards, timeline, comparison, map).
-- Title slide = layout "title". Last slide = layout "close".
+- Every content slide MUST have a live interactive the audience can click: flipcards, tabs, quiz, flow, cards, timeline, accordion, or a next-slide button. A chart or stat row alone is not enough.
+- Title slide includes a primary button with action "next-slide". Last slide is a quiz or cards (layout "close").
 - Real specific copy from the user's request or sources. No lorem, no "Overview", no "Thank you", no placeholders.
 - Headlines are editorial (two lines allowed with \\n). Kickers are short UPPERCASE.
 - Numbers in charts/stats must be consistent with the source. If the user gave no numbers, use clearly labelled illustrative figures and say so in notes.
-- Dark theme unless the topic needs light. Accent sparingly.
-- notes on every slide (2 sentences).
+- Pick a theme that fits the topic — not every deck is dark orange. Light paper, midnight blue, forest, ink, signal red, and studio purple are all valid.
+- Vary the hero widget across slides. Do not repeat the same component two slides in a row.
+- notes on every slide (2 sentences) — tell the presenter what to click.
 `;
 
 export function planSystemPrompt(minSlides: number, maxSlides: number): string {
@@ -81,7 +82,7 @@ Respond with ONLY:
   "title": string,
   "description": string,
   "audience": string,
-  "theme": { "name": string, "mode": "dark"|"light", "colors": { "background": "#0b0d12", "surface": "#161a22", "text": "#f4f5f7", "muted": "#9aa3b2", "accent": "#f5a623", "accentText": "#101114" }, "radius": 16 },
+  "theme": { "name": "Studio", "mode": "dark", "colors": { "background": "#120814", "surface": "#1d1222", "text": "#f7f0fb", "muted": "#b09ab8", "accent": "#e66df2", "accentText": "#1a0b1c" }, "radius": 16 },
   "slides": [ { "name": string, "goal": string, "suggestedComponents": [string] } ]
 }
 
@@ -122,5 +123,7 @@ Respond with ONLY:
   ]
 }
 
-Prefer the smallest change. Keep ids when updating. If asked to make a slide better, switch it to one of the five layouts and fill real content — do not add overlapping elements.`;
+Prefer the smallest change (updateElement / addElement). Keep ids when updating.
+If asked to make a slide better, add a live interactive (flipcards, quiz, tabs, flow, cards) — do not return a static text dump.
+If you cannot apply the request, return { "summary": "why", "operations": [] }. Never return the full presentation. Never omit required props.`;
 }

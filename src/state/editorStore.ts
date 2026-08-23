@@ -73,7 +73,10 @@ export const useEditorStore = create<EditorState>()(
 
       replacePresentation: (p) =>
         set((state) => ({
-          presentation: p,
+          presentation: {
+            ...p,
+            chatThread: p.chatThread ?? state.presentation?.chatThread,
+          },
           selectedSlideId: p.slides.some((s) => s.id === state.selectedSlideId)
             ? state.selectedSlideId
             : p.slides[0]?.id ?? null,

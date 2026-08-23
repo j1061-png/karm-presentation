@@ -22,6 +22,19 @@ type DragState =
 
 const HANDLES = ["nw", "n", "ne", "e", "se", "s", "sw", "w"] as const;
 
+const LIVE_TYPES = new Set([
+  "flipcards",
+  "tabs",
+  "accordion",
+  "quiz",
+  "flow",
+  "cards",
+  "callout",
+  "timeline",
+  "button",
+  "chart",
+]);
+
 const HANDLE_CURSORS: Record<string, string> = {
   nw: "nwse-resize", se: "nwse-resize",
   ne: "nesw-resize", sw: "nesw-resize",
@@ -39,6 +52,7 @@ export function Canvas() {
   const deleteElement = useEditorStore((s) => s.deleteElement);
   const duplicateElement = useEditorStore((s) => s.duplicateElement);
   const addElement = useEditorStore((s) => s.addElement);
+  const selectSlide = useEditorStore((s) => s.selectSlide);
 
   const frameRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<DragState | null>(null);
@@ -257,6 +271,16 @@ export function Canvas() {
               hideElementId={editingId}
               className="rounded-lg overflow-hidden"
               rounded
+              onAction={(a) => {
+                if (!presentation) return;
+                const idx = presentation.slides.findIndex((s) => s.id === slide.id);
+                if (a.type === "next-slide") selectSlide(presentation.slides[Math.min(presentation.slides.length - 1, idx + 1)]?.id);
+                if (a.type === "prev-slide") selectSlide(presentation.slides[Math.max(0, idx - 1)]?.id);
+                if (a.type === "goto-slide" && a.targetSlide !== undefined) {
+                  const t = presentation.slides[a.targetSlide];
+                  if (t) selectSlide(t.id);
+                }
+              }}
             />
 
             {/* ------------------------------------------ overlay layer */}
@@ -265,10 +289,11 @@ export function Canvas() {
                 const isSelected = el.id === selectedElementId;
                 const isEditing = el.id === editingId;
                 if (isEditing) return null; // the inline editor owns this region
+                const live = LIVE_TYPES.has(el.type);
                 return (
                   <div
                     key={el.id}
-                    className={isSelected ? "el-selected" : "el-hover"}
+                    className={isSelected ? "el-selected" : live ? undefined : "el-hover"}
                     style={{
                       position: "absolute",
                       left: `${el.x}%`,
@@ -276,11 +301,11 @@ export function Canvas() {
                       width: `${el.w}%`,
                       height: `${el.h}%`,
                       zIndex: 100 + el.z,
-                      cursor: isEditing ? "text" : "move",
-                      pointerEvents: isEditing ? "none" : "auto",
+                      cursor: isEditing ? "text" : live && !isSelected ? "pointer" : "move",
+                      pointerEvents: isEditing || (live && !isSelected) ? "none" : "auto",
                     }}
                     onPointerDown={(e) => {
-                      if (isEditing) return;
+                      if (isEditing || (live && !isSelected)) return;
                       selectElement(el.id);
                       setEditingId(null);
                       startDrag(e, {
@@ -298,6 +323,20 @@ export function Canvas() {
                       if (["heading", "text", "quote", "list"].includes(el.type)) setEditingId(el.id);
                     }}
                   >
+                    {live && !isSelected && (
+                      <button
+                        type="button"
+                        title="Select to move"
+                        className="absolute top-1 left-1 w-5 h-5 rounded-md bg-surface/90 border border-border text-text-tertiary text-[10px] leading-none cursor-pointer z-30"
+                        style={{ pointerEvents: "auto" }}
+                        onPointerDown={(e) => {
+                          e.stopPropagation();
+                          selectElement(el.id);
+                        }}
+                      >
+                        ▣
+                      </button>
+                    )}
                     {/* Resize handles */}
                     {isSelected &&
                       !isEditing &&

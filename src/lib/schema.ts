@@ -398,6 +398,15 @@ export const SlideSchema = z.object({
 });
 export type Slide = z.infer<typeof SlideSchema>;
 
+export const ChatTurnSchema = z.object({
+  id: z.string(),
+  role: z.enum(["user", "assistant"]),
+  text: z.string().default(""),
+  files: z.array(z.string()).optional(),
+  kind: z.enum(["text", "result", "edit", "error"]).optional(),
+});
+export type ChatTurn = z.infer<typeof ChatTurnSchema>;
+
 export const PresentationSchema = z.object({
   id: z.string(),
   title: z.string().default("Untitled presentation"),
@@ -407,6 +416,7 @@ export const PresentationSchema = z.object({
   version: z.number().int().default(1),
   createdAt: z.string(),
   updatedAt: z.string(),
+  chatThread: z.array(ChatTurnSchema).optional(),
 });
 export type Presentation = z.infer<typeof PresentationSchema>;
 

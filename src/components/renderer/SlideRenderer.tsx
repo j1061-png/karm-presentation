@@ -127,6 +127,7 @@ export function SlideRenderer({
                   width: `${el.w}%`,
                   height: `${el.h}%`,
                   zIndex: el.z,
+                  overflow: "hidden",
                   visibility: el.id === hideElementId ? "hidden" : undefined,
                   transform: el.rotation ? `rotate(${el.rotation}deg)` : undefined,
                   ["--el-opacity" as string]: el.opacity,

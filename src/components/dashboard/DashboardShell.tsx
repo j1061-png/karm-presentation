@@ -32,6 +32,14 @@ export function DashboardShell({
   const [toast, setToast] = useState<string | null>(null);
   const [recentExpanded, setRecentExpanded] = useState(false);
   const [threadActive, setThreadActive] = useState(false);
+  const [openChatId, setOpenChatId] = useState<string | null>(null);
+  const [chatEpoch, setChatEpoch] = useState(0);
+
+  function openInChat(id: string) {
+    setView("home");
+    setOpenChatId(id);
+    setChatEpoch((n) => n + 1);
+  }
 
   const refresh = useCallback(async () => {
     try {
@@ -162,6 +170,7 @@ export function DashboardShell({
         recents={metas}
         user={user}
         onSignOut={() => void signOut()}
+        onOpenRecent={openInChat}
       />
 
       <main
@@ -186,7 +195,13 @@ export function DashboardShell({
                   What do you want to create{firstName ? `, ${firstName}` : ""}?
                 </h1>
               )}
-              <Composer onThreadChange={setThreadActive} onCreated={() => void refresh()} />
+              <Composer
+                key={chatEpoch}
+                continueId={openChatId}
+                onThreadChange={setThreadActive}
+                onCreated={() => void refresh()}
+                onReset={() => setOpenChatId(null)}
+              />
 
               {/* Compact recents */}
               {!threadActive && recent && recent.length > 0 && (
@@ -207,6 +222,7 @@ export function DashboardShell({
                       <PresentationItem
                         key={m.id}
                         meta={m}
+                        onOpen={openInChat}
                         onRename={handleRename}
                         onDuplicate={handleDuplicate}
                         onDelete={handleDelete}
@@ -304,6 +320,7 @@ export function DashboardShell({
                   <PresentationItem
                     key={m.id}
                     meta={m}
+                    onOpen={openInChat}
                     onRename={handleRename}
                     onDuplicate={handleDuplicate}
                     onDelete={handleDelete}

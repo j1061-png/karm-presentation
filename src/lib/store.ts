@@ -99,8 +99,13 @@ export async function getPresentation(
 }
 
 export async function savePresentation(userId: string, p: Presentation): Promise<void> {
-  await upload(docPath(userId, p.id), p);
-  await upsertIndexEntry(userId, toMeta(p));
+  const prev = await getPresentation(userId, p.id);
+  const next: Presentation = {
+    ...p,
+    chatThread: p.chatThread ?? prev?.chatThread,
+  };
+  await upload(docPath(userId, p.id), next);
+  await upsertIndexEntry(userId, toMeta(next));
 }
 
 export async function deletePresentation(userId: string, id: string): Promise<void> {

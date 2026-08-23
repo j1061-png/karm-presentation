@@ -87,7 +87,7 @@ export function ElementView({ el, ctx }: { el: SlideElement; ctx: RenderContext 
       const sizes: Record<number, number> = { 1: 56, 2: 40, 3: 28 };
       return (
         <div
-          className="w-full h-full flex flex-col justify-center whitespace-pre-wrap"
+          className="w-full h-full flex flex-col justify-center overflow-hidden"
           style={{
             ...boxStyle,
             ...baseText,
@@ -97,7 +97,7 @@ export function ElementView({ el, ctx }: { el: SlideElement; ctx: RenderContext 
             lineHeight: s.lineHeight ?? 1.1,
           }}
         >
-          {el.props.text}
+          <span className="line-clamp-2">{el.props.text}</span>
         </div>
       );
     }
@@ -199,7 +199,15 @@ export function ElementView({ el, ctx }: { el: SlideElement; ctx: RenderContext 
 
     case "chart":
       return (
-        <div className="w-full h-full" style={{ ...boxStyle, background: s.background ?? surface, padding: s.padding ?? 18, border: s.borderWidth !== 0 ? `1px solid ${border}` : undefined }}>
+        <div
+          className="w-full h-full overflow-hidden"
+          style={{
+            ...boxStyle,
+            background: s.background ?? surface,
+            padding: s.padding ?? 14,
+            border: s.borderWidth !== 0 ? `1px solid ${border}` : undefined,
+          }}
+        >
           <ChartView props={el.props} theme={theme} animate={live} />
         </div>
       );
@@ -328,7 +336,7 @@ export function ElementView({ el, ctx }: { el: SlideElement; ctx: RenderContext 
           className="w-full h-full flex items-center justify-center gap-2 font-medium transition-all duration-150 hover:brightness-110 active:scale-[0.98] cursor-pointer"
           style={{ ...variants[el.props.variant], borderRadius: s.borderRadius ?? 10, fontSize: s.fontSize ?? 17 }}
           onClick={(e) => {
-            if (!live) return;
+            if (mode === "thumb") return;
             e.stopPropagation();
             if (el.props.action === "link" && el.props.href) {
               window.open(el.props.href, "_blank", "noopener,noreferrer");
@@ -455,33 +463,38 @@ function StatView({
     el.props.trend?.direction === "up" ? "#43c98a" :
     el.props.trend?.direction === "down" ? "#f0554d" : theme.colors.muted;
 
+  const valueSize = s.fontSize ?? 40;
+
   return (
     <div
-      className={`w-full h-full flex flex-col justify-center ${mode === "live" ? "pk-lift" : ""}`}
+      className={`w-full h-full flex flex-col justify-center overflow-hidden min-h-0 ${mode === "live" ? "pk-lift" : ""}`}
       style={{
         ...boxStyle,
         background: s.background ?? theme.colors.surface,
-        padding: s.padding ?? 22,
+        padding: s.padding ?? 16,
         border: `1px solid ${theme.mode === "dark" ? "rgba(255,255,255,0.09)" : "rgba(0,0,0,0.1)"}`,
       }}
     >
       {Icon && (
         <div
-          className="w-[2.2em] h-[2.2em] rounded-[0.6em] flex items-center justify-center mb-[0.8em]"
-          style={{ background: `color-mix(in srgb, ${theme.colors.accent} 16%, transparent)`, fontSize: (s.fontSize ?? 44) * 0.42 }}
+          className="w-[1.8em] h-[1.8em] rounded-[0.5em] flex items-center justify-center mb-[0.45em] flex-shrink-0"
+          style={{ background: `color-mix(in srgb, ${theme.colors.accent} 16%, transparent)`, fontSize: valueSize * 0.36 }}
         >
           <Icon style={{ color: theme.colors.accent, width: "60%", height: "60%" }} />
         </div>
       )}
-      <div className="flex items-baseline gap-1.5 tabular-nums" style={{ color: s.color ?? theme.colors.text, fontSize: s.fontSize ?? 44, fontWeight: s.fontWeight ?? 650, letterSpacing: -1 }}>
+      <div
+        className="flex items-baseline gap-1 tabular-nums leading-none flex-shrink-0"
+        style={{ color: s.color ?? theme.colors.text, fontSize: valueSize, fontWeight: s.fontWeight ?? 650, letterSpacing: -1 }}
+      >
         {el.props.prefix}
         {formatStatValue(el.props.value, progress, animate)}
         {el.props.suffix && <span style={{ color: theme.colors.accent }}>{el.props.suffix}</span>}
       </div>
-      <div className="flex items-center gap-2 mt-[0.35em]" style={{ fontSize: (s.fontSize ?? 44) * 0.34 }}>
-        <span style={{ color: theme.colors.muted }}>{el.props.label}</span>
+      <div className="flex items-start gap-2 mt-[0.4em] min-h-0" style={{ fontSize: Math.max(12, valueSize * 0.3) }}>
+        <span className="line-clamp-2 min-w-0" style={{ color: theme.colors.muted }}>{el.props.label}</span>
         {el.props.trend && (
-          <span className="flex items-center gap-1 font-medium" style={{ color: trendColor }}>
+          <span className="flex items-center gap-1 font-medium flex-shrink-0 mt-0.5" style={{ color: trendColor }}>
             {trendIcon}
             {el.props.trend.value}
           </span>

@@ -26,6 +26,7 @@ export function Sidebar({
   recents,
   user,
   onSignOut,
+  onOpenRecent,
 }: {
   view: DashboardView;
   onNavigate: (v: DashboardView) => void;
@@ -33,6 +34,7 @@ export function Sidebar({
   recents: PresentationMeta[] | null;
   user: { name: string; email: string; avatarUrl: string | null };
   onSignOut: () => void;
+  onOpenRecent?: (id: string) => void;
 }) {
   const router = useRouter();
   const { theme, toggle } = useTheme();
@@ -146,7 +148,7 @@ export function Sidebar({
                 {recents.slice(0, 12).map((m) => (
                   <button
                     key={m.id}
-                    onClick={() => router.push(`/editor/${m.id}`)}
+                    onClick={() => (onOpenRecent ? onOpenRecent(m.id) : router.push(`/editor/${m.id}`))}
                     className="group flex items-center gap-2 px-2.5 py-[6px] rounded-lg text-[13px] text-text-secondary hover:text-text hover:bg-surface-2 transition-colors cursor-pointer text-left"
                     title={m.title}
                   >

@@ -1,17 +1,17 @@
 import { nanoid } from "nanoid";
 import { chatJson } from "./deepseek";
 import { EFFORT, parseEffort, type Effort } from "./effort";
-import { fallbackSlide, layoutSlide } from "./layouts";
+import { ensureInteractive, fallbackSlide, layoutSlide } from "./layouts";
+import { resolveDeckTheme } from "./palettes";
 import { editSystemPrompt, planSystemPrompt, slidesSystemPrompt } from "./prompts";
 import {
-  AIEditResponseSchema,
   PlanSchema,
   type AIEditResponse,
   type Plan,
   type Presentation,
   type Slide,
 } from "./schema";
-import { extractJson, repairPresentation, repairSlide, repairTheme } from "./validate";
+import { extractJson, repairElement, repairPresentation, repairSlide, repairTheme } from "./validate";
 
 export type GenerationStage =
   | { stage: "analysing"; detail?: string }
@@ -26,6 +26,62 @@ export interface SourceFile {
   name: string;
   kind: string;
   content: string;
+}
+
+const HERO_ROTATION = [
+  "chart",
+  "flipcards",
+  "tabs",
+  "quiz",
+  "flow",
+  "cards",
+  "timeline",
+  "comparison",
+  "accordion",
+];
+
+function parsePlan(raw: unknown): Plan {
+  const obj = typeof raw === "object" && raw !== null ? (raw as Record<string, unknown>) : {};
+  const slides = Array.isArray(obj.slides)
+    ? obj.slides
+        .map((s) => {
+          if (typeof s !== "object" || s === null) return null;
+          const row = s as Record<string, unknown>;
+          const name = typeof row.name === "string" ? row.name.trim() : "";
+          if (!name) return null;
+          return {
+            name,
+            goal: typeof row.goal === "string" ? row.goal : "",
+            suggestedComponents: Array.isArray(row.suggestedComponents)
+              ? row.suggestedComponents.filter((c): c is string => typeof c === "string")
+              : [],
+          };
+        })
+        .filter((s): s is NonNullable<typeof s> => s !== null)
+    : [];
+  return PlanSchema.parse({
+    title: typeof obj.title === "string" && obj.title.trim() ? obj.title.trim() : "Untitled presentation",
+    description: typeof obj.description === "string" ? obj.description : "",
+    audience: typeof obj.audience === "string" ? obj.audience : "",
+    theme: repairTheme(obj.theme),
+    slides: slides.length > 0 ? slides : [{ name: "The stake", goal: "", suggestedComponents: ["stat"] }],
+  });
+}
+
+function diversifyPlan(plan: Plan): Plan {
+  const used = new Set<string>();
+  const slides = plan.slides.map((s, i) => {
+    if (i === 0) return { ...s, suggestedComponents: ["stat", "button"] };
+    if (i === plan.slides.length - 1) {
+      const close = s.suggestedComponents.find((c) => c === "quiz" || c === "cards") ?? "quiz";
+      return { ...s, suggestedComponents: [close] };
+    }
+    const preferred = s.suggestedComponents.find((c) => HERO_ROTATION.includes(c) && !used.has(c));
+    const hero = preferred ?? HERO_ROTATION.find((h) => !used.has(h)) ?? "cards";
+    used.add(hero);
+    return { ...s, suggestedComponents: [hero] };
+  });
+  return { ...plan, slides };
 }
 
 function sourceContext(files: SourceFile[]): string {
@@ -60,7 +116,7 @@ export async function generatePlan(prompt: string, files: SourceFile[], effort: 
         content: `Plan a ${cfg.minSlides}–${cfg.maxSlides} slide interactive presentation for:\n\n"${prompt}"${sourceContext(files)}`,
       },
     ],
-    (raw) => PlanSchema.parse(extractJson(raw)),
+    (raw) => parsePlan(extractJson(raw)),
     {
       maxTokens: cfg.maxTokensPlan,
       temperature: cfg.temperature,
@@ -86,7 +142,7 @@ async function generateSlideBatch(
     .map((s) => {
       const role =
         s.index === 0 ? "title" : s.index === plan.slides.length - 1 ? "close" : "content";
-      return `SLIDE ${s.index + 1} — "${s.name}" (layout hint: ${role})\nGoal: ${s.goal}\nHero widget: ${s.suggestedComponents.join(", ") || "stat or cards"}`;
+      return `SLIDE ${s.index + 1} — "${s.name}" (layout hint: ${role})\nGoal: ${s.goal}\nREQUIRED hero widget: ${s.suggestedComponents[0] || "cards"} — do not reuse a widget from another slide`;
     })
     .join("\n\n");
 
@@ -123,7 +179,15 @@ ${briefs}`,
   const slides = parsed
     .map((s, i) => repairSlide(s, batch[i]?.index ?? i))
     .filter((s): s is Slide => s !== null)
-    .map((s, i) => layoutSlide(s, batch[i]?.index ?? i, plan.slides.length, theme));
+    .map((s, i) => {
+      const idx = batch[i]?.index ?? i;
+      const hero = batch[i]?.suggestedComponents[0];
+      try {
+        return ensureInteractive(layoutSlide(s, idx, plan.slides.length, theme), hero, idx, plan.slides.length, theme);
+      } catch {
+        return fallbackSlide(s.name, s.notes ?? "", idx, theme);
+      }
+    });
 
   while (slides.length < batch.length) {
     const missing = batch[slides.length];
@@ -150,8 +214,22 @@ export async function generatePresentation(
   });
 
   onStage({ stage: "planning", detail: `${cfg.label} pass — structuring the narrative` });
-  const plan = await generatePlan(prompt, files, effort);
-  const theme = repairTheme(plan.theme);
+  let rawPlan: Plan;
+  try {
+    rawPlan = await generatePlan(prompt, files, effort);
+  } catch {
+    rawPlan = parsePlan({
+      title: prompt.slice(0, 72) || "Untitled presentation",
+      description: prompt,
+      slides: Array.from({ length: cfg.minSlides }, (_, i) => ({
+        name: ["The stake", "The numbers", "How it works", "The proof", "The argument", "The ask"][i] ?? `Slide ${i + 1}`,
+        goal: prompt,
+        suggestedComponents: [],
+      })),
+    });
+  }
+  const theme = resolveDeckTheme(prompt, repairTheme(rawPlan.theme));
+  const plan = diversifyPlan({ ...rawPlan, theme });
 
   onStage({
     stage: "designing",
@@ -182,7 +260,14 @@ export async function generatePresentation(
   onStage({ stage: "interactive", detail: "Snapping layouts and wiring interactions" });
 
   const merged = results.flat();
-  const allSlides = merged.map((s, i) => layoutSlide(s, i, merged.length, theme));
+  const allSlides = merged.map((s, i) => {
+    const hero = plan.slides[i]?.suggestedComponents[0];
+    try {
+      return ensureInteractive(layoutSlide(s, i, merged.length, theme), hero, i, merged.length, theme);
+    } catch {
+      return fallbackSlide(s.name, s.notes ?? "", i, theme);
+    }
+  });
   onStage({ stage: "finalising", detail: "Polishing and validating" });
 
   const now = new Date().toISOString();
@@ -195,6 +280,15 @@ export async function generatePresentation(
       slides: allSlides,
       createdAt: now,
       updatedAt: now,
+      chatThread: [
+        { id: nanoid(8), role: "user", text: prompt },
+        {
+          id: nanoid(8),
+          role: "assistant",
+          text: "Created the presentation. Click around — then ask for a change.",
+          kind: "result",
+        },
+      ],
     },
     {}
   );
@@ -203,11 +297,12 @@ export async function generatePresentation(
 function presentationContext(p: Presentation, selectedSlideId?: string, selectedElementId?: string): string {
   const slides = p.slides.map((s, i) => {
     const isSelected = s.id === selectedSlideId;
-    const full = isSelected || p.slides.length <= 6;
-    if (full) return `Slide ${i + 1} ${isSelected ? "[SELECTED BY USER] " : ""}: ${JSON.stringify(s)}`;
-    return `Slide ${i + 1}: { "id": "${s.id}", "name": "${s.name}", elements: [${s.elements
-      .map((e) => `{"id":"${e.id}","type":"${e.type}"}`)
-      .join(",")}] }`;
+    return `Slide ${i + 1} ${isSelected ? "[SELECTED BY USER] " : ""}(id ${s.id}): ${JSON.stringify({
+      id: s.id,
+      name: s.name,
+      elements: s.elements,
+      notes: s.notes?.slice(0, 240),
+    })}`;
   });
   let selection = "";
   if (selectedElementId && selectedSlideId) {
@@ -216,6 +311,67 @@ function presentationContext(p: Presentation, selectedSlideId?: string, selected
     if (el) selection = `\nThe user currently has this ELEMENT selected: ${JSON.stringify(el)}`;
   }
   return `PRESENTATION "${p.title}" (id ${p.id})\nTheme: ${JSON.stringify(p.theme)}\nSlides:\n${slides.join("\n")}${selection}`;
+}
+
+function parseEditResponse(raw: unknown, presentation: Presentation): AIEditResponse {
+  const obj = typeof raw === "object" && raw !== null ? (raw as Record<string, unknown>) : {};
+  const operations: AIEditResponse["operations"] = [];
+  const opsIn = Array.isArray(obj.operations) ? obj.operations : [];
+
+  for (const item of opsIn) {
+    if (typeof item !== "object" || item === null) continue;
+    const op = item as Record<string, unknown>;
+    try {
+      if (op.op === "replaceSlide" && typeof op.slideId === "string") {
+        const slide = repairSlide(op.slide, 0);
+        if (slide) operations.push({ op: "replaceSlide", slideId: op.slideId, slide });
+      } else if (op.op === "addSlide") {
+        const slide = repairSlide(op.slide, presentation.slides.length);
+        if (slide)
+          operations.push({
+            op: "addSlide",
+            index: typeof op.index === "number" ? op.index : undefined,
+            slide,
+          });
+      } else if (op.op === "deleteSlide" && typeof op.slideId === "string") {
+        operations.push({ op: "deleteSlide", slideId: op.slideId });
+      } else if (op.op === "updateElement" && typeof op.slideId === "string" && typeof op.elementId === "string") {
+        const element = repairElement(op.element);
+        if (element) operations.push({ op: "updateElement", slideId: op.slideId, elementId: op.elementId, element });
+      } else if (op.op === "addElement" && typeof op.slideId === "string") {
+        const element = repairElement(op.element);
+        if (element) operations.push({ op: "addElement", slideId: op.slideId, element });
+      } else if (op.op === "deleteElement" && typeof op.slideId === "string" && typeof op.elementId === "string") {
+        operations.push({ op: "deleteElement", slideId: op.slideId, elementId: op.elementId });
+      } else if (op.op === "updateTheme") {
+        operations.push({ op: "updateTheme", theme: repairTheme(op.theme) });
+      } else if (op.op === "setTitle" && typeof op.title === "string") {
+        operations.push({ op: "setTitle", title: op.title });
+      }
+    } catch {
+      /* skip a bad operation instead of failing the whole edit */
+    }
+  }
+
+  if (operations.length === 0 && Array.isArray(obj.slides)) {
+    obj.slides.forEach((rawSlide, i) => {
+      const slide = repairSlide(rawSlide, i);
+      if (!slide) return;
+      const existing = presentation.slides[i];
+      if (existing) operations.push({ op: "replaceSlide", slideId: existing.id, slide: { ...slide, id: existing.id } });
+      else operations.push({ op: "addSlide", index: i, slide });
+    });
+  }
+
+  return {
+    summary:
+      typeof obj.summary === "string" && obj.summary.trim()
+        ? obj.summary.trim()
+        : operations.length
+          ? "Updated the presentation."
+          : "I couldn't find a safe change for that request.",
+    operations,
+  };
 }
 
 export async function generateEdit(
@@ -233,8 +389,8 @@ export async function generateEdit(
         content: `${presentationContext(presentation, selectedSlideId, selectedElementId)}\n\nUSER REQUEST: "${instruction}"${sourceContext(files)}`,
       },
     ],
-    (raw) => AIEditResponseSchema.parse(extractJson(raw)),
-    { maxTokens: 6000, temperature: 0.25, model: "deepseek-chat", json: true }
+    (raw) => parseEditResponse(extractJson(raw), presentation),
+    { maxTokens: 10000, temperature: 0.2, model: "deepseek-chat", json: true }
   );
 }
 
@@ -245,7 +401,14 @@ export function applyOperations(p: Presentation, response: AIEditResponse): Pres
       case "replaceSlide": {
         const repaired = repairSlide(op.slide, 0);
         if (!repaired) break;
-        const laid = layoutSlide(repaired, next.slides.findIndex((s) => s.id === op.slideId), next.slides.length, next.theme);
+        const idx = next.slides.findIndex((s) => s.id === op.slideId);
+        const laid = ensureInteractive(
+          layoutSlide(repaired, idx, next.slides.length, next.theme),
+          undefined,
+          idx,
+          next.slides.length,
+          next.theme
+        );
         next.slides = next.slides.map((s) => (s.id === op.slideId ? { ...laid, id: s.id } : s));
         break;
       }
@@ -253,7 +416,13 @@ export function applyOperations(p: Presentation, response: AIEditResponse): Pres
         const repaired = repairSlide(op.slide, next.slides.length);
         if (!repaired) break;
         const idx = op.index !== undefined ? Math.min(op.index, next.slides.length) : next.slides.length;
-        const laid = layoutSlide(repaired, idx, next.slides.length + 1, next.theme);
+        const laid = ensureInteractive(
+          layoutSlide(repaired, idx, next.slides.length + 1, next.theme),
+          undefined,
+          idx,
+          next.slides.length + 1,
+          next.theme
+        );
         next.slides = [...next.slides.slice(0, idx), laid, ...next.slides.slice(idx)];
         break;
       }
@@ -263,21 +432,25 @@ export function applyOperations(p: Presentation, response: AIEditResponse): Pres
         break;
       }
       case "updateElement": {
+        const repaired = repairElement(op.element);
+        if (!repaired) break;
         next.slides = next.slides.map((s) =>
           s.id !== op.slideId
             ? s
             : {
                 ...s,
                 elements: s.elements.map((e) =>
-                  e.id === op.elementId ? { ...op.element, id: e.id } : e
+                  e.id === op.elementId ? { ...repaired, id: e.id } : e
                 ),
               }
         );
         break;
       }
       case "addElement": {
+        const repaired = repairElement(op.element);
+        if (!repaired) break;
         next.slides = next.slides.map((s) =>
-          s.id !== op.slideId ? s : { ...s, elements: [...s.elements, op.element] }
+          s.id !== op.slideId ? s : { ...s, elements: [...s.elements, repaired] }
         );
         break;
       }

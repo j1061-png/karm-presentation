@@ -4,6 +4,7 @@ import { savePresentation } from "@/lib/store";
 import { getAccessiblePresentation, refreshSharedIndexes } from "@/lib/collab";
 import { publicAiError } from "@/lib/public-error";
 import { applyOperations, generateEdit } from "@/lib/generate";
+import { repairPresentation } from "@/lib/validate";
 
 export const maxDuration = 180;
 
@@ -47,7 +48,12 @@ export async function POST(request: Request) {
 
   // The client sends its current (possibly unsaved) document so edits apply
   // to what the user actually sees.
-  const workingDoc = body?.presentation ?? presentation;
+  let workingDoc = presentation;
+  try {
+    workingDoc = repairPresentation(body?.presentation ?? presentation, presentation);
+  } catch {
+    workingDoc = presentation;
+  }
 
   try {
     const response = await generateEdit(

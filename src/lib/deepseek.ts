@@ -73,7 +73,8 @@ export async function chatJson<T>(
   parse: (raw: string) => T,
   options: ChatOptions = {}
 ): Promise<T> {
-  const first = await chat(messages, { ...options, json: true });
+  const json = options.json !== false;
+  const first = await chat(messages, { ...options, json });
   try {
     return parse(first);
   } catch (firstError) {
@@ -88,7 +89,7 @@ export async function chatJson<T>(
           `Error: ${firstError instanceof Error ? firstError.message : "invalid JSON"}`,
       },
     ];
-    const second = await chat(retryMessages, { ...options, json: true, temperature: 0.3 });
+    const second = await chat(retryMessages, { ...options, json, temperature: 0.2 });
     return parse(second);
   }
 }

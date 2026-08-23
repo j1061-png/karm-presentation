@@ -7,7 +7,7 @@ import { ThemeSchema } from "@/lib/schema";
 import { SlideRenderer } from "@/components/renderer/SlideRenderer";
 import { ShareModal } from "@/components/share/ShareModal";
 import {
-  MoreHorizontal, Pencil, Copy, Trash2, Play, Share2, Layers, UserPlus, LogOut,
+  MoreHorizontal, Pencil, PencilRuler, Copy, Trash2, Play, Share2, Layers, UserPlus, LogOut,
 } from "lucide-react";
 
 function timeAgo(iso: string): string {
@@ -26,12 +26,14 @@ export function PresentationItem({
   onDuplicate,
   onDelete,
   onLeave,
+  onOpen,
 }: {
   meta: PresentationMeta;
   onRename: (id: string, title: string) => void;
   onDuplicate: (id: string) => void;
   onDelete: (id: string) => void;
   onLeave?: (id: string) => void;
+  onOpen?: (id: string) => void;
 }) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -76,8 +78,10 @@ export function PresentationItem({
       <div
         role="button"
         tabIndex={0}
-        onClick={() => router.push(`/editor/${meta.id}`)}
-        onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && router.push(`/editor/${meta.id}`)}
+        onClick={() => (onOpen ? onOpen(meta.id) : router.push(`/editor/${meta.id}`))}
+        onKeyDown={(e) =>
+          (e.key === "Enter" || e.key === " ") && (onOpen ? onOpen(meta.id) : router.push(`/editor/${meta.id}`))
+        }
         className="relative w-[88px] flex-shrink-0 rounded-md overflow-hidden ring-1 ring-border cursor-pointer"
         style={{ background: meta.themeColors.background }}
         aria-label={`Open ${meta.title}`}
@@ -94,7 +98,7 @@ export function PresentationItem({
       {/* Title + meta */}
       <button
         className="flex-1 min-w-0 text-left cursor-pointer"
-        onClick={() => !renaming && router.push(`/editor/${meta.id}`)}
+        onClick={() => !renaming && (onOpen ? onOpen(meta.id) : router.push(`/editor/${meta.id}`))}
       >
         {renaming ? (
           <input
@@ -166,6 +170,7 @@ export function PresentationItem({
               style={{ boxShadow: "0 8px 24px var(--shadow-color)" }}
             >
               {[
+                { label: "Open editor", icon: PencilRuler, fn: () => router.push(`/editor/${meta.id}`) },
                 { label: "Rename", icon: Pencil, fn: () => setRenaming(true) },
                 { label: "Duplicate", icon: Copy, fn: () => onDuplicate(meta.id) },
                 ...(meta.role !== "editor"
