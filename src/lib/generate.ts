@@ -1,5 +1,6 @@
 import { nanoid } from "nanoid";
 import { chatJson } from "./deepseek";
+import { createManusWebTask, manusConfigured, pollManusWebResult } from "./manus";
 import { EFFORT, parseEffort, type Effort } from "./effort";
 import { ensureInteractive, fallbackSlide, layoutSlide } from "./layouts";
 import { resolveDeckTheme } from "./palettes";
@@ -347,6 +348,59 @@ function parseWebResponse(raw: unknown, rawText?: string): { title: string; desc
   };
 }
 
+/** Build the finished project document from generated web files. */
+function webProjectDoc(
+  parsed: { title: string; description: string; files: ProjectFile[] },
+  prompt: string,
+  kind: WebKind
+): Presentation {
+  const label = WEB_KIND_LABEL[kind];
+  const now = new Date().toISOString();
+  return repairPresentation(
+    {
+      id: nanoid(12),
+      title: parsed.title,
+      description: parsed.description,
+      kind,
+      files: parsed.files,
+      entry: parsed.files.some((f) => f.path === "index.html") ? "index.html" : parsed.files[0].path,
+      slides: [],
+      createdAt: now,
+      updatedAt: now,
+      chatThread: [
+        { id: nanoid(8), role: "user", text: prompt },
+        {
+          id: nanoid(8),
+          role: "assistant",
+          text: `Built your ${label}. Try it out — then ask for any change.`,
+          kind: "result",
+        },
+      ],
+    },
+    {}
+  );
+}
+
+/** Generate through the Manus agent (when configured). Throws on any failure. */
+async function generateWebProjectViaManus(
+  prompt: string,
+  files: SourceFile[],
+  kind: WebKind,
+  onStage: (s: GenerationStage) => void
+): Promise<Presentation> {
+  const label = WEB_KIND_LABEL[kind];
+  onStage({ stage: "analysing", detail: `Briefing the agent on your ${label}` });
+  const taskId = await createManusWebTask(prompt, kind, sourceContext(files));
+  onStage({ stage: "planning", detail: "Agent is planning the build" });
+  const result = await pollManusWebResult(
+    taskId,
+    (detail) => onStage({ stage: "designing", detail }),
+    260_000
+  );
+  onStage({ stage: "finalising", detail: "Validating and saving" });
+  return webProjectDoc(result, prompt, kind);
+}
+
 export async function generateWebProject(
   prompt: string,
   files: SourceFile[],
@@ -354,6 +408,16 @@ export async function generateWebProject(
   onStage: (s: GenerationStage) => void,
   effortInput?: unknown
 ): Promise<Presentation> {
+  // Prefer the Manus agent for web artifacts; fall back to the model pipeline.
+  if (manusConfigured()) {
+    try {
+      return await generateWebProjectViaManus(prompt, files, kind, onStage);
+    } catch (e) {
+      if (!process.env.DEEPSEEK_API_KEY) throw e;
+      onStage({ stage: "designing", detail: "Agent unavailable — building directly" });
+    }
+  }
+
   const label = WEB_KIND_LABEL[kind];
   const effort = parseEffort(effortInput);
   const cfg = EFFORT[effort];
@@ -389,30 +453,7 @@ export async function generateWebProject(
   onStage({ stage: "interactive", detail: "Wiring interactions" });
   onStage({ stage: "finalising", detail: "Validating and saving" });
 
-  const now = new Date().toISOString();
-  return repairPresentation(
-    {
-      id: nanoid(12),
-      title: parsed.title,
-      description: parsed.description,
-      kind,
-      files: parsed.files,
-      entry: parsed.files.some((f) => f.path === "index.html") ? "index.html" : parsed.files[0].path,
-      slides: [],
-      createdAt: now,
-      updatedAt: now,
-      chatThread: [
-        { id: nanoid(8), role: "user", text: prompt },
-        {
-          id: nanoid(8),
-          role: "assistant",
-          text: `Built your ${label}. Try it out — then ask for any change.`,
-          kind: "result",
-        },
-      ],
-    },
-    {}
-  );
+  return webProjectDoc(parsed, prompt, kind);
 }
 
 export interface WebEditResponse {

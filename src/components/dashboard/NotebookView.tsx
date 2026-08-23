@@ -3,13 +3,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
-  chatWithAI, generateProject, type UploadedSource,
+  chatWithAI, fetchUrlSource, generateProject, type UploadedSource,
 } from "@/lib/api";
 import { ATTACH_ACCEPT, formatFileSize, useAttachments } from "@/lib/use-attachments";
 import {
   Plus, ArrowUp, Loader2, AlertCircle, FileText, Trash2, X, ClipboardPaste,
   Presentation as PresentationIcon, HelpCircle, Layers, FileBarChart2,
   Network, Table2, Gamepad2, ExternalLink, Sparkles, StickyNote, NotebookPen,
+  Link2, Globe,
 } from "lucide-react";
 
 /**
@@ -192,6 +193,10 @@ export function NotebookView() {
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteText, setPasteText] = useState("");
   const [pasteName, setPasteName] = useState("");
+  const [urlOpen, setUrlOpen] = useState(false);
+  const [urlValue, setUrlValue] = useState("");
+  const [urlBusy, setUrlBusy] = useState(false);
+  const [urlError, setUrlError] = useState<string | null>(null);
   const [genBusy, setGenBusy] = useState<string | null>(null);
   const [genDetail, setGenDetail] = useState("");
   const [genError, setGenError] = useState<string | null>(null);
@@ -390,6 +395,34 @@ export function NotebookView() {
     }
   }
 
+  async function addUrlSource() {
+    const url = urlValue.trim();
+    if (!url || urlBusy || !nb) return;
+    setUrlBusy(true);
+    setUrlError(null);
+    try {
+      const source = await fetchUrlSource(url);
+      updateNotebook((n) => ({
+        ...n,
+        sources: [
+          ...n.sources,
+          {
+            id: sid(),
+            name: source.name,
+            kind: "url",
+            content: source.content.slice(0, MAX_SOURCE_CHARS),
+          },
+        ],
+      }), nb.id);
+      setUrlValue("");
+      setUrlOpen(false);
+    } catch (e) {
+      setUrlError(e instanceof Error ? e.message : "Could not fetch that page.");
+    } finally {
+      setUrlBusy(false);
+    }
+  }
+
   function addPastedText() {
     const content = pasteText.trim();
     if (!content || !nb) return;
@@ -489,6 +522,17 @@ export function NotebookView() {
             >
               <ClipboardPaste size={13} />
             </button>
+            <button
+              onClick={() => {
+                setUrlError(null);
+                setUrlOpen(true);
+              }}
+              title="Add a web page by URL"
+              aria-label="Add a web page by URL"
+              className="w-9 flex items-center justify-center border border-border rounded-xl hover:bg-surface-2 transition-colors cursor-pointer text-text-secondary"
+            >
+              <Link2 size={13} />
+            </button>
           </div>
           <input
             ref={inputRef}
@@ -526,7 +570,11 @@ export function NotebookView() {
 
             {nb.sources.map((s) => (
               <div key={s.id} className="group flex items-center gap-2 border border-border rounded-xl px-2.5 py-2">
-                <FileText size={13} className="text-text-tertiary flex-shrink-0" />
+                {s.kind === "url" ? (
+                  <Globe size={13} className="text-text-tertiary flex-shrink-0" />
+                ) : (
+                  <FileText size={13} className="text-text-tertiary flex-shrink-0" />
+                )}
                 <div className="min-w-0 flex-1">
                   <div className="text-[11.5px] truncate" title={s.name}>{s.name}</div>
                   <div className="text-[10.5px] text-text-tertiary">{formatFileSize(s.content.length)} of text</div>
@@ -704,6 +752,52 @@ export function NotebookView() {
           </div>
         </div>
       </div>
+
+      {/* ------------------------------------------------------ url modal */}
+      {urlOpen && (
+        <div
+          className="fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setUrlOpen(false)}
+        >
+          <div
+            className="w-full max-w-[440px] bg-surface border border-border-strong rounded-2xl p-4 flex flex-col gap-3"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-label="Add source from URL"
+          >
+            <div className="text-[13.5px] font-semibold">Add a web page as a source</div>
+            <input
+              value={urlValue}
+              autoFocus
+              onChange={(e) => setUrlValue(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && void addUrlSource()}
+              placeholder="https://example.com/article"
+              className="bg-bg border border-border rounded-xl px-3.5 py-2.5 text-[13px] font-mono outline-none focus:border-border-strong transition-colors placeholder:text-text-tertiary"
+            />
+            {urlError && (
+              <div className="text-[12px] text-danger flex items-center gap-1.5">
+                <AlertCircle size={12} className="flex-shrink-0" /> {urlError}
+              </div>
+            )}
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setUrlOpen(false)}
+                className="text-[12.5px] border border-border rounded-xl px-3.5 py-2 hover:bg-surface-2 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => void addUrlSource()}
+                disabled={!urlValue.trim() || urlBusy}
+                className="flex items-center gap-1.5 text-[12.5px] font-medium bg-accent text-accent-text rounded-xl px-3.5 py-2 hover:bg-accent-hover transition-colors cursor-pointer disabled:opacity-50"
+              >
+                {urlBusy ? <Loader2 size={12} className="animate-spin" /> : <Link2 size={12} />}
+                Fetch page
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ---------------------------------------------------- paste modal */}
       {pasteOpen && (

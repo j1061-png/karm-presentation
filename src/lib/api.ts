@@ -263,6 +263,22 @@ export async function aiEdit(input: {
 }
 
 // ---------------------------------------------------------------------------
+// Connectors
+// ---------------------------------------------------------------------------
+
+/** Fetch a public web page as a text source (URL connector). */
+export async function fetchUrlSource(url: string): Promise<UploadedSource> {
+  const { source } = await json<{ source: UploadedSource }>(
+    await fetch("/api/connectors/url", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url }),
+    })
+  );
+  return source;
+}
+
+// ---------------------------------------------------------------------------
 // Generation (SSE)
 // ---------------------------------------------------------------------------
 

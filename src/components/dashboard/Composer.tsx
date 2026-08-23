@@ -4,9 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowUp, Plus, UploadCloud, AlertCircle, Check, Loader2, PencilRuler, Play, PlusCircle,
-  Presentation as PresentationIcon, Globe, Gamepad2, AppWindow, MessageCircle,
+  Presentation as PresentationIcon, Globe, Gamepad2, AppWindow, MessageCircle, Rocket, Copy,
 } from "lucide-react";
-import { aiEdit, chatWithAI, getPresentation, savePresentation } from "@/lib/api";
+import { aiEdit, chatWithAI, getPresentation, publishPresentation, savePresentation } from "@/lib/api";
 import { parseEffort, type Effort } from "@/lib/effort";
 import { ATTACH_ACCEPT, useAttachments } from "@/lib/use-attachments";
 import { EffortPicker } from "@/components/chat/EffortPicker";
@@ -783,9 +783,27 @@ function ThreadMessage({
 function WebProjectCard({ doc }: { doc: Presentation }) {
   const [tab, setTab] = useState<"preview" | "code">("preview");
   const [activeFile, setActiveFile] = useState(doc.entry);
+  const [deploying, setDeploying] = useState(false);
+  const [liveUrl, setLiveUrl] = useState<string | null>(null);
+  const [deployError, setDeployError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const html = assemblePreviewHtml(doc.files, doc.entry);
   const label = doc.kind === "game" ? "game" : doc.kind === "app" ? "app" : "website";
   const file = doc.files?.find((f) => f.path === activeFile) ?? doc.files?.[0];
+
+  async function deploy() {
+    if (deploying) return;
+    setDeploying(true);
+    setDeployError(null);
+    try {
+      await publishPresentation(doc.id, "link");
+      setLiveUrl(`${window.location.origin}/p/${doc.id}`);
+    } catch (e) {
+      setDeployError(e instanceof Error ? e.message : "Deploy failed.");
+    } finally {
+      setDeploying(false);
+    }
+  }
   return (
     <div className="self-stretch bg-surface border border-border rounded-2xl overflow-hidden">
       <div className="px-4 pt-3.5 pb-2 flex items-start justify-between gap-3">
@@ -852,6 +870,37 @@ function WebProjectCard({ doc }: { doc: Presentation }) {
           </div>
         </div>
       )}
+      {liveUrl && (
+        <div className="mx-4 mb-2 flex items-center gap-2 bg-success/10 border border-success/30 rounded-xl px-3 py-2">
+          <span className="relative flex w-2 h-2 flex-shrink-0">
+            <span className="relative inline-flex rounded-full w-2 h-2 bg-success" />
+          </span>
+          <a
+            href={liveUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="text-[12px] font-mono text-success truncate hover:underline flex-1 min-w-0"
+          >
+            {liveUrl}
+          </a>
+          <button
+            onClick={() => {
+              void navigator.clipboard.writeText(liveUrl);
+              setCopied(true);
+              setTimeout(() => setCopied(false), 1500);
+            }}
+            className="text-success/80 hover:text-success cursor-pointer flex-shrink-0"
+            aria-label="Copy live URL"
+          >
+            {copied ? <Check size={13} /> : <Copy size={13} />}
+          </button>
+        </div>
+      )}
+      {deployError && (
+        <div className="mx-4 mb-2 text-[12px] text-danger flex items-center gap-1.5">
+          <AlertCircle size={12} className="flex-shrink-0" /> {deployError}
+        </div>
+      )}
       <div className="px-4 pb-3 flex items-center gap-2">
         <div className="flex-1" />
         <Link
@@ -864,11 +913,19 @@ function WebProjectCard({ doc }: { doc: Presentation }) {
         <Link
           href={`/presentations/${doc.id}`}
           target="_blank"
-          className="flex items-center gap-1.5 text-[12.5px] font-medium bg-accent text-accent-text rounded-lg px-3 py-1.5 hover:bg-accent-hover transition-colors"
+          className="flex items-center gap-1.5 text-[12.5px] font-medium border border-border rounded-lg px-3 py-1.5 hover:bg-surface-2 transition-colors"
         >
           <Play size={13} />
-          Open full screen
+          Full screen
         </Link>
+        <button
+          onClick={() => void deploy()}
+          disabled={deploying}
+          className="flex items-center gap-1.5 text-[12.5px] font-medium bg-accent text-accent-text rounded-lg px-3 py-1.5 hover:bg-accent-hover transition-colors cursor-pointer disabled:opacity-60"
+        >
+          {deploying ? <Loader2 size={13} className="animate-spin" /> : <Rocket size={13} />}
+          {liveUrl ? "Redeploy" : "Deploy"}
+        </button>
       </div>
     </div>
   );
