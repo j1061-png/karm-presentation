@@ -166,7 +166,16 @@ export function DashboardShell({
             : "overflow-y-auto"
         }`}
       >
-        <div className="h-12 flex items-center justify-end px-4 flex-shrink-0">
+        <div className="h-12 flex items-center justify-between px-5 flex-shrink-0 border-b border-border">
+          <div className="text-[13px] font-medium text-text-secondary">
+            {view === "home"
+              ? "Home"
+              : view === "presentations"
+                ? "Projects"
+                : view === "notebook"
+                  ? "Notebook"
+                  : "Settings"}
+          </div>
           <NotificationsBell onChanged={() => void refresh()} />
         </div>
 
@@ -193,9 +202,11 @@ export function DashboardShell({
 
               {/* Compact recents */}
               {!threadActive && recent && recent.length > 0 && (
-                <div className="mt-12 animate-rise">
-                  <div className="flex items-center justify-between px-3 mb-1.5">
-                    <h2 className="text-[12px] font-medium text-text-tertiary">Recent</h2>
+                <div className="mt-10 animate-rise">
+                  <div className="flex items-center justify-between px-1 mb-2">
+                    <h2 className="text-[12px] font-medium text-text-tertiary uppercase tracking-wider">
+                      Recent
+                    </h2>
                     {canToggleRecent && (
                       <button
                         onClick={() => setRecentExpanded((v) => !v)}
@@ -205,7 +216,7 @@ export function DashboardShell({
                       </button>
                     )}
                   </div>
-                  <div className="flex flex-col">
+                  <div className="flex flex-col bg-surface border border-border rounded-2xl p-1.5">
                     {recent.map((m) => (
                       <PresentationItem
                         key={m.id}
@@ -303,7 +314,7 @@ export function DashboardShell({
                 )}
               </div>
             ) : (
-              <div className="flex flex-col">
+              <div className="flex flex-col bg-surface border border-border rounded-2xl p-1.5">
                 {filtered.map((m) => (
                   <PresentationItem
                     key={m.id}
