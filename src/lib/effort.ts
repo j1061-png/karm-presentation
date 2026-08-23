@@ -1,3 +1,5 @@
+import type { DeepSeekModel } from "./deepseek";
+
 export type Effort = "instant" | "fast" | "standard" | "think" | "max";
 
 export const EFFORT_LEVELS: Effort[] = ["instant", "fast", "standard", "think", "max"];
@@ -12,9 +14,14 @@ export interface EffortConfig {
   hint: string;
   detail: string;
   eta: string;
-  model: "deepseek-chat" | "deepseek-reasoner";
+  model: DeepSeekModel;
   temperature: number;
-  jsonMode: boolean;
+  /**
+   * Let the model reason before answering. Only worth the latency on the
+   * top levels — every level asks for JSON, which thinking makes slower
+   * without making it more valid.
+   */
+  thinking: boolean;
   minSlides: number;
   maxSlides: number;
   batchSize: number;
@@ -29,9 +36,9 @@ export const EFFORT: Record<Effort, EffortConfig> = {
     hint: "Rough cut, right now",
     detail: "A short first pass when you just need something on the board.",
     eta: "~20s",
-    model: "deepseek-chat",
+    model: "deepseek-v4-flash",
     temperature: 0.55,
-    jsonMode: true,
+    thinking: false,
     minSlides: 4,
     maxSlides: 5,
     batchSize: 2,
@@ -44,9 +51,9 @@ export const EFFORT: Record<Effort, EffortConfig> = {
     hint: "Quick draft",
     detail: "Smaller scope, still interactive. Good for a first look.",
     eta: "~40s",
-    model: "deepseek-chat",
+    model: "deepseek-v4-flash",
     temperature: 0.4,
-    jsonMode: true,
+    thinking: false,
     minSlides: 5,
     maxSlides: 6,
     batchSize: 2,
@@ -59,9 +66,9 @@ export const EFFORT: Record<Effort, EffortConfig> = {
     hint: "Balanced",
     detail: "The everyday setting. Solid structure and detail.",
     eta: "~1 min",
-    model: "deepseek-chat",
+    model: "deepseek-v4-flash",
     temperature: 0.35,
-    jsonMode: true,
+    thinking: false,
     minSlides: 6,
     maxSlides: 8,
     batchSize: 1,
@@ -74,29 +81,29 @@ export const EFFORT: Record<Effort, EffortConfig> = {
     hint: "More careful",
     detail: "Slower pass. Tighter reasoning, better content, less filler.",
     eta: "~2 min",
-    model: "deepseek-reasoner",
+    model: "deepseek-v4-pro",
     temperature: 0.3,
-    jsonMode: false,
+    thinking: true,
     minSlides: 7,
     maxSlides: 10,
     batchSize: 1,
     concurrency: 1,
-    maxTokensPlan: 6000,
-    maxTokensSlides: 14000,
+    maxTokensPlan: 12000,
+    maxTokensSlides: 24000,
   },
   max: {
     label: "Max",
     hint: "Full treatment",
     detail: "Longest run. Bigger, more interactive, built to ship.",
     eta: "~3 min",
-    model: "deepseek-reasoner",
+    model: "deepseek-v4-pro",
     temperature: 0.28,
-    jsonMode: false,
+    thinking: true,
     minSlides: 8,
     maxSlides: 12,
     batchSize: 1,
     concurrency: 1,
-    maxTokensPlan: 7000,
-    maxTokensSlides: 16000,
+    maxTokensPlan: 14000,
+    maxTokensSlides: 28000,
   },
 };

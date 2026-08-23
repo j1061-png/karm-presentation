@@ -139,7 +139,7 @@ export async function generatePlan(prompt: string, files: SourceFile[], effort: 
       maxTokens: cfg.maxTokensPlan,
       temperature: cfg.temperature,
       model: cfg.model,
-      json: cfg.jsonMode,
+      thinking: cfg.thinking,
     }
   );
   return {
@@ -189,7 +189,7 @@ ${briefs}`,
       maxTokens: cfg.maxTokensSlides,
       temperature: cfg.temperature,
       model: cfg.model,
-      json: cfg.jsonMode,
+      thinking: cfg.thinking,
     }
   );
 
@@ -381,6 +381,14 @@ function webProjectDoc(
   );
 }
 
+/**
+ * How long the agent may run before we give up on it. The route caps the
+ * whole request at 300s (see api/generate/route.ts), and a failed agent run
+ * still has to leave room for the direct-model fallback below — at 260s it
+ * did not, so a slow agent killed the request instead of falling back.
+ */
+const MANUS_DEADLINE_MS = 170_000;
+
 /** Generate through the Manus agent (when configured). Throws on any failure. */
 async function generateWebProjectViaManus(
   prompt: string,
@@ -395,7 +403,7 @@ async function generateWebProjectViaManus(
   const result = await pollManusWebResult(
     taskId,
     (detail) => onStage({ stage: "designing", detail }),
-    260_000
+    MANUS_DEADLINE_MS
   );
   onStage({ stage: "finalising", detail: "Validating and saving" });
   return webProjectDoc(result, prompt, kind);
@@ -414,6 +422,7 @@ export async function generateWebProject(
       return await generateWebProjectViaManus(prompt, files, kind, onStage);
     } catch (e) {
       if (!process.env.DEEPSEEK_API_KEY) throw e;
+      console.error("[manus] falling back to the model pipeline:", e);
       onStage({ stage: "designing", detail: "Agent unavailable — building directly" });
     }
   }
@@ -421,7 +430,7 @@ export async function generateWebProject(
   const label = WEB_KIND_LABEL[kind];
   const effort = parseEffort(effortInput);
   const cfg = EFFORT[effort];
-  const isReasoner = cfg.model === "deepseek-reasoner";
+  const thinks = cfg.thinking;
   const effortHint =
     effort === "instant" || effort === "fast"
       ? "\nKeep it lean: nail the core experience, skip nice-to-haves."
@@ -443,10 +452,10 @@ export async function generateWebProject(
     ],
     (raw) => parseWebResponse(extractJson(raw), raw),
     {
-      maxTokens: isReasoner ? 16000 : 8000,
+      maxTokens: thinks ? 28000 : 8000,
       temperature: cfg.temperature + 0.2,
       model: cfg.model,
-      json: cfg.jsonMode,
+      thinking: cfg.thinking,
     }
   );
 
@@ -500,7 +509,7 @@ export async function generateWebEdit(
       },
     ],
     (raw) => parseWebEditResponse(extractJson(raw)),
-    { maxTokens: 8000, temperature: 0.3, model: "deepseek-chat", json: true }
+    { maxTokens: 8000, temperature: 0.3, model: "deepseek-v4-flash", json: true }
   );
 }
 
@@ -615,7 +624,7 @@ export async function generateEdit(
       },
     ],
     (raw) => parseEditResponse(extractJson(raw), presentation),
-    { maxTokens: 10000, temperature: 0.2, model: "deepseek-chat", json: true }
+    { maxTokens: 10000, temperature: 0.2, model: "deepseek-v4-flash", json: true }
   );
 }
 
