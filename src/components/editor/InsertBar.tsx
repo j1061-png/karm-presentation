@@ -187,7 +187,7 @@ export function InsertBar({
           key={c.type}
           draggable
           onDragStart={(e) => {
-            e.dataTransfer.setData("application/x-karm-component", c.type);
+            e.dataTransfer.setData("application/x-studio-component", c.type);
             e.dataTransfer.effectAllowed = "copy";
           }}
           onClick={() => onInsert(c.type)}

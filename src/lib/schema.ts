@@ -14,7 +14,7 @@ import { z } from "zod";
 // ---------------------------------------------------------------------------
 
 export const ThemeSchema = z.object({
-  name: z.string().default("Karm Dark"),
+  name: z.string().default("Studio Dark"),
   mode: z.enum(["dark", "light"]).default("dark"),
   colors: z
     .object({
@@ -407,18 +407,43 @@ export const ChatTurnSchema = z.object({
 });
 export type ChatTurn = z.infer<typeof ChatTurnSchema>;
 
+// ---------------------------------------------------------------------------
+// Project kinds — a project is a presentation OR a web artifact (site/game/app)
+// ---------------------------------------------------------------------------
+
+export const ProjectKindSchema = z.enum(["presentation", "website", "game", "app"]);
+export type ProjectKind = z.infer<typeof ProjectKindSchema>;
+
+/** A single file in a web artifact (website / game / app). */
+export const ProjectFileSchema = z.object({
+  path: z.string().min(1).max(200),
+  content: z.string().max(600_000),
+});
+export type ProjectFile = z.infer<typeof ProjectFileSchema>;
+
 export const PresentationSchema = z.object({
   id: z.string(),
   title: z.string().default("Untitled presentation"),
   description: z.string().default(""),
+  /** What this project is. Presentations render slides; web kinds serve files. */
+  kind: ProjectKindSchema.default("presentation"),
   theme: ThemeSchema.default({}),
-  slides: z.array(SlideSchema).min(1),
+  slides: z.array(SlideSchema).default([]),
+  /** File tree for website / game / app projects. */
+  files: z.array(ProjectFileSchema).max(40).optional(),
+  /** Entry file served at the project root. */
+  entry: z.string().default("index.html"),
   version: z.number().int().default(1),
   createdAt: z.string(),
   updatedAt: z.string(),
   chatThread: z.array(ChatTurnSchema).optional(),
 });
 export type Presentation = z.infer<typeof PresentationSchema>;
+
+/** True when the project is a web artifact served from its file tree. */
+export function isWebKind(kind: ProjectKind | undefined): boolean {
+  return kind === "website" || kind === "game" || kind === "app";
+}
 
 // ---------------------------------------------------------------------------
 // Listing metadata (stored in the per-user index)
@@ -428,6 +453,7 @@ export interface PresentationMeta {
   id: string;
   title: string;
   description: string;
+  kind?: ProjectKind;
   slideCount: number;
   createdAt: string;
   updatedAt: string;

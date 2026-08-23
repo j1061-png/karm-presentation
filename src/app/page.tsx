@@ -260,7 +260,7 @@ function LoginContent() {
       </div>
 
       <footer className="text-center text-[11.5px] text-text-tertiary pb-5">
-        AI-powered interactive presentations for KarmSolar
+        AI workspace for presentations, sites, games, and apps
       </footer>
     </main>
   );

@@ -5,12 +5,12 @@ import { PwaProvider } from "@/components/pwa/PwaProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "KarmSolar",
-  description: "AI-powered interactive presentations for KarmSolar",
-  applicationName: "KarmSolar",
+  title: "Studio",
+  description: "AI workspace for presentations, sites, games, and apps",
+  applicationName: "Studio",
   appleWebApp: {
     capable: true,
-    title: "KarmSolar",
+    title: "Studio",
     statusBarStyle: "black-translucent",
   },
   icons: {

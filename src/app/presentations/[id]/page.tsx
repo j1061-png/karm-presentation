@@ -26,5 +26,5 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const { id } = await params;
   const user = await getUser();
   const result = user ? await getAccessiblePresentation(user.id, id) : null;
-  return { title: result ? result.presentation.title : "KarmSolar" };
+  return { title: result ? result.presentation.title : "Studio" };
 }

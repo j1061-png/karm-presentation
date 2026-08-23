@@ -1,8 +1,13 @@
 "use client";
 
-import { useTheme } from "@/components/theme/useTheme";
+/**
+ * Text-only product brand. No image marks anywhere — the product name is
+ * simply "Studio".
+ */
 
-/** Official KarmSolar painted mark — use for small logo slots. */
+export const PRODUCT_NAME = "Studio";
+
+/** Small square monogram for tight slots (sidebar collapsed, editor chrome). */
 export function BrandMark({
   size = 24,
   className = "",
@@ -11,19 +16,18 @@ export function BrandMark({
   className?: string;
 }) {
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src="/karm-mark.png"
-      alt="KarmSolar"
-      width={size}
-      height={size}
-      className={`object-contain flex-shrink-0 ${className}`}
+    <span
+      aria-label={PRODUCT_NAME}
+      className={`inline-flex items-center justify-center rounded-lg font-bold select-none flex-shrink-0 bg-accent text-accent-text ${className}`}
+      style={{ width: size, height: size, fontSize: Math.round(size * 0.55), lineHeight: 1 }}
       draggable={false}
-    />
+    >
+      S
+    </span>
   );
 }
 
-/** Official Karm. wordmark from karmholding.com (theme-aware). */
+/** The product wordmark: just the word, set in the UI font. */
 export function BrandWordmark({
   height = 28,
   className = "",
@@ -31,20 +35,19 @@ export function BrandWordmark({
   height?: number;
   className?: string;
 }) {
-  const { theme } = useTheme();
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={theme === "dark" ? "/karm-logo-light.png" : "/karm-logo.png"}
-      alt="KarmSolar"
-      className={`object-contain object-left ${className}`}
-      style={{ height, width: "auto" }}
+    <span
+      aria-label={PRODUCT_NAME}
+      className={`inline-flex items-center font-semibold tracking-tight select-none ${className}`}
+      style={{ height, fontSize: Math.round(height * 0.68), lineHeight: 1 }}
       draggable={false}
-    />
+    >
+      {PRODUCT_NAME}
+    </span>
   );
 }
 
-/** Product lockup: official Karm wordmark only. */
+/** Product lockup: wordmark expanded, monogram when collapsed. */
 export function BrandLockup({
   markSize = 24,
   collapsed = false,

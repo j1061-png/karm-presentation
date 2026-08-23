@@ -7,8 +7,6 @@ import {
   ChevronLeft, ChevronRight, X, Maximize, Minimize, Share2,
   LayoutGrid, StickyNote, HelpCircle,
 } from "lucide-react";
-import { BrandMark } from "@/components/brand/BrandLogo";
-
 /**
  * Fullscreen interactive presentation player.
  * Keyboard: ←/→/space navigate, Esc overview, N notes, ? help, F fullscreen.
@@ -156,10 +154,6 @@ export function Player({
           className="h-full transition-all duration-300"
           style={{ width: `${((index + 1) / slides.length) * 100}%`, background: theme.colors.accent }}
         />
-      </div>
-
-      <div className="absolute bottom-5 left-5 pointer-events-none" style={{ opacity: controlsVisible ? 0.9 : 0.35 }}>
-        <BrandMark size={28} />
       </div>
 
       {notes && slide.notes && (

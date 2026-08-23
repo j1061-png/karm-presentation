@@ -5,7 +5,8 @@ import type { Presentation, Slide, SlideBackground, SlideElement } from "./schem
  * example — gradient canvases, jump buttons, and live widgets on every slide.
  */
 
-type TemplateDoc = Omit<Presentation, "id" | "createdAt" | "updatedAt">;
+type TemplateDoc = Omit<Presentation, "id" | "createdAt" | "updatedAt" | "kind" | "entry"> &
+  Partial<Pick<Presentation, "kind" | "entry">>;
 
 export interface Template {
   key: string;
@@ -132,7 +133,7 @@ export const TEMPLATES: Template[] = [
     doc: {
       title: "Company pitch",
       description: "Interactive investor pitch",
-      theme: dark("#f5a623", "Karm Dark"),
+      theme: dark("#f5a623", "Studio Dark"),
       version: 1,
       slides: [
         slide(
@@ -249,7 +250,7 @@ export const TEMPLATES: Template[] = [
     doc: {
       title: "Q3 2026 Review",
       description: "Internal QBR",
-      theme: dark("#f5a623", "Karm Dark"),
+      theme: dark("#f5a623", "Studio Dark"),
       version: 1,
       slides: [
         slide(
@@ -396,9 +397,9 @@ export const TEMPLATES: Template[] = [
     tags: ["Map", "Charts", "Flip cards"],
     description: "Who you are, where you operate, proof the room can explore.",
     doc: {
-      title: "KarmSolar at a glance",
+      title: "Company at a glance",
       description: "Who we are",
-      theme: dark("#f5a623", "Karm Dark"),
+      theme: dark("#f5a623", "Studio Dark"),
       version: 1,
       slides: [
         slide(
@@ -406,13 +407,13 @@ export const TEMPLATES: Template[] = [
           "Title",
           [
             blob("o1g", 60, -20, 55, 90, "#f5a623", 0.15),
-            { id: "o1k", type: "text", x: 6, y: 16, w: 50, h: 5, ...b, props: { text: "KARMSOLAR  ·  EGYPT" }, style: { color: "#f5a623", fontSize: 14, letterSpacing: 2, fontWeight: 600 } },
+            { id: "o1k", type: "text", x: 6, y: 16, w: 50, h: 5, ...b, props: { text: "COMPANY OVERVIEW" }, style: { color: "#f5a623", fontSize: 14, letterSpacing: 2, fontWeight: 600 } },
             { id: "o1a", type: "heading", x: 6, y: 24, w: 58, h: 24, ...b, props: { text: "Independent power.\nOn our terms.", level: 1 }, style: { fontSize: 50, fontWeight: 700 }, animation: anim(0) },
-            { id: "o1b", type: "text", x: 6, y: 52, w: 50, h: 12, ...b, props: { text: "We build, own, and operate solar for Egyptian businesses and communities — then we stay." }, style: { color: "#9aa3b2", fontSize: 18 }, animation: anim(0.12) },
+            { id: "o1b", type: "text", x: 6, y: 52, w: 50, h: 12, ...b, props: { text: "We build, own, and operate solar for businesses and communities — then we stay." }, style: { color: "#9aa3b2", fontSize: 18 }, animation: anim(0.12) },
             { id: "o1c", type: "button", x: 6, y: 78, w: 22, h: 9, ...b, props: { label: "See the numbers", action: "next-slide", variant: "primary" } },
             { id: "o1s1", type: "stat", x: 64, y: 24, w: 30, h: 22, ...b, props: { value: "42", suffix: "MW", label: "Installed", countUp: true, icon: "sun" }, animation: anim(0.18, "zoom") },
             { id: "o1s2", type: "stat", x: 64, y: 50, w: 30, h: 22, ...b, props: { value: "45", suffix: "k t", label: "CO₂ offset / year", countUp: true, icon: "leaf" }, animation: anim(0.28, "zoom") },
-            { id: "o1s3", type: "stat", x: 64, y: 76, w: 30, h: 16, ...b, props: { value: "2011", label: "Founded in Zamalek", countUp: false, icon: "calendar" }, animation: anim(0.36, "zoom") },
+            { id: "o1s3", type: "stat", x: 64, y: 76, w: 30, h: 16, ...b, props: { value: "2011", label: "Founded", countUp: false, icon: "calendar" }, animation: anim(0.36, "zoom") },
           ],
           bg("#0b0d12", "#1a1408", 148, true)
         ),
@@ -437,8 +438,8 @@ export const TEMPLATES: Template[] = [
             { id: "o3a", type: "heading", x: 6, y: 10, w: 50, h: 8, ...b, props: { text: "Where we work", level: 2 } },
             { id: "o3b", type: "map", x: 6, y: 22, w: 52, h: 70, ...b, props: { lat: 26.8, lng: 30.8, zoom: 5, label: "Egypt" }, animation: anim(0.1) },
             { id: "o3c", type: "timeline", x: 62, y: 22, w: 32, h: 70, ...b, props: { orientation: "vertical", items: [
-              { date: "2011", title: "Founded", description: "Zamalek, Cairo." },
-              { date: "Sites", title: "Farafra & beyond", description: "Remote grids and urban distribution." },
+              { date: "2011", title: "Founded", description: "The first office." },
+              { date: "Sites", title: "Expansion", description: "Remote grids and urban distribution." },
               { date: "Today", title: "Ecosystem", description: "Energy, water, charge, build." },
             ] }, animation: anim(0.18) },
           ],

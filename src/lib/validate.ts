@@ -3,10 +3,13 @@ import {
   ChatTurnSchema,
   ElementSchema,
   PresentationSchema,
+  ProjectKindSchema,
   SlideSchema,
   ThemeSchema,
+  isWebKind,
   type ChatTurn,
   type Presentation,
+  type ProjectFile,
   type Slide,
   type SlideElement,
   type Theme,
@@ -240,8 +243,41 @@ export function repairTheme(input: unknown): Theme {
   return ThemeSchema.parse({});
 }
 
+/** Sanitize a web artifact file path: relative, no traversal, safe chars only. */
+export function sanitizeFilePath(input: unknown): string | null {
+  if (typeof input !== "string") return null;
+  const path = input.trim().replace(/^\.?\/+/, "").replace(/\\/g, "/");
+  if (!path || path.length > 200) return null;
+  if (path.includes("..")) return null;
+  if (!/^[\w][\w\-./ ]*$/.test(path)) return null;
+  if (path.endsWith("/")) return null;
+  return path;
+}
+
+const MAX_PROJECT_FILES = 40;
+const MAX_FILE_BYTES = 600_000;
+
+/** Repair a web artifact file tree: drop bad entries, dedupe paths, cap size. */
+export function repairFiles(input: unknown): ProjectFile[] {
+  if (!Array.isArray(input)) return [];
+  const seen = new Set<string>();
+  const out: ProjectFile[] = [];
+  for (const item of input) {
+    if (out.length >= MAX_PROJECT_FILES) break;
+    if (typeof item !== "object" || item === null) continue;
+    const row = item as Record<string, unknown>;
+    const path = sanitizeFilePath(row.path);
+    if (!path || seen.has(path)) continue;
+    const content = typeof row.content === "string" ? row.content : null;
+    if (content === null || content.length > MAX_FILE_BYTES) continue;
+    seen.add(path);
+    out.push({ path, content });
+  }
+  return out;
+}
+
 /**
- * Validate and repair a full presentation document. Throws only if nothing
+ * Validate and repair a full project document. Throws only if nothing
  * usable can be recovered.
  */
 export function repairPresentation(input: unknown, existing?: Partial<Presentation>): Presentation {
@@ -251,14 +287,29 @@ export function repairPresentation(input: unknown, existing?: Partial<Presentati
   const raw = input as Record<string, unknown>;
   const now = new Date().toISOString();
 
+  const kindParsed = ProjectKindSchema.safeParse(raw.kind);
+  const kind = kindParsed.success ? kindParsed.data : existing?.kind ?? "presentation";
+  const web = isWebKind(kind);
+
   const rawSlides = Array.isArray(raw.slides) ? raw.slides : [];
   const slides = rawSlides
     .map((s, i) => repairSlide(s, i))
     .filter((s): s is Slide => s !== null);
 
-  if (slides.length === 0) {
+  const files = repairFiles(raw.files);
+  const fallbackFiles = files.length > 0 ? files : existing?.files ?? [];
+
+  if (!web && slides.length === 0) {
     throw new Error("The AI response contained no valid slides.");
   }
+  if (web && fallbackFiles.length === 0) {
+    throw new Error("The AI response contained no usable files.");
+  }
+
+  const entry =
+    sanitizeFilePath(raw.entry) ??
+    (fallbackFiles.some((f) => f.path === "index.html") ? "index.html" : fallbackFiles[0]?.path) ??
+    "index.html";
 
   const doc = {
     id: existing?.id ?? (typeof raw.id === "string" ? raw.id : nanoid(12)),
@@ -267,8 +318,11 @@ export function repairPresentation(input: unknown, existing?: Partial<Presentati
         ? raw.title.trim()
         : existing?.title ?? "Untitled presentation",
     description: typeof raw.description === "string" ? raw.description : "",
+    kind,
     theme: repairTheme(raw.theme ?? existing?.theme),
     slides,
+    files: web ? fallbackFiles : undefined,
+    entry,
     version: 1,
     createdAt: existing?.createdAt ?? now,
     updatedAt: now,

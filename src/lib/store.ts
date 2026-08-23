@@ -52,6 +52,7 @@ export function toMeta(p: Presentation): PresentationMeta {
     id: p.id,
     title: p.title,
     description: p.description,
+    kind: p.kind ?? "presentation",
     slideCount: p.slides.length,
     createdAt: p.createdAt,
     updatedAt: p.updatedAt,

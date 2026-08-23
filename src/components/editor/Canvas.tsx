@@ -210,7 +210,7 @@ export function Canvas() {
     const xPct = Math.max(0, Math.min(92, ((e.clientX - rect.left) / rect.width) * 100 - 4));
     const yPct = Math.max(0, Math.min(92, ((e.clientY - rect.top) / rect.height) * 100 - 4));
 
-    const componentType = e.dataTransfer.getData("application/x-karm-component");
+    const componentType = e.dataTransfer.getData("application/x-studio-component");
     if (componentType) {
       const el = createDefaultElement(componentType, xPct, yPct);
       if (el) addElement(slideId, el);
@@ -252,7 +252,7 @@ export function Canvas() {
             onClick={(e) => e.stopPropagation()}
             onDragOver={(e) => {
               e.preventDefault();
-              if (e.dataTransfer.types.includes("Files") || e.dataTransfer.types.includes("application/x-karm-component")) {
+              if (e.dataTransfer.types.includes("Files") || e.dataTransfer.types.includes("application/x-studio-component")) {
                 setDropHover(true);
               }
             }}

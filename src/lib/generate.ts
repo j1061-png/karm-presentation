@@ -3,15 +3,32 @@ import { chatJson } from "./deepseek";
 import { EFFORT, parseEffort, type Effort } from "./effort";
 import { ensureInteractive, fallbackSlide, layoutSlide } from "./layouts";
 import { resolveDeckTheme } from "./palettes";
-import { editSystemPrompt, planSystemPrompt, slidesSystemPrompt } from "./prompts";
+import {
+  editSystemPrompt,
+  planSystemPrompt,
+  slidesSystemPrompt,
+  webEditSystemPrompt,
+  webSystemPrompt,
+} from "./prompts";
 import {
   PlanSchema,
+  isWebKind,
   type AIEditResponse,
   type Plan,
   type Presentation,
+  type ProjectFile,
+  type ProjectKind,
   type Slide,
 } from "./schema";
-import { extractJson, repairElement, repairPresentation, repairSlide, repairTheme } from "./validate";
+import {
+  extractJson,
+  repairElement,
+  repairFiles,
+  repairPresentation,
+  repairSlide,
+  repairTheme,
+  sanitizeFilePath,
+} from "./validate";
 
 export type GenerationStage =
   | { stage: "analysing"; detail?: string }
@@ -292,6 +309,157 @@ export async function generatePresentation(
     },
     {}
   );
+}
+
+// ---------------------------------------------------------------------------
+// Web artifacts — websites, games, apps
+// ---------------------------------------------------------------------------
+
+export type WebKind = Extract<ProjectKind, "website" | "game" | "app">;
+
+const WEB_KIND_LABEL: Record<WebKind, string> = {
+  website: "website",
+  game: "game",
+  app: "app",
+};
+
+function parseWebResponse(raw: unknown, rawText?: string): { title: string; description: string; files: ProjectFile[] } {
+  const obj = typeof raw === "object" && raw !== null ? (raw as Record<string, unknown>) : {};
+  let files = repairFiles(obj.files);
+
+  // Model sometimes returns a bare "html" string instead of a files array.
+  if (files.length === 0 && typeof obj.html === "string" && obj.html.trim()) {
+    files = [{ path: "index.html", content: obj.html }];
+  }
+  // Last resort: pull an ```html fence out of the raw text.
+  if (files.length === 0 && rawText) {
+    const fence = rawText.match(/```html\s*([\s\S]*?)```/);
+    if (fence && fence[1].trim()) files = [{ path: "index.html", content: fence[1].trim() }];
+  }
+  if (files.length === 0 || !files.some((f) => f.content.length > 200)) {
+    throw new Error("Response missing a usable 'files' array with index.html content.");
+  }
+
+  return {
+    title: typeof obj.title === "string" && obj.title.trim() ? obj.title.trim() : "Untitled project",
+    description: typeof obj.description === "string" ? obj.description : "",
+    files,
+  };
+}
+
+export async function generateWebProject(
+  prompt: string,
+  files: SourceFile[],
+  kind: WebKind,
+  onStage: (s: GenerationStage) => void
+): Promise<Presentation> {
+  const label = WEB_KIND_LABEL[kind];
+  onStage({ stage: "analysing", detail: `Understanding your ${label}` });
+  onStage({ stage: "planning", detail: `Sketching the ${label}` });
+  onStage({ stage: "designing", detail: `Writing the ${label} code` });
+
+  const parsed = await chatJson(
+    [
+      { role: "system", content: webSystemPrompt(kind) },
+      {
+        role: "user",
+        content: `Build this ${label}:\n\n"${prompt}"${sourceContext(files)}`,
+      },
+    ],
+    (raw) => parseWebResponse(extractJson(raw), raw),
+    { maxTokens: 8000, temperature: 0.6, model: "deepseek-chat", json: true }
+  );
+
+  onStage({ stage: "interactive", detail: "Wiring interactions" });
+  onStage({ stage: "finalising", detail: "Validating and saving" });
+
+  const now = new Date().toISOString();
+  return repairPresentation(
+    {
+      id: nanoid(12),
+      title: parsed.title,
+      description: parsed.description,
+      kind,
+      files: parsed.files,
+      entry: parsed.files.some((f) => f.path === "index.html") ? "index.html" : parsed.files[0].path,
+      slides: [],
+      createdAt: now,
+      updatedAt: now,
+      chatThread: [
+        { id: nanoid(8), role: "user", text: prompt },
+        {
+          id: nanoid(8),
+          role: "assistant",
+          text: `Built your ${label}. Try it out — then ask for any change.`,
+          kind: "result",
+        },
+      ],
+    },
+    {}
+  );
+}
+
+export interface WebEditResponse {
+  summary: string;
+  files: ProjectFile[];
+  deleteFiles: string[];
+}
+
+function parseWebEditResponse(raw: unknown): WebEditResponse {
+  const obj = typeof raw === "object" && raw !== null ? (raw as Record<string, unknown>) : {};
+  const files = repairFiles(obj.files);
+  const deleteFiles = Array.isArray(obj.deleteFiles)
+    ? obj.deleteFiles
+        .map((p) => sanitizeFilePath(p))
+        .filter((p): p is string => p !== null)
+    : [];
+  return {
+    summary:
+      typeof obj.summary === "string" && obj.summary.trim()
+        ? obj.summary.trim()
+        : files.length || deleteFiles.length
+          ? "Updated the project."
+          : "I couldn't find a safe change for that request.",
+    files,
+    deleteFiles,
+  };
+}
+
+export async function generateWebEdit(
+  presentation: Presentation,
+  instruction: string,
+  files: SourceFile[] = []
+): Promise<WebEditResponse> {
+  const kind = (presentation.kind === "game" || presentation.kind === "app" ? presentation.kind : "website") as WebKind;
+  const current = (presentation.files ?? [])
+    .map((f) => `--- FILE: ${f.path} ---\n${f.content}\n--- END OF ${f.path} ---`)
+    .join("\n\n");
+  return chatJson(
+    [
+      { role: "system", content: webEditSystemPrompt(kind) },
+      {
+        role: "user",
+        content: `PROJECT "${presentation.title}" (${kind})\n\nCURRENT FILES:\n${current}\n\nUSER REQUEST: "${instruction}"${sourceContext(files)}`,
+      },
+    ],
+    (raw) => parseWebEditResponse(extractJson(raw)),
+    { maxTokens: 8000, temperature: 0.3, model: "deepseek-chat", json: true }
+  );
+}
+
+/** Merge a web edit into the project: replace changed files, drop deleted ones. */
+export function applyWebEdit(p: Presentation, response: WebEditResponse): Presentation {
+  const byPath = new Map((p.files ?? []).map((f) => [f.path, f] as const));
+  for (const f of response.files) byPath.set(f.path, f);
+  for (const path of response.deleteFiles) byPath.delete(path);
+  const merged = [...byPath.values()];
+  if (merged.length === 0) return p;
+  const entry = merged.some((f) => f.path === p.entry)
+    ? p.entry
+    : merged.some((f) => f.path === "index.html")
+      ? "index.html"
+      : merged[0].path;
+  return { ...p, files: merged, entry, updatedAt: new Date().toISOString() };
 }
 
 function presentationContext(p: Presentation, selectedSlideId?: string, selectedElementId?: string): string {

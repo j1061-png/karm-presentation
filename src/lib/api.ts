@@ -2,7 +2,7 @@
 
 import type { Presentation, PresentationMeta } from "./schema";
 
-/** Thin client for the present@karm API routes. */
+/** Thin client for the Studio API routes. */
 
 async function json<T>(res: Response): Promise<T> {
   const body = await res.json().catch(() => ({}));

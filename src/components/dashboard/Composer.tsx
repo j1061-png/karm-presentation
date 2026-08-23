@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowUp, Plus, UploadCloud, AlertCircle, Check, Loader2, PencilRuler, Play, PlusCircle,
+  Presentation as PresentationIcon, Globe, Gamepad2, AppWindow,
 } from "lucide-react";
 import { aiEdit, getPresentation, savePresentation } from "@/lib/api";
 import { parseEffort, type Effort } from "@/lib/effort";
@@ -11,7 +12,8 @@ import { ATTACH_ACCEPT, useAttachments } from "@/lib/use-attachments";
 import { EffortPicker } from "@/components/chat/EffortPicker";
 import { FileChips } from "@/components/chat/FileChips";
 import { SlideRenderer } from "@/components/renderer/SlideRenderer";
-import type { ChatTurn, Presentation } from "@/lib/schema";
+import { assemblePreviewHtml } from "@/lib/web-preview";
+import { isWebKind, type ChatTurn, type Presentation, type ProjectKind } from "@/lib/schema";
 
 interface GenProgress {
   stage: string;
@@ -30,18 +32,52 @@ type ChatMessage =
 
 const GEN_STAGES: { key: string; label: string }[] = [
   { key: "analysing", label: "Analysing your request" },
-  { key: "planning", label: "Planning your presentation" },
-  { key: "designing", label: "Designing slides" },
+  { key: "planning", label: "Planning the structure" },
+  { key: "designing", label: "Designing and building" },
   { key: "interactive", label: "Adding interactions" },
   { key: "finalising", label: "Finalising" },
 ];
 
-const SUGGESTIONS = [
-  "KarmSolar company overview",
-  "Q3 solar farm performance",
-  "Project timeline across Egypt",
-  "Microgrid safety training",
+const KIND_OPTIONS: { kind: ProjectKind; label: string; icon: typeof Globe }[] = [
+  { kind: "presentation", label: "Presentation", icon: PresentationIcon },
+  { kind: "website", label: "Website", icon: Globe },
+  { kind: "game", label: "Game", icon: Gamepad2 },
+  { kind: "app", label: "App", icon: AppWindow },
 ];
+
+const KIND_PLACEHOLDER: Record<ProjectKind, string> = {
+  presentation: "Describe the presentation you want to create...",
+  website: "Describe the website you want to build...",
+  game: "Describe the game you want to play...",
+  app: "Describe the app you want to build...",
+};
+
+const SUGGESTIONS: Record<ProjectKind, string[]> = {
+  presentation: [
+    "Company overview deck",
+    "Q3 performance review",
+    "Product launch pitch",
+    "Team onboarding training",
+  ],
+  website: [
+    "Personal portfolio site",
+    "Landing page for a coffee shop",
+    "Event invite page with RSVP",
+    "One-page product site",
+  ],
+  game: [
+    "Snake game with a scoreboard",
+    "Memory card matching game",
+    "Trivia quiz game",
+    "2D platformer with keyboard controls",
+  ],
+  app: [
+    "Expense splitter calculator",
+    "Pomodoro timer with tasks",
+    "Habit tracker with streaks",
+    "Markdown notes app",
+  ],
+};
 
 function toChatTurns(messages: ChatMessage[]): ChatTurn[] {
   return messages
@@ -51,7 +87,7 @@ function toChatTurns(messages: ChatMessage[]): ChatTurn[] {
       return {
         id: m.id,
         role: "assistant" as const,
-        text: m.kind === "result" ? "Created the presentation. Click around — then ask for a change." : m.text,
+        text: m.kind === "result" ? "Created the project. Try it out — then ask for a change." : m.text,
         kind: m.kind === "error" ? "error" : m.kind === "edit" ? "edit" : "result",
       };
     });
@@ -82,6 +118,7 @@ export function Composer({
   const [generating, setGenerating] = useState<GenProgress | null>(null);
   const [editing, setEditing] = useState(false);
   const [effort, setEffort] = useState<Effort>("standard");
+  const [kind, setKind] = useState<ProjectKind>("presentation");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [activeDoc, setActiveDoc] = useState<Presentation | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -243,7 +280,7 @@ export function Composer({
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: text, files: attached, effort }),
+        body: JSON.stringify({ prompt: text, files: attached, effort, kind }),
         signal: controller.signal,
       });
       if (!res.ok || !res.body) {
@@ -386,11 +423,13 @@ export function Composer({
         <div className="flex items-center justify-between px-1 pb-3 flex-shrink-0">
           <div className="min-w-0">
             <div className="text-[13.5px] font-medium truncate">
-              {activeDoc?.title ?? "New presentation"}
+              {activeDoc?.title ?? "New project"}
             </div>
             {activeDoc && (
               <div className="text-[11.5px] text-text-tertiary">
-                {activeDoc.slides.length} slide{activeDoc.slides.length === 1 ? "" : "s"} · keep chatting to edit
+                {isWebKind(activeDoc.kind)
+                  ? `${activeDoc.kind} · keep chatting to edit`
+                  : `${activeDoc.slides.length} slide${activeDoc.slides.length === 1 ? "" : "s"} · keep chatting to edit`}
               </div>
             )}
           </div>
@@ -406,10 +445,11 @@ export function Composer({
                 </Link>
                 <Link
                   href={`/presentations/${activeDoc.id}`}
+                  target={isWebKind(activeDoc.kind) ? "_blank" : undefined}
                   className="flex items-center gap-1.5 text-[12px] font-medium bg-accent text-accent-text rounded-lg px-2.5 py-1.5 hover:bg-accent-hover transition-colors"
                 >
                   <Play size={12} />
-                  Present
+                  {isWebKind(activeDoc.kind) ? "Open" : "Present"}
                 </Link>
               </>
             )}
@@ -451,6 +491,30 @@ export function Composer({
         </div>
       )}
 
+      {!activeDoc && !threadActive && (
+        <div className="flex justify-center gap-1.5 mb-3">
+          {KIND_OPTIONS.map((opt) => {
+            const Icon = opt.icon;
+            const active = kind === opt.kind;
+            return (
+              <button
+                key={opt.kind}
+                type="button"
+                onClick={() => setKind(opt.kind)}
+                className={`flex items-center gap-1.5 text-[12.5px] font-medium rounded-full px-3.5 py-1.5 border transition-colors cursor-pointer ${
+                  active
+                    ? "bg-text text-bg border-transparent"
+                    : "border-border text-text-secondary hover:text-text hover:bg-surface-2"
+                }`}
+              >
+                <Icon size={13} />
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       <div
         className={`bg-surface border rounded-[26px] transition-colors flex-shrink-0 ${
           dragging ? "border-accent" : "border-border focus-within:border-border-strong"
@@ -474,9 +538,7 @@ export function Composer({
             }
           }}
           placeholder={
-            activeDoc
-              ? "Ask for a change, or attach a file..."
-              : "Describe the presentation you want to create..."
+            activeDoc ? "Ask for a change, or attach a file..." : KIND_PLACEHOLDER[kind]
           }
           rows={1}
           className="w-full bg-transparent resize-none outline-none px-5 pt-4 pb-1 text-[15px] leading-relaxed placeholder:text-text-tertiary disabled:opacity-60"
@@ -506,7 +568,7 @@ export function Composer({
           />
 
           <div className="flex items-center gap-2.5">
-            {!activeDoc && (
+            {!activeDoc && kind === "presentation" && (
               <EffortPicker
                 value={effort}
                 disabled={busy}
@@ -535,7 +597,7 @@ export function Composer({
 
       {!threadActive && prompt.length === 0 && files.length === 0 && (
         <div className="flex flex-wrap justify-center gap-2 mt-4">
-          {SUGGESTIONS.map((s) => (
+          {SUGGESTIONS[kind].map((s) => (
             <button
               key={s}
               onClick={() => {
@@ -597,11 +659,55 @@ function ThreadMessage({
 
   if (!doc || doc.id !== message.presentationId) {
     return (
-      <div className="self-start text-[13px] text-text-secondary">Presentation ready.</div>
+      <div className="self-start text-[13px] text-text-secondary">Project ready.</div>
     );
   }
 
+  if (isWebKind(doc.kind)) return <WebProjectCard doc={doc} />;
   return <LiveDeckCard doc={doc} />;
+}
+
+function WebProjectCard({ doc }: { doc: Presentation }) {
+  const html = assemblePreviewHtml(doc.files, doc.entry);
+  const label = doc.kind === "game" ? "game" : doc.kind === "app" ? "app" : "website";
+  return (
+    <div className="self-stretch bg-surface border border-border rounded-2xl overflow-hidden">
+      <div className="px-4 pt-3.5 pb-2">
+        <div className="text-[14px] font-medium">{doc.title}</div>
+        <div className="text-[12px] text-text-tertiary mt-0.5">
+          Your {label} is live below — try it, then type a change.
+        </div>
+      </div>
+      <div className="px-4 pb-3">
+        <iframe
+          key={doc.updatedAt}
+          srcDoc={html}
+          sandbox="allow-scripts allow-forms allow-pointer-lock allow-modals"
+          className="w-full rounded-lg border border-border bg-white"
+          style={{ height: 420 }}
+          title={doc.title}
+        />
+      </div>
+      <div className="px-4 pb-3 flex items-center gap-2">
+        <div className="flex-1" />
+        <Link
+          href={`/editor/${doc.id}`}
+          className="flex items-center gap-1.5 text-[12.5px] font-medium border border-border rounded-lg px-3 py-1.5 hover:bg-surface-2 transition-colors"
+        >
+          <PencilRuler size={13} />
+          Open editor
+        </Link>
+        <Link
+          href={`/presentations/${doc.id}`}
+          target="_blank"
+          className="flex items-center gap-1.5 text-[12.5px] font-medium bg-accent text-accent-text rounded-lg px-3 py-1.5 hover:bg-accent-hover transition-colors"
+        >
+          <Play size={13} />
+          Open full screen
+        </Link>
+      </div>
+    </div>
+  );
 }
 
 function LiveDeckCard({ doc }: { doc: Presentation }) {

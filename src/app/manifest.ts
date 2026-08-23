@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "KarmSolar",
-    short_name: "KarmSolar",
-    description: "Interactive presentations for KarmSolar",
+    name: "Studio",
+    short_name: "Studio",
+    description: "AI workspace for presentations, sites, games, and apps",
     start_url: "/dashboard",
     scope: "/",
     display: "standalone",

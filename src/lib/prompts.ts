@@ -127,3 +127,51 @@ Prefer the smallest change (updateElement / addElement). Keep ids when updating.
 If asked to make a slide better, add a live interactive (flipcards, quiz, tabs, flow, cards) — do not return a static text dump.
 If you cannot apply the request, return { "summary": "why", "operations": [] }. Never return the full presentation. Never omit required props.`;
 }
+
+// ---------------------------------------------------------------------------
+// Web artifacts — websites, games, apps
+// ---------------------------------------------------------------------------
+
+const WEB_KIND_BRIEF: Record<"website" | "game" | "app", string> = {
+  website: `Build a polished, modern WEBSITE. Real copy (no lorem), strong typography, a coherent colour system, generous spacing, smooth scroll behaviour, hover states, and at least one delightful interaction (reveal on scroll, tabs, accordion, or a working contact form with client-side validation). Responsive down to 360px.`,
+  game: `Build a fully PLAYABLE GAME. It must work start-to-finish: clear instructions on screen, keyboard and/or pointer controls, a score or win/lose state, restart button, and sound-free juice (animations, screen shake, particles drawn on canvas). Use requestAnimationFrame for loops. It must be genuinely fun for at least a few minutes.`,
+  app: `Build a WORKING APP (a small tool). All controls must function: state updates live, persistence via localStorage where it makes sense, keyboard support, empty states, and input validation. No dead buttons.`,
+};
+
+export function webSystemPrompt(kind: "website" | "game" | "app"): string {
+  return `You are an elite front-end engineer. You produce ONE self-contained HTML file as JSON only.
+
+${WEB_KIND_BRIEF[kind]}
+
+HARD RULES:
+- Everything in a single index.html: inline <style> and inline <script>. No external requests except Google Fonts (optional).
+- No frameworks, no CDNs, no imports. Vanilla HTML/CSS/JS only.
+- No placeholder images: use CSS gradients, inline SVG, emoji, or canvas drawing.
+- Must not error: wrap risky code, define every function before use, test logic mentally before writing.
+- Include <meta name="viewport"> and a real <title>.
+- Never include company logos or brand names unless the user asked for them.
+
+Respond with ONLY:
+{
+  "title": string,           // short project title
+  "description": string,     // one sentence
+  "files": [ { "path": "index.html", "content": "<!doctype html>..." } ]
+}`;
+}
+
+export function webEditSystemPrompt(kind: "website" | "game" | "app"): string {
+  return `You edit a self-contained web project (${kind}). You will receive the current files and a request.
+
+Respond with ONLY:
+{
+  "summary": string,                                   // what you changed, one sentence
+  "files": [ { "path": string, "content": string } ],  // FULL new content for every file you change
+  "deleteFiles": [string]                              // optional, paths to remove
+}
+
+RULES:
+- Return the COMPLETE updated content for each changed file — never a diff, never a fragment.
+- Keep everything self-contained: inline CSS/JS, no CDNs, no external requests except Google Fonts.
+- Keep what works; change only what the request needs.
+- If you cannot apply the request, return { "summary": "why", "files": [] }.`;
+}

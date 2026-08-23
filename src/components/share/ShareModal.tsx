@@ -347,7 +347,7 @@ export function ShareModal({
                     </div>
                     <a
                       href={qrDataUrl}
-                      download={`present-karm-${presentationId}.png`}
+                      download={`studio-${presentationId}.png`}
                       className="inline-flex items-center gap-1.5 text-[11.5px] text-accent hover:underline cursor-pointer"
                     >
                       <Download size={11} /> Download PNG

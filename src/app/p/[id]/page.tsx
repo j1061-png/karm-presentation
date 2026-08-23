@@ -44,10 +44,10 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  if (!/^[\w-]+$/.test(id)) return { title: "KarmSolar" };
+  if (!/^[\w-]+$/.test(id)) return { title: "Studio" };
   const published = await getPublished(id).catch(() => null);
   if (!published || published.visibility === "private") {
-    return { title: "KarmSolar", robots: { index: false } };
+    return { title: "Studio", robots: { index: false } };
   }
 
   const p = published.presentation;
@@ -62,7 +62,7 @@ export async function generateMetadata({
     openGraph: {
       title,
       description,
-      siteName: "KarmSolar",
+      siteName: "Studio",
       type: "website",
     },
     twitter: {

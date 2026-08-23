@@ -1,5 +1,11 @@
 import { getUser } from "@/lib/supabase/server";
-import { generatePresentation, type GenerationStage, type SourceFile } from "@/lib/generate";
+import {
+  generatePresentation,
+  generateWebProject,
+  type GenerationStage,
+  type SourceFile,
+  type WebKind,
+} from "@/lib/generate";
 import { savePresentation } from "@/lib/store";
 import { publicAiError } from "@/lib/public-error";
 
@@ -28,8 +34,13 @@ export async function POST(request: Request) {
     : [];
 
   if (!prompt && files.length === 0) {
-    return Response.json({ error: "Describe your presentation or attach files." }, { status: 400 });
+    return Response.json({ error: "Describe what you want to create or attach files." }, { status: 400 });
   }
+
+  const kind: "presentation" | WebKind =
+    body?.kind === "website" || body?.kind === "game" || body?.kind === "app"
+      ? body.kind
+      : "presentation";
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
@@ -38,12 +49,20 @@ export async function POST(request: Request) {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
       };
       try {
-        const presentation = await generatePresentation(
-          prompt || "A presentation based on the attached source material.",
-          files,
-          send,
-          body?.effort
-        );
+        const presentation =
+          kind === "presentation"
+            ? await generatePresentation(
+                prompt || "A presentation based on the attached source material.",
+                files,
+                send,
+                body?.effort
+              )
+            : await generateWebProject(
+                prompt || `A ${kind} based on the attached source material.`,
+                files,
+                kind,
+                send
+              );
         await savePresentation(user.id, presentation);
         send({ stage: "complete", presentationId: presentation.id });
       } catch (e) {

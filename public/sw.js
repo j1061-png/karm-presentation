@@ -1,10 +1,7 @@
-const CACHE = "karm-app-v1";
+const CACHE = "studio-app-v1";
 const PRECACHE = [
   "/",
   "/dashboard",
-  "/karm-mark.png",
-  "/karm-logo.png",
-  "/karm-logo-light.png",
   "/favicon.png",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
@@ -42,26 +39,25 @@ self.addEventListener("fetch", (event) => {
       fetch(request)
         .then((response) => {
           const copy = response.clone();
-          caches.open(CACHE).then((cache) => cache.put(request, copy)).catch(() => {});
+          caches.open(CACHE).then((cache) => cache.put(request, copy));
           return response;
         })
-        .catch(() => caches.match(request).then((cached) => cached || caches.match("/dashboard")))
+        .catch(() => caches.match(request).then((cached) => cached ?? caches.match("/dashboard")))
     );
     return;
   }
 
   event.respondWith(
-    caches.match(request).then((cached) => {
-      const fetched = fetch(request)
-        .then((response) => {
-          if (response.ok) {
+    caches.match(request).then(
+      (cached) =>
+        cached ??
+        fetch(request).then((response) => {
+          if (response.ok && (url.pathname.startsWith("/_next/static/") || PRECACHE.includes(url.pathname))) {
             const copy = response.clone();
-            caches.open(CACHE).then((cache) => cache.put(request, copy)).catch(() => {});
+            caches.open(CACHE).then((cache) => cache.put(request, copy));
           }
           return response;
         })
-        .catch(() => cached);
-      return cached || fetched;
-    })
+    )
   );
 });

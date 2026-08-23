@@ -8,6 +8,7 @@ import { SlideRenderer } from "@/components/renderer/SlideRenderer";
 import { ShareModal } from "@/components/share/ShareModal";
 import {
   MoreHorizontal, Pencil, PencilRuler, Copy, Trash2, Play, Share2, Layers, UserPlus, LogOut,
+  Globe, Gamepad2, AppWindow,
 } from "lucide-react";
 
 function timeAgo(iso: string): string {
@@ -90,7 +91,15 @@ export function PresentationItem({
           <SlideRenderer slide={meta.preview} theme={slideTheme} mode="thumb" className="pointer-events-none" />
         ) : (
           <div className="aspect-video flex items-center justify-center">
-            <Layers size={14} className="text-text-tertiary" />
+            {meta.kind === "game" ? (
+              <Gamepad2 size={14} className="text-text-tertiary" />
+            ) : meta.kind === "app" ? (
+              <AppWindow size={14} className="text-text-tertiary" />
+            ) : meta.kind === "website" ? (
+              <Globe size={14} className="text-text-tertiary" />
+            ) : (
+              <Layers size={14} className="text-text-tertiary" />
+            )}
           </div>
         )}
       </div>
@@ -120,7 +129,11 @@ export function PresentationItem({
           <span className="block text-[13.5px] font-medium truncate">{meta.title}</span>
         )}
         <span className="block text-[12px] text-text-tertiary mt-0.5">
-          {meta.slideCount} slide{meta.slideCount === 1 ? "" : "s"} · {timeAgo(meta.updatedAt)}
+          {meta.kind && meta.kind !== "presentation"
+            ? `${meta.kind[0].toUpperCase()}${meta.kind.slice(1)}`
+            : `${meta.slideCount} slide${meta.slideCount === 1 ? "" : "s"}`}
+          {" · "}
+          {timeAgo(meta.updatedAt)}
           {meta.role === "editor" && meta.ownerName ? ` · Shared by ${meta.ownerName}` : ""}
         </span>
       </button>
