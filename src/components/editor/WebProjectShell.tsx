@@ -42,7 +42,7 @@ export function WebProjectShell({
   const [doc, setDoc] = useState<Presentation>(initial);
   const [saveState, setSaveState] = useState<SaveState>("saved");
   const [shareOpen, setShareOpen] = useState(false);
-  const [codeOpen, setCodeOpen] = useState(false);
+  const [codeOpen, setCodeOpen] = useState(true);
   const [activeFile, setActiveFile] = useState(initial.entry);
   const [titleDraft, setTitleDraft] = useState(initial.title);
   const [reloadKey, setReloadKey] = useState(0);

@@ -5,13 +5,11 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import * as api from "@/lib/api";
 import type { PresentationMeta } from "@/lib/schema";
-import { TEMPLATES } from "@/lib/templates";
 import { Sidebar, type DashboardView } from "./Sidebar";
 import { Composer } from "./Composer";
 import { PresentationItem } from "./PresentationItem";
 import { NotificationsBell } from "./NotificationsBell";
 import { SettingsPanel } from "./SettingsPanel";
-import { TemplateGallery } from "./TemplateGallery";
 import {
   Search, Plus, Loader2, Presentation,
 } from "lucide-react";
@@ -83,19 +81,6 @@ export function DashboardShell({
       router.push(`/editor/${p.id}`);
     } catch (e) {
       setToast(e instanceof Error ? e.message : "Failed to create presentation");
-      setBusy(null);
-    }
-  }
-
-  async function handleTemplate(key: string) {
-    const template = TEMPLATES.find((t) => t.key === key);
-    if (!template) return;
-    setBusy(key);
-    try {
-      const p = await api.createPresentation({ presentation: template.doc as never });
-      router.push(`/editor/${p.id}`);
-    } catch (e) {
-      setToast(e instanceof Error ? e.message : "Failed to create from template");
       setBusy(null);
     }
   }
@@ -330,10 +315,6 @@ export function DashboardShell({
               </div>
             )}
           </div>
-        )}
-
-        {view === "templates" && (
-          <TemplateGallery busy={busy} onUse={(key) => void handleTemplate(key)} />
         )}
 
         {/* --------------------------------------------- settings view */}

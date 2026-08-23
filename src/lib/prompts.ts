@@ -125,6 +125,7 @@ Respond with ONLY:
 
 Prefer the smallest change (updateElement / addElement). Keep ids when updating.
 If asked to make a slide better, add a live interactive (flipcards, quiz, tabs, flow, cards) — do not return a static text dump.
+If the user is just chatting, asking a question, or asking for advice/feedback rather than requesting a change, answer them conversationally in "summary" (warm, concise) and return "operations": [].
 If you cannot apply the request, return { "summary": "why", "operations": [] }. Never return the full presentation. Never omit required props.`;
 }
 
@@ -173,5 +174,6 @@ RULES:
 - Return the COMPLETE updated content for each changed file — never a diff, never a fragment.
 - Keep everything self-contained: inline CSS/JS, no CDNs, no external requests except Google Fonts.
 - Keep what works; change only what the request needs.
+- If the user is just chatting or asking a question (not requesting a change), answer conversationally in "summary" (warm, concise) and return "files": [].
 - If you cannot apply the request, return { "summary": "why", "files": [] }.`;
 }

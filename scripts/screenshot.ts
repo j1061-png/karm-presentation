@@ -46,12 +46,11 @@ async function main() {
   await ssr.auth.signInWithPassword({ email, password });
   const cookieHeader = [...jar.entries()].map(([n, v]) => `${n}=${encodeURIComponent(v)}`).join("; ");
 
-  // Seed a presentation from a template so the editor shows real content
-  const { TEMPLATES } = await import("../src/lib/templates");
+  // Seed a blank presentation so the editor has content to show
   const createRes = await fetch(`${BASE}/api/presentations`, {
     method: "POST",
     headers: { Cookie: cookieHeader, "Content-Type": "application/json" },
-    body: JSON.stringify({ presentation: TEMPLATES[0].doc }),
+    body: JSON.stringify({ title: "Company overview" }),
   });
   const { presentation } = await createRes.json();
   const pid = presentation.id as string;

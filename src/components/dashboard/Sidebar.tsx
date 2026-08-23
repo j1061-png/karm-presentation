@@ -5,18 +5,17 @@ import { useRouter } from "next/navigation";
 import type { PresentationMeta } from "@/lib/schema";
 import { useTheme } from "@/components/theme/useTheme";
 import {
-  Plus, House, Layers, LayoutTemplate, Settings, PanelLeft,
+  Plus, House, Layers, Settings, PanelLeft,
   LogOut, Moon, SunMedium, FileText, Download,
 } from "lucide-react";
 import { BrandLockup, BrandMark } from "@/components/brand/BrandLogo";
 import { usePwa } from "@/components/pwa/PwaProvider";
 
-export type DashboardView = "home" | "presentations" | "templates" | "settings";
+export type DashboardView = "home" | "presentations" | "settings";
 
 const NAV: { key: DashboardView; label: string; icon: typeof Plus }[] = [
   { key: "home", label: "Home", icon: House },
-  { key: "presentations", label: "Presentations", icon: Layers },
-  { key: "templates", label: "Templates", icon: LayoutTemplate },
+  { key: "presentations", label: "Projects", icon: Layers },
 ];
 
 export function Sidebar({
@@ -104,15 +103,15 @@ export function Sidebar({
         </button>
       </div>
 
-      {/* New presentation */}
+      {/* New project */}
       <div className={collapsed ? "px-0 mb-1" : "px-2.5 mb-1"}>
         <button
           onClick={onNew}
-          title="New presentation"
+          title="New project"
           className={`${itemBase} ${itemPad} font-medium text-text hover:bg-surface-2 border border-border bg-surface`}
         >
           <Plus size={16} className="flex-shrink-0" />
-          {!collapsed && "New presentation"}
+          {!collapsed && "New project"}
         </button>
       </div>
 

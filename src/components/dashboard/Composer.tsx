@@ -6,7 +6,7 @@ import {
   ArrowUp, Plus, UploadCloud, AlertCircle, Check, Loader2, PencilRuler, Play, PlusCircle,
   Presentation as PresentationIcon, Globe, Gamepad2, AppWindow,
 } from "lucide-react";
-import { aiEdit, getPresentation, savePresentation } from "@/lib/api";
+import { aiEdit, chatWithAI, getPresentation, savePresentation } from "@/lib/api";
 import { parseEffort, type Effort } from "@/lib/effort";
 import { ATTACH_ACCEPT, useAttachments } from "@/lib/use-attachments";
 import { EffortPicker } from "@/components/chat/EffortPicker";
@@ -46,10 +46,10 @@ const KIND_OPTIONS: { kind: ProjectKind; label: string; icon: typeof Globe }[] =
 ];
 
 const KIND_PLACEHOLDER: Record<ProjectKind, string> = {
-  presentation: "Describe the presentation you want to create...",
-  website: "Describe the website you want to build...",
-  game: "Describe the game you want to play...",
-  app: "Describe the app you want to build...",
+  presentation: "Chat, or describe the presentation you want to create...",
+  website: "Chat, or describe the website you want to build...",
+  game: "Chat, or describe the game you want to play...",
+  app: "Chat, or describe the app you want to build...",
 };
 
 const SUGGESTIONS: Record<ProjectKind, string[]> = {
@@ -117,6 +117,7 @@ export function Composer({
   const [dragging, setDragging] = useState(false);
   const [generating, setGenerating] = useState<GenProgress | null>(null);
   const [editing, setEditing] = useState(false);
+  const [chatting, setChatting] = useState(false);
   const [effort, setEffort] = useState<Effort>("standard");
   const [kind, setKind] = useState<ProjectKind>("presentation");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -220,7 +221,7 @@ export function Composer({
     el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
   }
 
-  const busy = !!generating || editing;
+  const busy = !!generating || editing || chatting;
   const canSend =
     (prompt.trim().length > 0 || readySources.length > 0) && !uploading && !busy;
 
@@ -244,18 +245,22 @@ export function Composer({
     ]);
   }
 
-  async function generate() {
-    if (!canSend) return;
-    const text =
-      prompt.trim() ||
-      (readySources.length > 0 ? "Create a presentation from the attached files." : "");
+  async function generate(preText?: string) {
+    const usingPre = typeof preText === "string";
+    if (!usingPre && !canSend) return;
+    const text = usingPre
+      ? preText
+      : prompt.trim() ||
+        (readySources.length > 0 ? "Create a presentation from the attached files." : "");
     if (!text) return;
-    const attached = readySources;
-    const attachedNames = files.filter((f) => f.status === "done").map((f) => f.name);
-    setPrompt("");
-    clearFiles();
-    if (textareaRef.current) textareaRef.current.style.height = "auto";
-    pushUser(text, attachedNames);
+    const attached = usingPre ? [] : readySources;
+    if (!usingPre) {
+      const attachedNames = files.filter((f) => f.status === "done").map((f) => f.name);
+      setPrompt("");
+      clearFiles();
+      if (textareaRef.current) textareaRef.current.style.height = "auto";
+      pushUser(text, attachedNames);
+    }
     const progressId = `p${Date.now()}`;
     setMessages((m) => [
       ...m,
@@ -353,18 +358,22 @@ export function Composer({
     }
   }
 
-  async function editDeck() {
-    if (!canSend || !activeDoc) return;
-    const text =
-      prompt.trim() ||
-      (readySources.length > 0 ? "Incorporate the attached files into the presentation." : "");
+  async function editDeck(preText?: string) {
+    const usingPre = typeof preText === "string";
+    if (!activeDoc || (!usingPre && !canSend)) return;
+    const text = usingPre
+      ? preText
+      : prompt.trim() ||
+        (readySources.length > 0 ? "Incorporate the attached files into the presentation." : "");
     if (!text) return;
-    const attached = readySources;
-    const attachedNames = files.filter((f) => f.status === "done").map((f) => f.name);
-    setPrompt("");
-    clearFiles();
-    if (textareaRef.current) textareaRef.current.style.height = "auto";
-    pushUser(text, attachedNames);
+    const attached = usingPre ? [] : readySources;
+    if (!usingPre) {
+      const attachedNames = files.filter((f) => f.status === "done").map((f) => f.name);
+      setPrompt("");
+      clearFiles();
+      if (textareaRef.current) textareaRef.current.style.height = "auto";
+      pushUser(text, attachedNames);
+    }
     setEditing(true);
     try {
       const result = await aiEdit({
@@ -403,8 +412,65 @@ export function Composer({
   }
 
   function send() {
-    if (activeDoc) void editDeck();
-    else void generate();
+    if (!canSend) return;
+    // Attached files always mean "build/edit with these".
+    if (readySources.length > 0) {
+      if (activeDoc) void editDeck();
+      else void generate();
+      return;
+    }
+    void routeMessage();
+  }
+
+  /** Let the assistant decide: answer conversationally, or kick off a build/edit. */
+  async function routeMessage() {
+    const text = prompt.trim();
+    if (!text) return;
+    setPrompt("");
+    if (textareaRef.current) textareaRef.current.style.height = "auto";
+    pushUser(text);
+    setChatting(true);
+
+    const history: { role: "user" | "assistant"; text: string }[] = [];
+    for (const m of messages) {
+      if (m.role === "user") history.push({ role: "user", text: m.text });
+      else if (m.kind === "edit" || m.kind === "error") history.push({ role: "assistant", text: m.text });
+    }
+
+    let decision: { mode: "chat" | "build"; reply: string };
+    try {
+      decision = await chatWithAI({
+        messages: [...history.slice(-12), { role: "user", text }],
+        hasProject: !!activeDoc,
+        kind: activeDoc?.kind ?? kind,
+      });
+    } catch {
+      // If the router fails, fall back to the build path so nothing is lost.
+      decision = { mode: "build", reply: "" };
+    }
+    setChatting(false);
+
+    if (decision.mode === "chat") {
+      const reply: ChatMessage = {
+        id: `a${Date.now()}`,
+        role: "assistant",
+        kind: "edit",
+        text: decision.reply,
+      };
+      setMessages((m) => {
+        const next = [...m, reply];
+        if (activeDoc) {
+          const withThread = { ...activeDoc, chatThread: toChatTurns(next) };
+          setActiveDoc(withThread);
+          void persistThread(withThread, next);
+        }
+        return next;
+      });
+      return;
+    }
+
+    if (activeDoc) await editDeck(text);
+    else await generate(text);
   }
 
   return (
@@ -485,7 +551,13 @@ export function Composer({
           {editing && (
             <div className="self-start flex items-center gap-2.5 bg-surface border border-border rounded-xl px-3.5 py-2.5">
               <Loader2 size={13} className="animate-spin text-accent" />
-              <span className="text-[12.5px] text-text-secondary">Updating your presentation...</span>
+              <span className="text-[12.5px] text-text-secondary">Working on it...</span>
+            </div>
+          )}
+          {chatting && (
+            <div className="self-start flex items-center gap-2.5 bg-surface border border-border rounded-xl px-3.5 py-2.5">
+              <Loader2 size={13} className="animate-spin text-accent" />
+              <span className="text-[12.5px] text-text-secondary">Thinking...</span>
             </div>
           )}
         </div>
@@ -538,7 +610,7 @@ export function Composer({
             }
           }}
           placeholder={
-            activeDoc ? "Ask for a change, or attach a file..." : KIND_PLACEHOLDER[kind]
+            activeDoc ? "Ask for a change, ask a question, or just chat..." : KIND_PLACEHOLDER[kind]
           }
           rows={1}
           className="w-full bg-transparent resize-none outline-none px-5 pt-4 pb-1 text-[15px] leading-relaxed placeholder:text-text-tertiary disabled:opacity-60"
@@ -668,26 +740,77 @@ function ThreadMessage({
 }
 
 function WebProjectCard({ doc }: { doc: Presentation }) {
+  const [tab, setTab] = useState<"preview" | "code">("preview");
+  const [activeFile, setActiveFile] = useState(doc.entry);
   const html = assemblePreviewHtml(doc.files, doc.entry);
   const label = doc.kind === "game" ? "game" : doc.kind === "app" ? "app" : "website";
+  const file = doc.files?.find((f) => f.path === activeFile) ?? doc.files?.[0];
   return (
     <div className="self-stretch bg-surface border border-border rounded-2xl overflow-hidden">
-      <div className="px-4 pt-3.5 pb-2">
-        <div className="text-[14px] font-medium">{doc.title}</div>
-        <div className="text-[12px] text-text-tertiary mt-0.5">
-          Your {label} is live below — try it, then type a change.
+      <div className="px-4 pt-3.5 pb-2 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="text-[14px] font-medium truncate">{doc.title}</div>
+          <div className="text-[12px] text-text-tertiary mt-0.5">
+            Your {label} is live below — try it, then type a change.
+          </div>
+        </div>
+        <div className="flex items-center bg-surface-2 border border-border rounded-lg p-0.5 flex-shrink-0">
+          {(
+            [
+              { key: "preview", label: "Preview" },
+              { key: "code", label: "Code" },
+            ] as const
+          ).map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={`text-[11.5px] px-2.5 py-1 rounded-[6px] transition-colors cursor-pointer ${
+                tab === t.key ? "bg-surface-3 text-text font-medium" : "text-text-secondary hover:text-text"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
         </div>
       </div>
-      <div className="px-4 pb-3">
-        <iframe
-          key={doc.updatedAt}
-          srcDoc={html}
-          sandbox="allow-scripts allow-forms allow-pointer-lock allow-modals"
-          className="w-full rounded-lg border border-border bg-white"
-          style={{ height: 420 }}
-          title={doc.title}
-        />
-      </div>
+      {tab === "preview" ? (
+        <div className="px-4 pb-3">
+          <iframe
+            key={doc.updatedAt}
+            srcDoc={html}
+            sandbox="allow-scripts allow-forms allow-pointer-lock allow-modals"
+            className="w-full rounded-lg border border-border bg-white"
+            style={{ height: 420 }}
+            title={doc.title}
+          />
+        </div>
+      ) : (
+        <div className="px-4 pb-3">
+          <div className="rounded-lg border border-border overflow-hidden">
+            <div className="flex items-center gap-1 px-2 py-1.5 bg-surface-2 border-b border-border overflow-x-auto">
+              {(doc.files ?? []).map((f) => (
+                <button
+                  key={f.path}
+                  onClick={() => setActiveFile(f.path)}
+                  className={`text-[11.5px] font-mono px-2 py-1 rounded-md whitespace-nowrap cursor-pointer transition-colors ${
+                    f.path === (file?.path ?? "")
+                      ? "bg-surface-3 text-text"
+                      : "text-text-secondary hover:text-text"
+                  }`}
+                >
+                  {f.path}
+                </button>
+              ))}
+            </div>
+            <pre
+              className="m-0 p-3 overflow-auto text-[11.5px] font-mono leading-relaxed bg-bg text-text-secondary"
+              style={{ height: 420 }}
+            >
+              {file?.content ?? ""}
+            </pre>
+          </div>
+        </div>
+      )}
       <div className="px-4 pb-3 flex items-center gap-2">
         <div className="flex-1" />
         <Link

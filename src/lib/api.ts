@@ -263,6 +263,30 @@ export async function aiEdit(input: {
 }
 
 // ---------------------------------------------------------------------------
+// Conversational chat
+// ---------------------------------------------------------------------------
+
+export interface ChatDecision {
+  mode: "chat" | "build";
+  reply: string;
+}
+
+/** Ask the assistant to either answer conversationally or signal a build. */
+export async function chatWithAI(input: {
+  messages: { role: "user" | "assistant"; text: string }[];
+  hasProject: boolean;
+  kind?: string;
+}): Promise<ChatDecision> {
+  return json<ChatDecision>(
+    await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    })
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Custom domains
 // ---------------------------------------------------------------------------
 
