@@ -261,3 +261,68 @@ export async function aiEdit(input: {
     })
   );
 }
+
+// ---------------------------------------------------------------------------
+// Custom domains
+// ---------------------------------------------------------------------------
+
+export interface DomainInfo {
+  hostname: string;
+  projectId: string;
+  source: "purchased" | "connected";
+  status: "pending_dns" | "active" | "error";
+  error?: string;
+}
+
+export interface DomainList {
+  domains: DomainInfo[];
+  purchaseConfigured: boolean;
+  connectConfigured: boolean;
+  appHost: string | null;
+}
+
+export async function listDomains(projectId?: string): Promise<DomainList> {
+  const qs = projectId ? `?projectId=${encodeURIComponent(projectId)}` : "";
+  return json<DomainList>(await fetch(`/api/domains${qs}`));
+}
+
+export interface DomainSearchResult {
+  domain: string;
+  available: boolean;
+  priceCents: number | null;
+}
+
+export async function searchDomain(q: string): Promise<DomainSearchResult> {
+  return json<DomainSearchResult>(await fetch(`/api/domains/search?q=${encodeURIComponent(q)}`));
+}
+
+export async function checkoutDomain(domain: string, projectId: string): Promise<{ url: string }> {
+  return json<{ url: string }>(
+    await fetch("/api/domains/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ domain, projectId }),
+    })
+  );
+}
+
+export interface ConnectDomainResult {
+  domain: DomainInfo;
+  dns: { type: string; host: string; value: string; note: string };
+}
+
+export async function connectDomain(hostname: string, projectId: string): Promise<ConnectDomainResult> {
+  return json<ConnectDomainResult>(
+    await fetch("/api/domains", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ hostname, projectId }),
+    })
+  );
+}
+
+export async function removeDomain(hostname: string): Promise<void> {
+  await json(
+    await fetch(`/api/domains?hostname=${encodeURIComponent(hostname)}`, { method: "DELETE" })
+  );
+}
