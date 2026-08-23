@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getUser } from "@/lib/supabase/server";
 import { getPublished } from "@/lib/store";
+import { isWebKind } from "@/lib/schema";
 import { StandalonePlayer } from "@/app/presentations/[id]/player-client";
 
 /**
@@ -35,6 +36,11 @@ export default async function PublicPresentationPage({
   const published = await loadViewable(id);
   if (!published) notFound();
 
+  // Web projects are served as real files by the sibling catch-all route.
+  if (isWebKind(published.presentation.kind)) {
+    redirect(`/p/${id}/${published.presentation.entry}`);
+  }
+
   return <StandalonePlayer presentation={published.presentation} />;
 }
 
@@ -53,7 +59,10 @@ export async function generateMetadata({
   const p = published.presentation;
   const title = p.title;
   const description =
-    p.description || `An interactive presentation with ${p.slides.length} slides.`;
+    p.description ||
+    (isWebKind(p.kind)
+      ? `An interactive ${p.kind} built with Studio.`
+      : `An interactive presentation with ${p.slides.length} slides.`);
 
   return {
     title,

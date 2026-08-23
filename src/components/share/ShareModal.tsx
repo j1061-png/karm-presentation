@@ -142,7 +142,7 @@ export function ShareModal({
     setTimeout(() => setCopied(false), 2000);
   }
 
-  const shareText = `${title} — interactive presentation`;
+  const shareText = `${title} — made with Studio`;
   const enc = encodeURIComponent;
   const shareTargets = [
     {
@@ -167,7 +167,7 @@ export function ShareModal({
       label: "Email",
       icon: <Mail size={15} />,
       color: "#f5a623",
-      href: `mailto:?subject=${enc(shareText)}&body=${enc(`Have a look at this presentation:\n\n${publicUrl}`)}`,
+      href: `mailto:?subject=${enc(shareText)}&body=${enc(`Have a look at this:\n\n${publicUrl}`)}`,
     },
   ];
 
@@ -183,7 +183,7 @@ export function ShareModal({
         className="w-full max-w-[440px] bg-surface border border-border-strong rounded-2xl shadow-2xl shadow-black/50 overflow-hidden"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
-        aria-label="Share presentation"
+        aria-label="Share project"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
@@ -192,7 +192,7 @@ export function ShareModal({
               <Share2 size={15} className="text-accent" />
             </div>
             <div>
-              <div className="text-[14px] font-semibold">Share presentation</div>
+              <div className="text-[14px] font-semibold">Publish &amp; share</div>
               <div className="text-[11.5px] text-text-tertiary truncate max-w-[260px]">{title}</div>
             </div>
           </div>
@@ -248,7 +248,7 @@ export function ShareModal({
             </div>
           ) : stage === "done" ? (
             <div className="flex items-center gap-2.5 bg-success/10 border border-success/30 rounded-xl px-4 py-3 text-[13px] text-success">
-              <Check size={15} /> Presentation is live
+              <Check size={15} /> Your project is live
             </div>
           ) : stage === "error" ? (
             <div className="flex items-center justify-between bg-danger/10 border border-danger/30 rounded-xl px-4 py-3">
@@ -343,7 +343,7 @@ export function ShareModal({
                   <div className="flex-1">
                     <div className="text-[12.5px] font-medium mb-0.5">QR code</div>
                     <div className="text-[11.5px] text-text-secondary mb-2">
-                      Scan to open the presentation on any device.
+                      Scan to open it on any device.
                     </div>
                     <a
                       href={qrDataUrl}
@@ -409,8 +409,8 @@ export function ShareModal({
               </div>
               <p className="text-[12.5px] text-text-secondary leading-relaxed mb-5 max-w-[300px]">
                 {isOwner
-                  ? "Publishing deploys a live, interactive version of this presentation at a public URL. Your draft stays separate — edits only go live when you republish."
-                  : "The owner has not published a live link yet. You can still edit this presentation."}
+                  ? "Publishing deploys a live version of this project as a real website at a public URL. Your draft stays separate — edits only go live when you republish."
+                  : "The owner has not published a live link yet. You can still edit this project."}
               </p>
               {isOwner && (
                 <>
@@ -421,7 +421,7 @@ export function ShareModal({
                     onClick={() => void publish("link")}
                     className="w-full flex items-center justify-center gap-2 text-[13.5px] font-medium bg-accent text-accent-text rounded-xl py-3 hover:bg-accent-hover transition-colors cursor-pointer"
                   >
-                    <Rocket size={15} /> Publish presentation
+                    <Rocket size={15} /> Publish
                   </button>
                 </>
               )}
