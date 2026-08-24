@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import {
   ArrowUp, Plus, UploadCloud, AlertCircle, Loader2, PlusCircle,
   Presentation as PresentationIcon, Globe, Gamepad2, AppWindow, MessageCircle,
@@ -12,7 +12,7 @@ import { ATTACH_ACCEPT, useAttachments } from "@/lib/use-attachments";
 import { EffortPicker } from "@/components/chat/EffortPicker";
 import { FileChips } from "@/components/chat/FileChips";
 import { WorkspaceCanvas } from "./WorkspaceCanvas";
-import { isWebKind, kindLabel, kindNoun, type ChatTurn, type Presentation, type ProjectKind } from "@/lib/schema";
+import { inferProjectKind, isWebKind, kindLabel, kindNoun, type ChatTurn, type Presentation, type ProjectKind } from "@/lib/schema";
 
 interface GenProgress {
   stage: string;
@@ -107,11 +107,15 @@ function fromChatTurns(turns: ChatTurn[], presentationId: string): ChatMessage[]
 export function Composer({
   continueId,
   onThreadChange,
+  onCanvasChange,
+  headerAccessory,
   onCreated,
   onReset,
 }: {
   continueId?: string | null;
   onThreadChange?: (active: boolean) => void;
+  onCanvasChange?: (open: boolean) => void;
+  headerAccessory?: ReactNode;
   onCreated?: () => void;
   onReset?: () => void;
 }) {
@@ -121,7 +125,17 @@ export function Composer({
   const [editing, setEditing] = useState(false);
   const [chatting, setChatting] = useState(false);
   const [effort, setEffort] = useState<Effort>("standard");
-  const [kind, setKind] = useState<ComposerMode>("presentation");
+  const [kind, setKind] = useState<ComposerMode>(() => {
+    try {
+      const saved = localStorage.getItem("pk-kind");
+      if (saved === "chat" || saved === "presentation" || saved === "website" || saved === "game" || saved === "app") {
+        return saved;
+      }
+    } catch {
+      /* ignore */
+    }
+    return "chat";
+  });
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [activeDoc, setActiveDoc] = useState<Presentation | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -134,6 +148,7 @@ export function Composer({
   const loadedId = useRef<string | null>(null);
 
   const threadActive = messages.length > 0;
+  const showCanvas = !!generating || !!activeDoc;
 
   useEffect(() => {
     if (!continueId || loadedId.current === continueId) return;
@@ -148,6 +163,9 @@ export function Composer({
         const doc = await getPresentation(continueId);
         if (myRun !== runId.current) return;
         setActiveDoc(doc);
+        if (doc.kind === "website" || doc.kind === "game" || doc.kind === "app" || doc.kind === "presentation") {
+          setKind(doc.kind);
+        }
         setMessages(
           doc.chatThread?.length
             ? fromChatTurns(doc.chatThread, doc.id)
@@ -178,6 +196,10 @@ export function Composer({
   useEffect(() => {
     onThreadChange?.(threadActive);
   }, [threadActive, onThreadChange]);
+
+  useEffect(() => {
+    onCanvasChange?.(showCanvas);
+  }, [showCanvas, onCanvasChange]);
 
   useEffect(() => {
     try {
@@ -243,9 +265,26 @@ export function Composer({
     setPrompt("");
     clearFiles();
     loadedId.current = null;
+    try {
+      const saved = localStorage.getItem("pk-kind");
+      if (
+        saved === "chat" ||
+        saved === "presentation" ||
+        saved === "website" ||
+        saved === "game" ||
+        saved === "app"
+      ) {
+        setKind(saved);
+      } else {
+        setKind("chat");
+      }
+    } catch {
+      setKind("chat");
+    }
     onThreadChange?.(false);
+    onCanvasChange?.(false);
     onReset?.();
-  }, [clearFiles, onThreadChange, onReset]);
+  }, [clearFiles, onThreadChange, onCanvasChange, onReset]);
 
   function pushUser(text: string, attachedNames: string[] = []) {
     setMessages((m) => [
@@ -265,7 +304,7 @@ export function Composer({
     );
   }
 
-  async function generate(preText?: string) {
+  async function generate(preText?: string, extraFiles?: typeof readySources) {
     const usingPre = typeof preText === "string";
     if (!usingPre && !canSend) return;
     const text = usingPre
@@ -273,7 +312,11 @@ export function Composer({
       : prompt.trim() ||
         (readySources.length > 0 ? `Create a ${kindNoun(kind)} from the attached files.` : "");
     if (!text) return;
-    const attached = usingPre ? [] : readySources;
+    const attached = usingPre ? extraFiles ?? [] : readySources;
+    const buildKind = inferProjectKind(text, kind);
+    if (buildKind !== kind) {
+      setKind(buildKind);
+    }
     if (!usingPre) {
       const attachedNames = files.filter((f) => f.status === "done").map((f) => f.name);
       setPrompt("");
@@ -311,7 +354,7 @@ export function Composer({
           prompt: text,
           files: attached,
           effort,
-          kind: kind === "chat" ? "presentation" : kind,
+          kind: buildKind,
         }),
         signal: controller.signal,
       });
@@ -357,7 +400,7 @@ export function Composer({
       }
 
       if (!finishedId) throw new Error("Generation ended unexpectedly. Please try again.");
-      updateProgress({ stage: "finalising", detail: `Saving your ${kindNoun(kind)}` });
+      updateProgress({ stage: "finalising", detail: `Saving your ${kindNoun(buildKind)}` });
       const doc = await getPresentation(finishedId);
       if (myRun !== runId.current) {
         setGenerating(null);
@@ -494,7 +537,6 @@ export function Composer({
         messages: [...history.slice(-12), { role: "user", text }],
         hasProject: !!activeDoc,
         kind: activeDoc?.kind ?? (kind === "chat" ? undefined : kind),
-        forceChat: chatMode,
         sources,
       });
     } catch (e) {
@@ -540,7 +582,7 @@ export function Composer({
     }
 
     if (activeDoc) await editDeck(text);
-    else await generate(text);
+    else await generate(text, sources);
   }
 
   const composerBox = (
@@ -626,6 +668,82 @@ export function Composer({
 
   );
 
+  const kindChips = (
+    <div className="flex justify-center gap-1.5 flex-wrap">
+      {KIND_OPTIONS.map((opt) => {
+        const Icon = opt.icon;
+        const active = kind === opt.kind;
+        return (
+          <button
+            key={opt.kind}
+            type="button"
+            onClick={() => {
+              setKind(opt.kind);
+              try {
+                localStorage.setItem("pk-kind", opt.kind);
+              } catch {
+                /* ignore */
+              }
+            }}
+            className={`flex items-center gap-1.5 text-[12.5px] font-medium rounded-full px-3.5 py-1.5 border transition-colors cursor-pointer ${
+              active
+                ? "bg-text text-bg border-transparent"
+                : "border-border text-text-secondary hover:text-text hover:bg-surface-2"
+            }`}
+          >
+            <Icon size={13} />
+            {opt.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  const chatHeader = (
+    <div className="h-11 flex items-center justify-between px-4 flex-shrink-0 border-b border-border gap-2">
+      <div className="min-w-0 truncate text-[13px] font-medium">
+        {activeDoc ? `${activeDoc.title} · ${kindLabel(activeDoc.kind)}` : "Chat"}
+      </div>
+      <div className="flex items-center gap-2 flex-shrink-0">
+        {headerAccessory}
+        <button
+          type="button"
+          onClick={resetThread}
+          className="flex items-center gap-1.5 text-[12px] text-text-secondary hover:text-text border border-border rounded-lg px-2.5 py-1.5 hover:bg-surface-2 transition-colors cursor-pointer"
+        >
+          <PlusCircle size={12} />
+          New chat
+        </button>
+      </div>
+    </div>
+  );
+
+  const chatMessages = (
+    <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto px-4 pb-4 flex flex-col gap-3">
+      {messages.map((m) => (
+        <ThreadMessage
+          key={m.id}
+          message={m}
+          doc={activeDoc}
+          onCancelGenerate={generating ? cancelRun : undefined}
+        />
+      ))}
+      {chatting && (
+        <div className="self-start flex items-center gap-2.5 bg-surface border border-border rounded-xl px-3.5 py-2.5">
+          <Loader2 size={13} className="animate-spin text-accent" />
+          <span className="text-[12.5px] text-text-secondary">Thinking...</span>
+        </div>
+      )}
+    </div>
+  );
+
+  const chatFooter = (
+    <div className="px-3 pb-3 pt-1 flex-shrink-0">
+      {!activeDoc && !generating && <div className="mb-2">{kindChips}</div>}
+      {composerBox}
+    </div>
+  );
+
   return (
     <div className={`w-full flex flex-col ${threadActive ? "flex-1 min-h-0" : "max-w-[680px] mx-auto"}`}>
       {dragging && (
@@ -638,109 +756,47 @@ export function Composer({
         </div>
       )}
 
-      {threadActive ? (
+      {threadActive && showCanvas ? (
         <div className="workspace-split flex-1 min-h-0">
           <div className="workspace-chat flex flex-col min-h-0 min-w-0 border-r border-border bg-bg">
-            <div className="h-12 flex items-center justify-between px-4 flex-shrink-0 border-b border-border">
-              <div className="min-w-0">
-                <div className="text-[13px] font-medium truncate">
-                  {activeDoc?.title ?? "Chat"}
-                </div>
-                {activeDoc && (
-                  <div className="text-[11px] text-text-tertiary truncate">
-                    {kindLabel(activeDoc.kind)}
-                  </div>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={resetThread}
-                className="flex items-center gap-1.5 text-[12px] text-text-secondary hover:text-text border border-border rounded-lg px-2.5 py-1.5 hover:bg-surface-2 transition-colors cursor-pointer"
-              >
-                <PlusCircle size={12} />
-                New chat
-              </button>
-            </div>
-            <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto px-4 pb-4 flex flex-col gap-3">
-          {messages.map((m) => (
-            <ThreadMessage
-              key={m.id}
-              message={m}
-              doc={activeDoc}
-              onCancelGenerate={
-                generating
-                  ? cancelRun
-                  : undefined
-              }
-            />
-          ))}
-          {chatting && (
-            <div className="self-start flex items-center gap-2.5 bg-surface border border-border rounded-xl px-3.5 py-2.5">
-              <Loader2 size={13} className="animate-spin text-accent" />
-              <span className="text-[12.5px] text-text-secondary">Thinking...</span>
-            </div>
-          )}
-            </div>
-            <div className="px-3 pb-3 pt-1 flex-shrink-0">
-              {composerBox}
-            </div>
+            {chatHeader}
+            {chatMessages}
+            {chatFooter}
           </div>
           <WorkspaceCanvas
             doc={activeDoc}
             generating={generating}
             editing={editing}
-            onCancelGenerate={
-              generating
-                ? cancelRun
-                : undefined
-            }
+            onCancelGenerate={generating ? cancelRun : undefined}
           />
+        </div>
+      ) : threadActive ? (
+        <div className="flex-1 min-h-0 flex flex-col w-full max-w-[720px] mx-auto">
+          {chatHeader}
+          {chatMessages}
+          {chatFooter}
         </div>
       ) : (
         <>
-      {!activeDoc && (
-        <div className="flex justify-center gap-1.5 mb-3">
-          {KIND_OPTIONS.map((opt) => {
-            const Icon = opt.icon;
-            const active = kind === opt.kind;
-            return (
-              <button
-                key={opt.kind}
-                type="button"
-                onClick={() => setKind(opt.kind)}
-                className={`flex items-center gap-1.5 text-[12.5px] font-medium rounded-full px-3.5 py-1.5 border transition-colors cursor-pointer ${
-                  active
-                    ? "bg-text text-bg border-transparent"
-                    : "border-border text-text-secondary hover:text-text hover:bg-surface-2"
-                }`}
-              >
-                <Icon size={13} />
-                {opt.label}
-              </button>
-            );
-          })}
-        </div>
-      )}
-
-      {composerBox}
-
-      {!threadActive && prompt.length === 0 && files.length === 0 && (
-        <div className="flex flex-wrap justify-center gap-2 mt-4">
-          {SUGGESTIONS[kind].map((s) => (
-            <button
-              key={s}
-              onClick={() => {
-                setPrompt(s);
-                textareaRef.current?.focus();
-                requestAnimationFrame(autoGrow);
-              }}
-              className="text-[12.5px] text-text-secondary border border-border rounded-full px-3 py-1.5 hover:bg-surface-2 hover:text-text transition-colors cursor-pointer"
-            >
-              {s}
-            </button>
-          ))}
-        </div>
-      )}
+          {kindChips}
+          <div className="mt-3">{composerBox}</div>
+          {prompt.length === 0 && files.length === 0 && (
+            <div className="flex flex-wrap justify-center gap-2 mt-4">
+              {SUGGESTIONS[kind].map((s) => (
+                <button
+                  key={s}
+                  onClick={() => {
+                    setPrompt(s);
+                    textareaRef.current?.focus();
+                    requestAnimationFrame(autoGrow);
+                  }}
+                  className="text-[12.5px] text-text-secondary border border-border rounded-full px-3 py-1.5 hover:bg-surface-2 hover:text-text transition-colors cursor-pointer"
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
         </>
       )}
     </div>

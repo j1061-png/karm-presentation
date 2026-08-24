@@ -11,7 +11,7 @@ import { PresentationItem } from "./PresentationItem";
 import { NotificationsBell } from "./NotificationsBell";
 import { SettingsPanel } from "./SettingsPanel";
 import {
-  Search, Plus, Loader2, Presentation,
+  Search, Plus, Presentation,
 } from "lucide-react";
 
 type SortKey = "updated" | "created" | "title";
@@ -26,7 +26,6 @@ export function DashboardShell({
   const [metas, setMetas] = useState<PresentationMeta[] | null>(null);
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortKey>("updated");
-  const [busy, setBusy] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [recentExpanded, setRecentExpanded] = useState(false);
   const [threadActive, setThreadActive] = useState(false);
@@ -81,16 +80,6 @@ export function DashboardShell({
     setThreadActive(false);
   }
 
-  async function handleNewBlank() {
-    setBusy("new");
-    try {
-      const p = await api.createPresentation();
-      router.push(`/editor/${p.id}`);
-    } catch (e) {
-      setToast(e instanceof Error ? e.message : "Failed to create project");
-      setBusy(null);
-    }
-  }
 
   async function handleRename(id: string, title: string) {
     setMetas((prev) => prev?.map((m) => (m.id === id ? { ...m, title } : m)) ?? null);
@@ -166,26 +155,18 @@ export function DashboardShell({
       />
 
       <main
-        className={`flex-1 min-w-0 min-h-0 flex flex-col ${
+        className={`flex-1 min-w-0 min-h-0 flex flex-col relative ${
           threadActive && view === "home" ? "overflow-hidden" : "overflow-y-auto"
         }`}
       >
-        <div
-          className={`flex items-center justify-between px-5 flex-shrink-0 ${
-            threadActive && view === "home" ? "h-10" : "h-12 border-b border-border"
-          }`}
-        >
+        {!(threadActive && view === "home") && (
+        <div className="h-12 flex items-center justify-between px-5 flex-shrink-0 border-b border-border">
           <div className="text-[13px] font-medium text-text-secondary">
-            {view === "home"
-              ? threadActive
-                ? ""
-                : "Home"
-              : view === "presentations"
-                ? "Projects"
-                : "Settings"}
+            {view === "home" ? "Home" : view === "presentations" ? "Projects" : "Settings"}
           </div>
           <NotificationsBell onChanged={() => void refresh()} />
         </div>
+        )}
 
         {/* -------------------------------------------------- home view */}
         {view === "home" && (
@@ -204,6 +185,7 @@ export function DashboardShell({
                 key={chatEpoch}
                 continueId={openChatId}
                 onThreadChange={setThreadActive}
+                headerAccessory={<NotificationsBell onChanged={() => void refresh()} />}
                 onCreated={() => void refresh()}
                 onReset={() => setOpenChatId(null)}
               />
@@ -269,12 +251,11 @@ export function DashboardShell({
                   <option value="title">A–Z</option>
                 </select>
                 <button
-                  onClick={handleNewBlank}
-                  disabled={busy === "new"}
-                  className="flex items-center gap-1.5 text-[13px] font-medium bg-accent text-accent-text rounded-lg px-3 py-1.5 hover:bg-accent-hover transition-colors cursor-pointer disabled:opacity-60"
+                  onClick={handleNewChat}
+                  className="flex items-center gap-1.5 text-[13px] font-medium bg-accent text-accent-text rounded-lg px-3 py-1.5 hover:bg-accent-hover transition-colors cursor-pointer"
                 >
-                  {busy === "new" ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
-                  New
+                  <Plus size={13} />
+                  New chat
                 </button>
               </div>
             </div>

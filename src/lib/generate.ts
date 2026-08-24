@@ -301,6 +301,7 @@ export async function generatePresentation(
       id: nanoid(12),
       title: plan.title,
       description: plan.description,
+      kind: "presentation" as const,
       theme,
       slides: allSlides,
       createdAt: now,

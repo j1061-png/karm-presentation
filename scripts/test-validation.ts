@@ -4,7 +4,7 @@
  */
 import { extractJson, repairPresentation, repairSlide } from "../src/lib/validate";
 import { layoutSlide } from "../src/lib/layouts";
-import { ThemeSchema } from "../src/lib/schema";
+import { inferProjectKind, ThemeSchema } from "../src/lib/schema";
 
 let passed = 0;
 let failed = 0;
@@ -184,6 +184,36 @@ test("promotes a heading-only slide into an interactive layout", () => {
     laid.elements.some((e) => ["cards", "stat", "chart", "flipcards", "flow"].includes(e.type)),
     "should inject an interactive widget"
   );
+});
+
+
+console.log("\ninferProjectKind:");
+test("picker website wins over a deck-like prompt", () => {
+  expect(inferProjectKind("pitch deck for our launch", "website") === "website", "picker should win");
+});
+test("snake game is a game even if picker is presentation", () => {
+  expect(inferProjectKind("Make me a snake game", "presentation") === "game", "should infer game");
+});
+test("portfolio site is a website", () => {
+  expect(inferProjectKind("Build a personal portfolio website", "chat") === "website", "should infer website");
+});
+test("pomodoro is an app", () => {
+  expect(inferProjectKind("create a pomodoro timer with tasks", "presentation") === "app", "should infer app");
+});
+test("pitch deck stays a presentation", () => {
+  expect(inferProjectKind("Q3 performance review pitch deck", "presentation") === "presentation", "should stay presentation");
+});
+test("game-changing copy is not a game", () => {
+  expect(inferProjectKind("a game-changing strategy deck", "presentation") === "presentation", "should not infer game");
+});
+test("make a game-changing deck is still a presentation", () => {
+  expect(
+    inferProjectKind("make a game-changing strategy deck", "chat") === "presentation",
+    "game-changing should not infer game"
+  );
+});
+test("chat picker still infers a snake game", () => {
+  expect(inferProjectKind("Make me a snake game", "chat") === "game", "chat picker should infer game");
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);
