@@ -36,7 +36,7 @@ function XIcon() {
 type PublishStage = "idle" | "preparing" | "validating" | "building" | "deploying" | "done" | "error";
 
 const STAGE_LABELS: Record<Exclude<PublishStage, "idle" | "done" | "error">, string> = {
-  preparing: "Preparing presentation",
+  preparing: "Preparing project",
   validating: "Validating content",
   building: "Building interactive experience",
   deploying: "Deploying",

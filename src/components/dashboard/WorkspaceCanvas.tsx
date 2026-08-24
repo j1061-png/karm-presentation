@@ -1,15 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
-  AlertCircle, Check, Copy, Loader2, PencilRuler, Play, PlusCircle, Rocket, Sparkles,
+  AlertCircle, Check, Copy, Loader2, PencilRuler, Play, Rocket, Sparkles,
 } from "lucide-react";
 import { publishPresentation } from "@/lib/api";
 import { SlideRenderer } from "@/components/renderer/SlideRenderer";
 import { assemblePreviewHtml } from "@/lib/web-preview";
 import { ShareButton } from "@/components/share/ShareButton";
-import { isWebKind, type Presentation } from "@/lib/schema";
+import { isWebKind, kindLabel, kindNoun, type Presentation } from "@/lib/schema";
 
 export interface GenProgress {
   stage: string;
@@ -32,13 +32,11 @@ export function WorkspaceCanvas({
   generating,
   editing,
   onCancelGenerate,
-  onNewChat,
 }: {
   doc: Presentation | null;
   generating: GenProgress | null;
   editing: boolean;
   onCancelGenerate?: () => void;
-  onNewChat?: () => void;
 }) {
   return (
     <section className="workspace-canvas min-h-0 flex flex-col bg-sidebar">
@@ -51,7 +49,7 @@ export function WorkspaceCanvas({
             {doc && (
               <div className="text-[11px] text-text-tertiary truncate">
                 {isWebKind(doc.kind)
-                  ? `${doc.kind} · keep chatting to edit`
+                  ? `${kindLabel(doc.kind)} · keep chatting to edit`
                   : `${doc.slides.length} slide${doc.slides.length === 1 ? "" : "s"} · keep chatting to edit`}
               </div>
             )}
@@ -99,21 +97,11 @@ export function WorkspaceCanvas({
                 <Sparkles size={18} className="text-text-tertiary" />
               </div>
               <p className="font-serif text-[22px] tracking-tight text-text mb-1.5">
-                Your work will appear here
+                Preview
               </p>
               <p className="text-[13px] text-text-secondary max-w-sm">
-                Ask Studio to build a presentation, website, game, or app. The live result shows up on this canvas.
+                When Studio starts building, the live presentation, site, game, or app shows up here.
               </p>
-              {onNewChat && (
-                <button
-                  type="button"
-                  onClick={onNewChat}
-                  className="mt-5 text-[12.5px] text-text-secondary hover:text-text cursor-pointer inline-flex items-center gap-1.5"
-                >
-                  <PlusCircle size={13} />
-                  Start a new chat
-                </button>
-              )}
             </div>
           )}
 
@@ -137,8 +125,13 @@ function WebProjectCard({ doc }: { doc: Presentation }) {
   const [deployError, setDeployError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const html = assemblePreviewHtml(doc.files, doc.entry);
-  const label = doc.kind === "game" ? "game" : doc.kind === "app" ? "app" : "website";
+  const label = kindNoun(doc.kind);
   const file = doc.files?.find((f) => f.path === activeFile) ?? doc.files?.[0];
+
+  useEffect(() => {
+    setActiveFile(doc.entry);
+    setTab("preview");
+  }, [doc.id, doc.updatedAt, doc.entry]);
 
   async function deploy() {
     if (deploying) return;
@@ -154,13 +147,10 @@ function WebProjectCard({ doc }: { doc: Presentation }) {
     }
   }
   return (
-    <div className="self-stretch bg-surface border border-border rounded-2xl overflow-hidden">
-      <div className="px-4 pt-3.5 pb-2 flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="text-[14px] font-medium truncate">{doc.title}</div>
-          <div className="text-[12px] text-text-tertiary mt-0.5">
-            Your {label} is live below — try it, then type a change.
-          </div>
+    <div className="h-full min-h-0 flex flex-col self-stretch">
+      <div className="pb-2 flex items-center justify-between gap-3">
+        <div className="text-[12px] text-text-tertiary truncate">
+          Try the {label}, then type a change in chat.
         </div>
         <div className="flex items-center bg-surface-2 border border-border rounded-lg p-0.5 flex-shrink-0">
           {(
@@ -182,18 +172,17 @@ function WebProjectCard({ doc }: { doc: Presentation }) {
         </div>
       </div>
       {tab === "preview" ? (
-        <div className="px-4 pb-3">
+        <div className="pb-3 flex-1 min-h-0">
           <iframe
             key={doc.updatedAt}
             srcDoc={html}
             sandbox="allow-scripts allow-forms allow-pointer-lock allow-modals"
-            className="w-full rounded-lg border border-border bg-white"
-            style={{ height: 420 }}
+            className="w-full h-full min-h-[280px] rounded-lg border border-border bg-white"
             title={doc.title}
           />
         </div>
       ) : (
-        <div className="px-4 pb-3">
+        <div className="pb-3 flex-1 min-h-0">
           <div className="rounded-lg border border-border overflow-hidden">
             <div className="flex items-center gap-1 px-2 py-1.5 bg-surface-2 border-b border-border overflow-x-auto">
               {(doc.files ?? []).map((f) => (
@@ -250,24 +239,7 @@ function WebProjectCard({ doc }: { doc: Presentation }) {
           <AlertCircle size={12} className="flex-shrink-0" /> {deployError}
         </div>
       )}
-      <div className="px-4 pb-3 flex items-center gap-2">
-        <div className="flex-1" />
-        <Link
-          href={`/editor/${doc.id}`}
-          className="flex items-center gap-1.5 text-[12.5px] font-medium border border-border rounded-lg px-3 py-1.5 hover:bg-surface-2 transition-colors"
-        >
-          <PencilRuler size={13} />
-          Open editor
-        </Link>
-        <ShareButton presentationId={doc.id} title={doc.title} />
-        <Link
-          href={`/presentations/${doc.id}`}
-          target="_blank"
-          className="flex items-center gap-1.5 text-[12.5px] font-medium border border-border rounded-lg px-3 py-1.5 hover:bg-surface-2 transition-colors"
-        >
-          <Play size={13} />
-          Full screen
-        </Link>
+      <div className="pb-3 flex items-center justify-end gap-2">
         <button
           onClick={() => void deploy()}
           disabled={deploying}
@@ -284,15 +256,15 @@ function WebProjectCard({ doc }: { doc: Presentation }) {
 function LiveDeckCard({ doc }: { doc: Presentation }) {
   const [index, setIndex] = useState(0);
   const slide = doc.slides[Math.min(index, doc.slides.length - 1)];
+  useEffect(() => {
+    setIndex(0);
+  }, [doc.id, doc.updatedAt]);
   return (
-    <div className="self-stretch bg-surface border border-border rounded-2xl overflow-hidden">
-      <div className="px-4 pt-3.5 pb-2">
-        <div className="text-[14px] font-medium">{doc.title}</div>
-        <div className="text-[12px] text-text-tertiary mt-0.5">
-          Click the slide — flip cards, tabs, quizzes, and buttons work. Then type a change below.
-        </div>
+    <div className="h-full min-h-0 flex flex-col self-stretch">
+      <div className="pb-2 text-[12px] text-text-tertiary">
+        Click the slide to try it, then type a change in chat.
       </div>
-      <div className="px-4 pb-3">
+      <div className="pb-3 flex-1 min-h-0">
         <SlideRenderer
           slide={slide}
           theme={doc.theme}
@@ -309,7 +281,7 @@ function LiveDeckCard({ doc }: { doc: Presentation }) {
           }}
         />
       </div>
-      <div className="px-4 pb-3 flex items-center gap-2">
+      <div className="pb-3 flex items-center gap-2">
         <button
           type="button"
           onClick={() => setIndex((i) => Math.max(0, i - 1))}
@@ -329,22 +301,6 @@ function LiveDeckCard({ doc }: { doc: Presentation }) {
         >
           Next
         </button>
-        <div className="flex-1" />
-        <Link
-          href={`/editor/${doc.id}`}
-          className="flex items-center gap-1.5 text-[12.5px] font-medium border border-border rounded-lg px-3 py-1.5 hover:bg-surface-2 transition-colors"
-        >
-          <PencilRuler size={13} />
-          Open editor
-        </Link>
-        <ShareButton presentationId={doc.id} title={doc.title} />
-        <Link
-          href={`/presentations/${doc.id}`}
-          className="flex items-center gap-1.5 text-[12.5px] font-medium bg-accent text-accent-text rounded-lg px-3 py-1.5 hover:bg-accent-hover transition-colors"
-        >
-          <Play size={13} />
-          Present
-        </Link>
       </div>
     </div>
   );

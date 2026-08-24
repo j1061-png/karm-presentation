@@ -2,8 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { PresentationMeta } from "@/lib/schema";
-import { ThemeSchema } from "@/lib/schema";
+import { isWebKind, ThemeSchema, type PresentationMeta } from "@/lib/schema";
 import { SlideRenderer } from "@/components/renderer/SlideRenderer";
 import { ShareModal } from "@/components/share/ShareModal";
 import {
@@ -156,8 +155,8 @@ export function PresentationItem({
         <button
           onClick={() => window.open(`/presentations/${meta.id}`, "_blank")}
           className="p-2 rounded-lg text-text-tertiary hover:text-text hover:bg-surface-3 transition-colors cursor-pointer opacity-0 group-hover:opacity-100 focus-within:opacity-100"
-          title="Present"
-          aria-label="Present"
+          title={isWebKind(meta.kind) ? "Open" : "Present"}
+          aria-label={isWebKind(meta.kind) ? "Open" : "Present"}
         >
           <Play size={14} />
         </button>

@@ -12,7 +12,7 @@ import { ATTACH_ACCEPT, useAttachments } from "@/lib/use-attachments";
 import { EffortPicker } from "@/components/chat/EffortPicker";
 import { FileChips } from "@/components/chat/FileChips";
 import { WorkspaceCanvas } from "./WorkspaceCanvas";
-import { isWebKind, type ChatTurn, type Presentation, type ProjectKind } from "@/lib/schema";
+import { isWebKind, kindLabel, kindNoun, type ChatTurn, type Presentation, type ProjectKind } from "@/lib/schema";
 
 interface GenProgress {
   stage: string;
@@ -128,6 +128,7 @@ export function Composer({
   const abortRef = useRef<AbortController | null>(null);
   const dragDepth = useRef(0);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const runId = useRef(0);
   const { files, addFiles, removeFile, clearFiles, readySources, uploading, inputRef } =
     useAttachments();
   const loadedId = useRef<string | null>(null);
@@ -137,12 +138,15 @@ export function Composer({
   useEffect(() => {
     if (!continueId || loadedId.current === continueId) return;
     loadedId.current = continueId;
+    const myRun = ++runId.current;
     abortRef.current?.abort();
     setGenerating(null);
     setEditing(false);
+    setChatting(false);
     void (async () => {
       try {
         const doc = await getPresentation(continueId);
+        if (myRun !== runId.current) return;
         setActiveDoc(doc);
         setMessages(
           doc.chatThread?.length
@@ -150,12 +154,13 @@ export function Composer({
             : [{ id: `r-${doc.id}`, role: "assistant", kind: "result", presentationId: doc.id }]
         );
       } catch {
+        if (myRun !== runId.current) return;
         setMessages([
           {
             id: "e-load",
             role: "assistant",
             kind: "error",
-            text: "Couldn't reopen that presentation. Try again from Recents.",
+            text: "Couldn't reopen that project. Try again from Recents.",
           },
         ]);
       }
@@ -228,11 +233,13 @@ export function Composer({
     (prompt.trim().length > 0 || readySources.length > 0) && !uploading && !busy;
 
   const resetThread = useCallback(() => {
+    runId.current += 1;
     abortRef.current?.abort();
     setMessages([]);
     setActiveDoc(null);
     setGenerating(null);
     setEditing(false);
+    setChatting(false);
     setPrompt("");
     clearFiles();
     loadedId.current = null;
@@ -247,13 +254,24 @@ export function Composer({
     ]);
   }
 
+  function cancelRun() {
+    runId.current += 1;
+    abortRef.current?.abort();
+    setGenerating(null);
+    setEditing(false);
+    setChatting(false);
+    setMessages((m) =>
+      m.filter((msg) => !(msg.role === "assistant" && msg.kind === "progress"))
+    );
+  }
+
   async function generate(preText?: string) {
     const usingPre = typeof preText === "string";
     if (!usingPre && !canSend) return;
     const text = usingPre
       ? preText
       : prompt.trim() ||
-        (readySources.length > 0 ? "Create a presentation from the attached files." : "");
+        (readySources.length > 0 ? `Create a ${kindNoun(kind)} from the attached files.` : "");
     if (!text) return;
     const attached = usingPre ? [] : readySources;
     if (!usingPre) {
@@ -263,6 +281,8 @@ export function Composer({
       if (textareaRef.current) textareaRef.current.style.height = "auto";
       pushUser(text, attachedNames);
     }
+    const myRun = ++runId.current;
+    abortRef.current?.abort();
     const progressId = `p${Date.now()}`;
     setMessages((m) => [
       ...m,
@@ -337,8 +357,13 @@ export function Composer({
       }
 
       if (!finishedId) throw new Error("Generation ended unexpectedly. Please try again.");
-      updateProgress({ stage: "finalising", detail: "Saving your presentation" });
+      updateProgress({ stage: "finalising", detail: `Saving your ${kindNoun(kind)}` });
       const doc = await getPresentation(finishedId);
+      if (myRun !== runId.current) {
+        setGenerating(null);
+        setMessages((m) => m.filter((msg) => msg.id !== progressId));
+        return;
+      }
       setGenerating(null);
       loadedId.current = doc.id;
       setMessages((m) => {
@@ -354,7 +379,7 @@ export function Composer({
       });
       onCreated?.();
     } catch (e) {
-      if (controller.signal.aborted) {
+      if (myRun !== runId.current || controller.signal.aborted) {
         setGenerating(null);
         setMessages((m) => m.filter((msg) => msg.id !== progressId));
         return;
@@ -377,7 +402,7 @@ export function Composer({
     const text = usingPre
       ? preText
       : prompt.trim() ||
-        (readySources.length > 0 ? "Incorporate the attached files into the presentation." : "");
+        (readySources.length > 0 ? `Incorporate the attached files into the ${kindNoun(activeDoc.kind)}.` : "");
     if (!text) return;
     const attached = usingPre ? [] : readySources;
     if (!usingPre) {
@@ -387,6 +412,7 @@ export function Composer({
       if (textareaRef.current) textareaRef.current.style.height = "auto";
       pushUser(text, attachedNames);
     }
+    const myRun = ++runId.current;
     setEditing(true);
     try {
       const result = await aiEdit({
@@ -395,6 +421,7 @@ export function Composer({
         presentation: activeDoc,
         files: attached,
       });
+      if (myRun !== runId.current) return;
       const nextDoc = result.changed ? result.presentation : activeDoc;
       const editMsg = { id: `a${Date.now()}`, role: "assistant" as const, kind: "edit" as const, text: result.summary };
       setMessages((m) => {
@@ -406,6 +433,7 @@ export function Composer({
       });
       onCreated?.();
     } catch (e) {
+      if (myRun !== runId.current) return;
       setMessages((m) => {
         const next: ChatMessage[] = [
           ...m,
@@ -420,7 +448,7 @@ export function Composer({
         return next;
       });
     } finally {
-      setEditing(false);
+      if (myRun === runId.current) setEditing(false);
     }
   }
 
@@ -451,6 +479,7 @@ export function Composer({
     if (chatMode) clearFiles();
     if (textareaRef.current) textareaRef.current.style.height = "auto";
     pushUser(text, attachedNames);
+    const myRun = ++runId.current;
     setChatting(true);
 
     const history: { role: "user" | "assistant"; text: string }[] = [];
@@ -469,6 +498,7 @@ export function Composer({
         sources,
       });
     } catch (e) {
+      if (myRun !== runId.current) return;
       if (chatMode || activeDoc) {
         // Don't kick off a rebuild/edit when the router itself failed — that
         // is what made follow-ups look like the AI crashed.
@@ -487,6 +517,7 @@ export function Composer({
       // First message with no project yet: still try to build so the prompt isn't lost.
       decision = { mode: "build", reply: "" };
     }
+    if (myRun !== runId.current) return;
     setChatting(false);
 
     if (decision.mode === "chat") {
@@ -584,7 +615,7 @@ export function Composer({
               onClick={send}
               disabled={!canSend}
               className="w-8 h-8 rounded-full bg-text text-bg flex items-center justify-center transition-opacity hover:opacity-85 disabled:opacity-25 disabled:cursor-not-allowed cursor-pointer"
-              aria-label={activeDoc ? "Send edit" : "Generate presentation"}
+              aria-label="Send"
               title="Send (Enter)"
             >
               {busy ? <Loader2 size={15} className="animate-spin" /> : <ArrowUp size={16} strokeWidth={2.5} />}
@@ -610,8 +641,17 @@ export function Composer({
       {threadActive ? (
         <div className="workspace-split flex-1 min-h-0">
           <div className="workspace-chat flex flex-col min-h-0 min-w-0 border-r border-border bg-bg">
-            <div className="h-12 flex items-center justify-between px-4 flex-shrink-0">
-              <div className="text-[13px] text-text-secondary truncate">Chat</div>
+            <div className="h-12 flex items-center justify-between px-4 flex-shrink-0 border-b border-border">
+              <div className="min-w-0">
+                <div className="text-[13px] font-medium truncate">
+                  {activeDoc?.title ?? "Chat"}
+                </div>
+                {activeDoc && (
+                  <div className="text-[11px] text-text-tertiary truncate">
+                    {kindLabel(activeDoc.kind)}
+                  </div>
+                )}
+              </div>
               <button
                 type="button"
                 onClick={resetThread}
@@ -629,20 +669,11 @@ export function Composer({
               doc={activeDoc}
               onCancelGenerate={
                 generating
-                  ? () => {
-                      abortRef.current?.abort();
-                      setGenerating(null);
-                    }
+                  ? cancelRun
                   : undefined
               }
             />
           ))}
-          {editing && (
-            <div className="self-start flex items-center gap-2.5 bg-surface border border-border rounded-xl px-3.5 py-2.5">
-              <Loader2 size={13} className="animate-spin text-accent" />
-              <span className="text-[12.5px] text-text-secondary">Working on it...</span>
-            </div>
-          )}
           {chatting && (
             <div className="self-start flex items-center gap-2.5 bg-surface border border-border rounded-xl px-3.5 py-2.5">
               <Loader2 size={13} className="animate-spin text-accent" />
@@ -660,13 +691,9 @@ export function Composer({
             editing={editing}
             onCancelGenerate={
               generating
-                ? () => {
-                    abortRef.current?.abort();
-                    setGenerating(null);
-                  }
+                ? cancelRun
                 : undefined
             }
-            onNewChat={resetThread}
           />
         </div>
       ) : (
@@ -745,6 +772,15 @@ function ThreadMessage({
       <div className="self-start flex items-center gap-2 text-[13px] text-text-secondary">
         <Loader2 size={13} className="animate-spin flex-shrink-0" />
         <span>{message.progress.detail || "Working on the canvas…"}</span>
+        {onCancelGenerate && (
+          <button
+            type="button"
+            onClick={onCancelGenerate}
+            className="text-[12px] text-text-tertiary hover:text-text cursor-pointer"
+          >
+            Cancel
+          </button>
+        )}
       </div>
     );
   }
@@ -772,8 +808,8 @@ function ThreadMessage({
     );
   }
 
-  const kindLabel = isWebKind(doc.kind)
-    ? doc.kind
+  const meta = isWebKind(doc.kind)
+    ? kindLabel(doc.kind)
     : `${doc.slides.length} slide${doc.slides.length === 1 ? "" : "s"}`;
   return (
     <div className="self-start flex items-center gap-2 text-[13px] text-text-secondary">
@@ -781,7 +817,7 @@ function ThreadMessage({
       <span>
         <span className="font-medium text-text">{doc.title}</span>
         {" "}is on the canvas
-        <span className="text-text-tertiary"> · {kindLabel}</span>
+        <span className="text-text-tertiary"> · {meta}</span>
       </span>
     </div>
   );

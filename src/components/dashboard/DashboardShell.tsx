@@ -74,13 +74,20 @@ export function DashboardShell({
     });
   }, [metas, query, sort]);
 
+  function handleNewChat() {
+    setView("home");
+    setOpenChatId(null);
+    setChatEpoch((n) => n + 1);
+    setThreadActive(false);
+  }
+
   async function handleNewBlank() {
     setBusy("new");
     try {
       const p = await api.createPresentation();
       router.push(`/editor/${p.id}`);
     } catch (e) {
-      setToast(e instanceof Error ? e.message : "Failed to create presentation");
+      setToast(e instanceof Error ? e.message : "Failed to create project");
       setBusy(null);
     }
   }
@@ -98,7 +105,7 @@ export function DashboardShell({
   async function handleDuplicate(id: string) {
     try {
       await api.duplicatePresentation(id);
-      setToast("Presentation duplicated");
+      setToast("Project duplicated");
       void refresh();
     } catch {
       setToast("Duplicate failed");
@@ -151,7 +158,7 @@ export function DashboardShell({
       <Sidebar
         view={view}
         onNavigate={setView}
-        onNew={handleNewBlank}
+        onNew={handleNewChat}
         recents={metas}
         user={user}
         onSignOut={() => void signOut()}
@@ -163,7 +170,11 @@ export function DashboardShell({
           threadActive && view === "home" ? "overflow-hidden" : "overflow-y-auto"
         }`}
       >
-        <div className="h-12 flex items-center justify-between px-5 flex-shrink-0 border-b border-border">
+        <div
+          className={`flex items-center justify-between px-5 flex-shrink-0 ${
+            threadActive && view === "home" ? "h-10" : "h-12 border-b border-border"
+          }`}
+        >
           <div className="text-[13px] font-medium text-text-secondary">
             {view === "home"
               ? threadActive

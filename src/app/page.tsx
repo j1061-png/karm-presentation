@@ -171,7 +171,7 @@ function LoginContent() {
               <p className="text-[13.5px] text-text-secondary mb-7 text-center">
                 {view === "signin"
                   ? "Sign in to continue."
-                  : "Build interactive presentations with AI."}
+                  : "Build presentations, sites, games, and apps with AI."}
               </p>
 
               <button

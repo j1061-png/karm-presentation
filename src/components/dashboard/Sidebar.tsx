@@ -103,15 +103,15 @@ export function Sidebar({
         </button>
       </div>
 
-      {/* New project */}
+      {/* New chat */}
       <div className={collapsed ? "px-0 mb-1" : "px-2.5 mb-1"}>
         <button
           onClick={onNew}
-          title="New project"
+          title="New chat"
           className={`${itemBase} ${itemPad} font-medium text-text hover:bg-surface-2 border border-border bg-surface`}
         >
           <Plus size={16} className="flex-shrink-0" />
-          {!collapsed && "New project"}
+          {!collapsed && "New chat"}
         </button>
       </div>
 
