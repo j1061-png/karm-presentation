@@ -13,12 +13,12 @@ const instrument = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  title: "Studio",
+  title: "webo",
   description: "AI workspace for presentations, sites, games, and apps",
-  applicationName: "Studio",
+  applicationName: "webo",
   appleWebApp: {
     capable: true,
-    title: "Studio",
+    title: "webo",
     statusBarStyle: "black-translucent",
   },
   icons: {

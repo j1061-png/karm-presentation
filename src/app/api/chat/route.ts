@@ -7,7 +7,7 @@ import { publicAiError } from "@/lib/public-error";
 export const maxDuration = 60;
 
 /**
- * Conversational endpoint: lets people talk to Studio like a normal chatbot.
+ * Conversational endpoint: lets people talk to webo like a normal chatbot.
  * The model decides whether the latest message is small talk / a question
  * (answer directly) or a request to build something (the client then runs
  * the generation pipeline).
@@ -43,7 +43,7 @@ function sourcesContext(sources: ChatBody["sources"]): string {
 }
 
 function chatOnlyPrompt(): string {
-  return `You are Studio, a friendly AI assistant inside an AI workspace that builds presentations, websites, games, and apps.
+  return `You are webo, a friendly AI assistant inside an AI workspace that builds presentations, websites, games, and apps.
 
 You are in pure chat mode. ALWAYS respond with ONLY: {"mode":"chat","reply":"<your answer>"}
 
@@ -61,7 +61,7 @@ function systemPrompt(hasProject: boolean, kind: string): string {
     ? `asks you to CHANGE, EDIT, ADD TO, or REDESIGN the currently open ${kind} (e.g. "make the header blue", "add a slide about pricing", "fix the bug")`
     : `asks you to CREATE or BUILD something (a presentation, website, game, or app — e.g. "make me a snake game", "build a portfolio site", "create a pitch deck")`;
 
-  return `You are Studio, a friendly AI workspace assistant. You chat naturally AND you can build presentations, websites, games, and apps.
+  return `You are webo, a friendly AI workspace assistant. You chat naturally AND you can build presentations, websites, games, and apps.
 
 Decide what the LATEST user message is:
 - If it ${buildMeaning}, respond with ONLY: {"mode":"build"}

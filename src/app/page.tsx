@@ -133,7 +133,7 @@ function LoginContent() {
             Watch it built on the right.
           </h1>
           <p className="mt-5 text-[15px] text-text-secondary max-w-sm leading-relaxed">
-            Studio is an AI workspace for presentations, websites, games, and apps — closer to a
+            webo is an AI workspace for presentations, websites, games, and apps — closer to a
             partner than a chat box.
           </p>
         </div>

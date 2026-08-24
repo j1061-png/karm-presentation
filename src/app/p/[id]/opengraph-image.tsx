@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 import { getPublished } from "@/lib/store";
 
 export const runtime = "nodejs";
-export const alt = "Studio project";
+export const alt = "webo project";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -58,23 +58,29 @@ export default async function OpenGraphImage({ params }: { params: Promise<{ id:
 
         {/* Brand */}
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: 52,
-              height: 52,
-              borderRadius: 14,
-              background: accent,
-              color: bg,
-              fontSize: 30,
-              fontWeight: 700,
-            }}
-          >
-            S
-          </div>
-          <div style={{ display: "flex", fontSize: 30, fontWeight: 600, color: text }}>Studio</div>
+          <svg width="52" height="52" viewBox="0 0 32 32" fill="none">
+            <rect x="3.2" y="3.2" width="25.6" height="25.6" rx="6.4" stroke="#2B7FFF" strokeWidth="2.25" />
+            <path d="M3.2 11.15h25.6" stroke="#2B7FFF" strokeWidth="2.25" />
+            <circle cx="8.35" cy="7.2" r="1.12" fill="#2B7FFF" />
+            <circle cx="12.15" cy="7.2" r="1.12" fill="#2B7FFF" />
+            <circle cx="15.95" cy="7.2" r="1.12" fill="#2B7FFF" />
+            <path
+              d="M10.1 16.15 7.35 20.05l2.75 3.9"
+              stroke="#2B7FFF"
+              strokeWidth="2.25"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <path d="M14.35 24.2 17.85 15.85" stroke="#2B7FFF" strokeWidth="2.25" strokeLinecap="round" />
+            <path
+              d="M21.9 16.15 24.65 20.05l-2.75 3.9"
+              stroke="#2B7FFF"
+              strokeWidth="2.25"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          <div style={{ display: "flex", fontSize: 30, fontWeight: 600, color: text }}>webo</div>
         </div>
 
         {/* Title */}

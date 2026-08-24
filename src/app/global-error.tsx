@@ -11,7 +11,7 @@ export default function GlobalError({
     <html lang="en">
       <body style={{ fontFamily: "system-ui, sans-serif", background: "#171717", color: "#f5f5f5" }}>
         <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, padding: 24, textAlign: "center" }}>
-          <p style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>Studio hit an unexpected error</p>
+          <p style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>webo hit an unexpected error</p>
           <p style={{ fontSize: 13, opacity: 0.7, maxWidth: 360, margin: 0 }}>
             Reload the page to continue. If this keeps happening, start a new chat.
           </p>

@@ -83,7 +83,7 @@ async function main() {
   const landing = await fetch(`${BASE}/`, { redirect: "manual" });
   check("landing page renders", landing.status === 200);
   const landingHtml = await landing.text();
-  check("landing has present@karm branding", landingHtml.includes("karm"));
+  check("landing has webo branding", landingHtml.includes("webo"));
 
   const authedDashboard = await authed("/dashboard");
   check("authenticated /dashboard renders", authedDashboard.status === 200, `got ${authedDashboard.status}`);

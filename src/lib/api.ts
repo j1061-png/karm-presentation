@@ -3,7 +3,7 @@
 import type { Presentation, PresentationMeta } from "./schema";
 import { parseSseData } from "./sse";
 
-/** Thin client for the Studio API routes. */
+/** Thin client for the webo API routes. */
 
 async function json<T>(res: Response): Promise<T> {
   const body = await res.json().catch(() => ({}));

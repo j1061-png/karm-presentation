@@ -82,7 +82,7 @@ Respond with ONLY:
   "title": string,
   "description": string,
   "audience": string,
-  "theme": { "name": "Studio", "mode": "dark", "colors": { "background": "#120814", "surface": "#1d1222", "text": "#f7f0fb", "muted": "#b09ab8", "accent": "#e66df2", "accentText": "#1a0b1c" }, "radius": 16 },
+  "theme": { "name": "Webo", "mode": "dark", "colors": { "background": "#120814", "surface": "#1d1222", "text": "#f7f0fb", "muted": "#b09ab8", "accent": "#e66df2", "accentText": "#1a0b1c" }, "radius": 16 },
   "slides": [ { "name": string, "goal": string, "suggestedComponents": [string] } ]
 }
 

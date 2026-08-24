@@ -1,4 +1,4 @@
-# Studio
+# webo
 
 AI workspace for presentations, websites, games, and apps. Sign in with Google, describe what you want to create (or drop in PDFs, PowerPoints, docs, CSVs and images), and the AI generates a structured, editable, fully interactive artifact — presentations with live charts, timelines, maps, tabs and quizzes, or self-contained websites and games that publish to a real URL (including custom domains).
 
@@ -32,7 +32,7 @@ prompt / files
 - **Dashboard** — big “What do you want to present?” prompt, polished drag-and-drop upload with progress/previews/errors, recent presentation cards with live slide thumbnails, search/sort, templates, settings.
 - **Staged generation experience** — Analysing → Planning → Designing (with slide progress) → Adding interactive elements → Finalising, streamed over SSE.
 - **Editor** — three panels: slide navigator (drag to reorder), live canvas (select, move, resize, inline text editing, drop images/components), inspector (position, style, animation, per-component data editors). Full undo/redo and debounced autosave with Saving/Saved/Unable-to-save states.
-- **AI editing** — “Ask Studio to change anything...” chat that understands the selected slide/element and applies validated operations to the model.
+- **AI editing** — “Ask webo to change anything...” chat that understands the selected slide/element and applies validated operations to the model.
 - **Modes** — Edit, Preview, and fullscreen Present with keyboard navigation and transitions. Every presentation is also a standalone site at `/presentations/<id>`.
 
 ## Setup

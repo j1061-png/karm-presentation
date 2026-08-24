@@ -14,7 +14,7 @@ import { z } from "zod";
 // ---------------------------------------------------------------------------
 
 export const ThemeSchema = z.object({
-  name: z.string().default("Studio Dark"),
+  name: z.string().default("Webo Dark"),
   mode: z.enum(["dark", "light"]).default("dark"),
   colors: z
     .object({

@@ -100,7 +100,7 @@ export function WorkspaceCanvas({
                 Preview
               </p>
               <p className="text-[13px] text-text-secondary max-w-sm">
-                When Studio starts building, the live presentation, site, game, or app shows up here.
+                When webo starts building, the live presentation, site, game, or app shows up here.
               </p>
             </div>
           )}

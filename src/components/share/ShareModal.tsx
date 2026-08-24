@@ -143,7 +143,7 @@ export function ShareModal({
     setTimeout(() => setCopied(false), 2000);
   }
 
-  const shareText = `${title} — made with Studio`;
+  const shareText = `${title} — made with webo`;
   const enc = encodeURIComponent;
   const shareTargets = [
     {

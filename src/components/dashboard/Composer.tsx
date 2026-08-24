@@ -41,7 +41,7 @@ const KIND_OPTIONS: { kind: ComposerMode; label: string; icon: typeof Globe }[] 
 ];
 
 const KIND_PLACEHOLDER: Record<ComposerMode, string> = {
-  chat: "Chat with Studio about anything...",
+  chat: "Chat with webo about anything...",
   presentation: "Chat, or describe the presentation you want to create...",
   website: "Chat, or describe the website you want to build...",
   game: "Chat, or describe the game you want to play...",
