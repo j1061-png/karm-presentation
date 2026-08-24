@@ -17,7 +17,7 @@ interface ChatBody {
   messages?: { role?: string; text?: string }[];
   hasProject?: boolean;
   kind?: string;
-  /** Notebook sources: when present, answers are grounded in this material. */
+  /** Optional source material to ground the answer. */
   sources?: { name?: string; content?: string }[];
   /** Pure chat mode: always answer conversationally, never signal a build. */
   forceChat?: boolean;

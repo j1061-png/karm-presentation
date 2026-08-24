@@ -10,7 +10,6 @@ import { Composer } from "./Composer";
 import { PresentationItem } from "./PresentationItem";
 import { NotificationsBell } from "./NotificationsBell";
 import { SettingsPanel } from "./SettingsPanel";
-import { NotebookView } from "./NotebookView";
 import {
   Search, Plus, Loader2, Presentation,
 } from "lucide-react";
@@ -161,9 +160,7 @@ export function DashboardShell({
 
       <main
         className={`flex-1 min-w-0 min-h-0 flex flex-col ${
-          (threadActive && view === "home") || view === "notebook"
-            ? "overflow-hidden"
-            : "overflow-y-auto"
+          threadActive && view === "home" ? "overflow-hidden" : "overflow-y-auto"
         }`}
       >
         <div className="h-12 flex items-center justify-between px-5 flex-shrink-0 border-b border-border">
@@ -172,9 +169,7 @@ export function DashboardShell({
               ? "Home"
               : view === "presentations"
                 ? "Projects"
-                : view === "notebook"
-                  ? "Notebook"
-                  : "Settings"}
+                : "Settings"}
           </div>
           <NotificationsBell onChanged={() => void refresh()} />
         </div>
@@ -330,9 +325,6 @@ export function DashboardShell({
             )}
           </div>
         )}
-
-        {/* --------------------------------------------- notebook view */}
-        {view === "notebook" && <NotebookView />}
 
         {/* --------------------------------------------- settings view */}
         {view === "settings" && (

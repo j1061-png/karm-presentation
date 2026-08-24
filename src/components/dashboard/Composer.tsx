@@ -14,6 +14,7 @@ import { EffortPicker } from "@/components/chat/EffortPicker";
 import { FileChips } from "@/components/chat/FileChips";
 import { SlideRenderer } from "@/components/renderer/SlideRenderer";
 import { assemblePreviewHtml } from "@/lib/web-preview";
+import { ShareButton } from "@/components/share/ShareButton";
 import { isWebKind, type ChatTurn, type Presentation, type ProjectKind } from "@/lib/schema";
 
 interface GenProgress {
@@ -551,6 +552,10 @@ export function Composer({
           <div className="flex items-center gap-2 flex-shrink-0">
             {activeDoc && (
               <>
+                <ShareButton
+                  presentationId={activeDoc.id}
+                  title={activeDoc.title}
+                />
                 <Link
                   href={`/editor/${activeDoc.id}`}
                   className="flex items-center gap-1.5 text-[12px] font-medium border border-border rounded-lg px-2.5 py-1.5 hover:bg-surface-2 transition-colors"
@@ -918,6 +923,7 @@ function WebProjectCard({ doc }: { doc: Presentation }) {
           <PencilRuler size={13} />
           Open editor
         </Link>
+        <ShareButton presentationId={doc.id} title={doc.title} />
         <Link
           href={`/presentations/${doc.id}`}
           target="_blank"
@@ -995,6 +1001,7 @@ function LiveDeckCard({ doc }: { doc: Presentation }) {
           <PencilRuler size={13} />
           Open editor
         </Link>
+        <ShareButton presentationId={doc.id} title={doc.title} />
         <Link
           href={`/presentations/${doc.id}`}
           className="flex items-center gap-1.5 text-[12.5px] font-medium bg-accent text-accent-text rounded-lg px-3 py-1.5 hover:bg-accent-hover transition-colors"

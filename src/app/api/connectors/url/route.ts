@@ -5,7 +5,7 @@ export const maxDuration = 30;
 
 /**
  * URL connector: fetches a public web page server-side and returns its
- * readable text so it can be used as a chat/notebook source.
+ * readable text so it can be used as a chat source.
  */
 
 const MAX_BYTES = 2_000_000;

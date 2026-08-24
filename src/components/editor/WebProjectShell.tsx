@@ -213,6 +213,11 @@ export function WebProjectShell({
             {kindLabel}
           </span>
           <SaveIndicator />
+          {role === "editor" && (
+            <span className="text-[11px] font-medium text-text-tertiary bg-surface-2 rounded-full px-2 py-0.5">
+              Shared with you
+            </span>
+          )}
         </div>
 
         <div className="flex-1" />
@@ -252,7 +257,7 @@ export function WebProjectShell({
           className="flex items-center gap-1.5 text-[12.5px] font-medium bg-accent text-accent-text rounded-lg px-3.5 py-2 hover:bg-accent-hover transition-colors cursor-pointer"
         >
           <Share2 size={13} />
-          Publish
+          Share
         </button>
       </header>
 

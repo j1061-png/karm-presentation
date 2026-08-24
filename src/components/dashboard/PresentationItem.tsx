@@ -151,11 +151,11 @@ export function PresentationItem({
         </span>
       )}
 
-      {/* Quick actions */}
-      <div className="flex items-center gap-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+      {/* Quick actions — Share stays visible so every project can be shared. */}
+      <div className="flex items-center gap-0.5 flex-shrink-0">
         <button
           onClick={() => window.open(`/presentations/${meta.id}`, "_blank")}
-          className="p-2 rounded-lg text-text-tertiary hover:text-text hover:bg-surface-3 transition-colors cursor-pointer"
+          className="p-2 rounded-lg text-text-tertiary hover:text-text hover:bg-surface-3 transition-colors cursor-pointer opacity-0 group-hover:opacity-100 focus-within:opacity-100"
           title="Present"
           aria-label="Present"
         >
@@ -164,12 +164,12 @@ export function PresentationItem({
         <button
           onClick={() => setShareOpen(true)}
           className="p-2 rounded-lg text-text-tertiary hover:text-text hover:bg-surface-3 transition-colors cursor-pointer"
-          title="Share"
+          title="Share and invite collaborators"
           aria-label="Share"
         >
           <Share2 size={14} />
         </button>
-        <div className="relative" ref={menuRef}>
+        <div className="relative opacity-0 group-hover:opacity-100 focus-within:opacity-100" ref={menuRef}>
           <button
             onClick={() => setMenuOpen((o) => !o)}
             className="p-2 rounded-lg text-text-tertiary hover:text-text hover:bg-surface-3 transition-colors cursor-pointer"

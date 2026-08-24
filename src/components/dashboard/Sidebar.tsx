@@ -5,18 +5,17 @@ import { useRouter } from "next/navigation";
 import type { PresentationMeta } from "@/lib/schema";
 import { useTheme } from "@/components/theme/useTheme";
 import {
-  Plus, House, Layers, NotebookPen, Settings, PanelLeft,
+  Plus, House, Layers, Settings, PanelLeft,
   LogOut, Moon, SunMedium, FileText, Download,
 } from "lucide-react";
 import { BrandLockup, BrandMark } from "@/components/brand/BrandLogo";
 import { usePwa } from "@/components/pwa/PwaProvider";
 
-export type DashboardView = "home" | "presentations" | "notebook" | "settings";
+export type DashboardView = "home" | "presentations" | "settings";
 
 const NAV: { key: DashboardView; label: string; icon: typeof Plus }[] = [
   { key: "home", label: "Home", icon: House },
   { key: "presentations", label: "Projects", icon: Layers },
-  { key: "notebook", label: "Notebook", icon: NotebookPen },
 ];
 
 export function Sidebar({

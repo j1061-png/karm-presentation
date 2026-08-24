@@ -154,10 +154,7 @@ export function EditorShell({
         <Player
           presentation={presentation}
           onExit={() => setMode("edit")}
-          onShare={() => {
-            setMode("edit");
-            setShareOpen(true);
-          }}
+          onShare={() => setShareOpen(true)}
         />
         {shareOpen && (
           <ShareModal
@@ -305,7 +302,12 @@ export function EditorShell({
       {/* --------------------------------------------------- main layout */}
       {mode === "preview" ? (
         <div className="flex-1 min-h-0">
-          <Player presentation={presentation} onExit={() => setMode("edit")} embedded />
+          <Player
+            presentation={presentation}
+            onExit={() => setMode("edit")}
+            embedded
+            onShare={() => setShareOpen(true)}
+          />
         </div>
       ) : (
         <div className="flex-1 flex min-h-0">
