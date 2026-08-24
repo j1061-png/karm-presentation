@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getUser } from "@/lib/supabase/server";
-import { chatJson } from "@/lib/deepseek";
-import { extractJson } from "@/lib/validate";
+import { parseChatDecision } from "@/lib/chat-decision";
+import { chat } from "@/lib/deepseek";
 import { publicAiError } from "@/lib/public-error";
 
 export const maxDuration = 60;
@@ -100,19 +100,8 @@ export async function POST(request: Request) {
   ];
 
   try {
-    const result = await chatJson(
-      messages,
-      (raw) => {
-        const obj = extractJson(raw) as { mode?: string; reply?: string };
-        if (obj.mode === "build") return { mode: "build" as const, reply: "" };
-        if (typeof obj.reply === "string" && obj.reply.trim()) {
-          return { mode: "chat" as const, reply: obj.reply.trim() };
-        }
-        throw new Error("Missing mode/reply.");
-      },
-      { maxTokens: 1000, temperature: 0.6, json: true }
-    );
-    return NextResponse.json(result);
+    const raw = await chat(messages, { maxTokens: 1000, temperature: 0.6, json: true });
+    return NextResponse.json(parseChatDecision(raw));
   } catch (e) {
     return NextResponse.json({ error: publicAiError(e) }, { status: 502 });
   }

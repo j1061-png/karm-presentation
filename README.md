@@ -46,6 +46,16 @@ prompt / files
 4. In Supabase → Authentication, enable Google and add your local URL (e.g. `http://localhost:3000/**`) to the redirect allowlist.
 5. Run: `npm run dev`
 
+## Production
+
+Vercel (and any host) deploys from `main`. Set these environment variables on the project **before** the first production request, or AI and saves will fail:
+
+- `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`
+- `DEEPSEEK_API_KEY` — required for chat, generation, and follow-up edits
+- `MANUS_API_KEY` — optional; websites/games/apps prefer Manus and fall back to DeepSeek
+
+A `GET /api/health` endpoint reports `{ ok, ai, storage }` (booleans only) so you can confirm secrets are present without logging in. Container deploys use the `Dockerfile` (standalone output). Vercel builds must **not** set `output: "standalone"` — `next.config.mjs` already skips it when `VERCEL=1`.
+
 ## Tests
 
 - `npm run test:validation` — malformed/truncated AI-response handling

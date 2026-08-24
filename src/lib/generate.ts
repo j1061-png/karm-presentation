@@ -164,12 +164,14 @@ async function generateSlideBatch(
     })
     .join("\n\n");
 
-  const parsed = await chatJson(
-    [
-      { role: "system", content: slidesSystemPrompt() },
-      {
-        role: "user",
-        content: `Presentation: "${plan.title}" — ${plan.description}
+  let parsed: unknown[];
+  try {
+    parsed = await chatJson(
+      [
+        { role: "system", content: slidesSystemPrompt() },
+        {
+          role: "user",
+          content: `Presentation: "${plan.title}" — ${plan.description}
 Audience: ${plan.audience}
 Theme: ${JSON.stringify(plan.theme)}
 Total slides: ${plan.slides.length}
@@ -178,20 +180,25 @@ Request: "${prompt}"${sourceContext(files)}
 Design ONLY these slides, in this order. One layout each. Copy the layout coordinates from the system prompt.
 
 ${briefs}`,
+        },
+      ],
+      (raw) => {
+        const obj = extractJson(raw) as { slides?: unknown[] };
+        if (!Array.isArray(obj.slides)) throw new Error("Response missing 'slides' array.");
+        return obj.slides;
       },
-    ],
-    (raw) => {
-      const obj = extractJson(raw) as { slides?: unknown[] };
-      if (!Array.isArray(obj.slides)) throw new Error("Response missing 'slides' array.");
-      return obj.slides;
-    },
-    {
-      maxTokens: cfg.maxTokensSlides,
-      temperature: cfg.temperature,
-      model: cfg.model,
-      thinking: cfg.thinking,
-    }
-  );
+      {
+        maxTokens: cfg.maxTokensSlides,
+        temperature: cfg.temperature,
+        model: cfg.model,
+        thinking: cfg.thinking,
+      }
+    );
+  } catch {
+    // One failed batch must not abort the whole deck — fill with structured
+    // fallbacks so the user still gets something they can edit.
+    return batch.map((s) => fallbackSlide(s.name, s.goal, s.index, repairTheme(plan.theme)));
+  }
 
   const theme = repairTheme(plan.theme);
   const slides = parsed
@@ -531,10 +538,17 @@ export function applyWebEdit(p: Presentation, response: WebEditResponse): Presen
 function presentationContext(p: Presentation, selectedSlideId?: string, selectedElementId?: string): string {
   const slides = p.slides.map((s, i) => {
     const isSelected = s.id === selectedSlideId;
+    const elements = isSelected
+      ? s.elements
+      : s.elements.map((e) => {
+          const props = e.props as { text?: string; label?: string; title?: string; question?: string };
+          const hint = props.text ?? props.label ?? props.title ?? props.question ?? "";
+          return { id: e.id, type: e.type, hint: String(hint).slice(0, 80) };
+        });
     return `Slide ${i + 1} ${isSelected ? "[SELECTED BY USER] " : ""}(id ${s.id}): ${JSON.stringify({
       id: s.id,
       name: s.name,
-      elements: s.elements,
+      elements,
       notes: s.notes?.slice(0, 240),
     })}`;
   });
@@ -631,77 +645,81 @@ export async function generateEdit(
 export function applyOperations(p: Presentation, response: AIEditResponse): Presentation {
   let next: Presentation = { ...p, slides: [...p.slides] };
   for (const op of response.operations) {
-    switch (op.op) {
-      case "replaceSlide": {
-        const repaired = repairSlide(op.slide, 0);
-        if (!repaired) break;
-        const idx = next.slides.findIndex((s) => s.id === op.slideId);
-        const laid = ensureInteractive(
-          layoutSlide(repaired, idx, next.slides.length, next.theme),
-          undefined,
-          idx,
-          next.slides.length,
-          next.theme
-        );
-        next.slides = next.slides.map((s) => (s.id === op.slideId ? { ...laid, id: s.id } : s));
-        break;
+    try {
+      switch (op.op) {
+        case "replaceSlide": {
+          const repaired = repairSlide(op.slide, 0);
+          if (!repaired) break;
+          const idx = next.slides.findIndex((s) => s.id === op.slideId);
+          const laid = ensureInteractive(
+            layoutSlide(repaired, idx, next.slides.length, next.theme),
+            undefined,
+            idx,
+            next.slides.length,
+            next.theme
+          );
+          next.slides = next.slides.map((s) => (s.id === op.slideId ? { ...laid, id: s.id } : s));
+          break;
+        }
+        case "addSlide": {
+          const repaired = repairSlide(op.slide, next.slides.length);
+          if (!repaired) break;
+          const idx = op.index !== undefined ? Math.min(op.index, next.slides.length) : next.slides.length;
+          const laid = ensureInteractive(
+            layoutSlide(repaired, idx, next.slides.length + 1, next.theme),
+            undefined,
+            idx,
+            next.slides.length + 1,
+            next.theme
+          );
+          next.slides = [...next.slides.slice(0, idx), laid, ...next.slides.slice(idx)];
+          break;
+        }
+        case "deleteSlide": {
+          if (next.slides.length <= 1) break;
+          next.slides = next.slides.filter((s) => s.id !== op.slideId);
+          break;
+        }
+        case "updateElement": {
+          const repaired = repairElement(op.element);
+          if (!repaired) break;
+          next.slides = next.slides.map((s) =>
+            s.id !== op.slideId
+              ? s
+              : {
+                  ...s,
+                  elements: s.elements.map((e) =>
+                    e.id === op.elementId ? { ...repaired, id: e.id } : e
+                  ),
+                }
+          );
+          break;
+        }
+        case "addElement": {
+          const repaired = repairElement(op.element);
+          if (!repaired) break;
+          next.slides = next.slides.map((s) =>
+            s.id !== op.slideId ? s : { ...s, elements: [...s.elements, repaired] }
+          );
+          break;
+        }
+        case "deleteElement": {
+          next.slides = next.slides.map((s) =>
+            s.id !== op.slideId
+              ? s
+              : { ...s, elements: s.elements.filter((e) => e.id !== op.elementId) }
+          );
+          break;
+        }
+        case "updateTheme":
+          next = { ...next, theme: op.theme };
+          break;
+        case "setTitle":
+          next = { ...next, title: op.title };
+          break;
       }
-      case "addSlide": {
-        const repaired = repairSlide(op.slide, next.slides.length);
-        if (!repaired) break;
-        const idx = op.index !== undefined ? Math.min(op.index, next.slides.length) : next.slides.length;
-        const laid = ensureInteractive(
-          layoutSlide(repaired, idx, next.slides.length + 1, next.theme),
-          undefined,
-          idx,
-          next.slides.length + 1,
-          next.theme
-        );
-        next.slides = [...next.slides.slice(0, idx), laid, ...next.slides.slice(idx)];
-        break;
-      }
-      case "deleteSlide": {
-        if (next.slides.length <= 1) break;
-        next.slides = next.slides.filter((s) => s.id !== op.slideId);
-        break;
-      }
-      case "updateElement": {
-        const repaired = repairElement(op.element);
-        if (!repaired) break;
-        next.slides = next.slides.map((s) =>
-          s.id !== op.slideId
-            ? s
-            : {
-                ...s,
-                elements: s.elements.map((e) =>
-                  e.id === op.elementId ? { ...repaired, id: e.id } : e
-                ),
-              }
-        );
-        break;
-      }
-      case "addElement": {
-        const repaired = repairElement(op.element);
-        if (!repaired) break;
-        next.slides = next.slides.map((s) =>
-          s.id !== op.slideId ? s : { ...s, elements: [...s.elements, repaired] }
-        );
-        break;
-      }
-      case "deleteElement": {
-        next.slides = next.slides.map((s) =>
-          s.id !== op.slideId
-            ? s
-            : { ...s, elements: s.elements.filter((e) => e.id !== op.elementId) }
-        );
-        break;
-      }
-      case "updateTheme":
-        next = { ...next, theme: op.theme };
-        break;
-      case "setTitle":
-        next = { ...next, title: op.title };
-        break;
+    } catch {
+      /* skip a bad operation instead of failing the whole follow-up */
     }
   }
   next.updatedAt = new Date().toISOString();

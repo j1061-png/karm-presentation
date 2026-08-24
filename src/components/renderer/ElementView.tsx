@@ -862,7 +862,14 @@ function FlowView({
   const { theme, mode } = ctx;
   const [active, setActive] = useState(0);
   const s = el.style ?? {};
-  const step = el.props.steps[Math.min(active, el.props.steps.length - 1)];
+  const step = el.props.steps[Math.min(active, Math.max(el.props.steps.length - 1, 0))];
+  if (!step) {
+    return (
+      <div className="w-full h-full flex items-center justify-center text-[12px] text-text-tertiary">
+        Flow has no steps yet
+      </div>
+    );
+  }
 
   return (
     <div className="w-full h-full flex flex-col justify-center gap-[0.9em]" style={{ fontSize: s.fontSize ?? 16 }}>

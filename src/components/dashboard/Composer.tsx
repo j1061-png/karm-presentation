@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { aiEdit, chatWithAI, getPresentation, publishPresentation, savePresentation } from "@/lib/api";
 import { parseEffort, type Effort } from "@/lib/effort";
+import { parseSseData } from "@/lib/sse";
 import { ATTACH_ACCEPT, useAttachments } from "@/lib/use-attachments";
 import { EffortPicker } from "@/components/chat/EffortPicker";
 import { FileChips } from "@/components/chat/FileChips";
@@ -321,11 +322,17 @@ export function Composer({
         const events = buffer.split("\n\n");
         buffer = events.pop() ?? "";
         for (const evt of events) {
-          const line = evt.split("\n").find((l) => l.startsWith("data: "));
-          if (!line) continue;
-          const data = JSON.parse(line.slice(6));
+          const data = parseSseData(evt) as {
+            stage?: string;
+            presentationId?: string;
+            message?: string;
+            detail?: string;
+            done?: number;
+            total?: number;
+          } | null;
+          if (!data || !data.stage) continue;
           if (data.stage === "complete") {
-            finishedId = data.presentationId;
+            finishedId = data.presentationId ?? null;
           } else if (data.stage === "error") {
             throw new Error(data.message);
           } else {
@@ -472,8 +479,9 @@ export function Composer({
         sources,
       });
     } catch (e) {
-      if (chatMode) {
-        // Pure chat has no build fallback — surface the error.
+      if (chatMode || activeDoc) {
+        // Don't kick off a rebuild/edit when the router itself failed — that
+        // is what made follow-ups look like the AI crashed.
         setChatting(false);
         setMessages((m) => [
           ...m,
@@ -486,7 +494,7 @@ export function Composer({
         ]);
         return;
       }
-      // If the router fails, fall back to the build path so nothing is lost.
+      // First message with no project yet: still try to build so the prompt isn't lost.
       decision = { mode: "build", reply: "" };
     }
     setChatting(false);

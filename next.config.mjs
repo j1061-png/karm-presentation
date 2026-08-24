@@ -1,7 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Emit a self-contained server bundle (.next/standalone) for container deploys.
-  output: "standalone",
+  // Standalone output is for container deploys (Dockerfile). Vercel sets VERCEL=1
+  // and should use its default output — forcing standalone there drops static
+  // assets and fails production deploys from main.
+  ...(process.env.VERCEL ? {} : { output: "standalone" }),
   serverExternalPackages: ["unpdf", "mammoth", "jszip"],
   async headers() {
     return [

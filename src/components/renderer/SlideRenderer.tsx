@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { Slide, SlideElement, Theme } from "@/lib/schema";
 import { ElementView, type RenderContext, type RenderMode } from "./ElementView";
 import { ParticleField } from "./ParticleField";
+import { RenderErrorBoundary } from "./RenderErrorBoundary";
 
 export const SLIDE_W = 1280;
 export const SLIDE_H = 720;
@@ -134,7 +135,9 @@ export function SlideRenderer({
                   ...animationCss(el, animate),
                 }}
               >
-                <ElementView el={el} ctx={ctx} />
+                <RenderErrorBoundary label={el.type}>
+                  <ElementView el={el} ctx={ctx} />
+                </RenderErrorBoundary>
               </div>
             );
             return elementWrapper ? (
