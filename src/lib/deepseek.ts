@@ -74,30 +74,52 @@ async function attempt(body: string, callerSignal: AbortSignal | undefined): Pro
   }
 }
 
+/** Pull the final answer out of a Chat Completions payload. Exported for tests. */
+export function extractMessageContent(data: unknown): { content: string; finishReason: string | null } {
+  const obj = data && typeof data === "object" ? (data as Record<string, unknown>) : {};
+  const choices = Array.isArray(obj.choices) ? obj.choices : [];
+  const first = choices[0] && typeof choices[0] === "object" ? (choices[0] as Record<string, unknown>) : null;
+  const message =
+    first?.message && typeof first.message === "object" ? (first.message as Record<string, unknown>) : null;
+  const content = typeof message?.content === "string" ? message.content : "";
+  const finishReason = typeof first?.finish_reason === "string" ? first.finish_reason : null;
+  return { content, finishReason };
+}
+
+function isShapeError(status: number, body: string): boolean {
+  if (status !== 400) return false;
+  return /thinking|temperature|response_format|json_object|max_tokens|invalid/i.test(body);
+}
+
 export async function chat(messages: ChatMessage[], options: ChatOptions = {}): Promise<string> {
   const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) throw new DeepSeekError("DEEPSEEK_API_KEY is not configured.", 500);
 
-  const thinking = options.thinking ?? false;
-  const body = JSON.stringify({
-    model: options.model ?? DEFAULT_MODEL,
-    messages,
-    max_tokens: options.maxTokens ?? 8000,
-    thinking: { type: thinking ? "enabled" : "disabled" },
-    // Thinking mode ignores sampling knobs and can reject them.
-    ...(thinking ? {} : { temperature: options.temperature ?? 0.3 }),
-    ...(options.json ? { response_format: { type: "json_object" } } : {}),
-    stream: false,
-  });
+  let thinking = options.thinking ?? false;
+  let json = options.json === true;
+  const model = options.model ?? DEFAULT_MODEL;
 
   // Transient upstream failures (dropped connection, 429, 5xx, per-attempt
   // timeout) used to surface immediately as "Something went wrong with the
   // AI". Retry them a couple of times with backoff before giving up; only
   // non-retryable statuses (4xx other than 429) and caller aborts fail fast.
+  // Thinking + json_object (or thinking eating the whole token budget) is a
+  // common empty-content / 400 case — drop thinking then json and retry.
   let lastError: unknown = null;
   for (let i = 0; i <= MAX_TRANSIENT_RETRIES; i++) {
     if (options.signal?.aborted) throw new DeepSeekError("Request aborted.", 499);
     if (i > 0) await sleep(RETRY_DELAYS_MS[i - 1] ?? 4_000);
+
+    const body = JSON.stringify({
+      model,
+      messages,
+      max_tokens: options.maxTokens ?? 8000,
+      thinking: { type: thinking ? "enabled" : "disabled" },
+      // Thinking mode ignores sampling knobs and can reject them.
+      ...(thinking ? {} : { temperature: options.temperature ?? 0.3 }),
+      ...(json ? { response_format: { type: "json_object" } } : {}),
+      stream: false,
+    });
 
     let res: Response;
     try {
@@ -122,18 +144,35 @@ export async function chat(messages: ChatMessage[], options: ChatOptions = {}): 
       );
       if (res.status === 429 || res.status >= 500) {
         lastError = err;
-        continue; // transient — retry
+        continue;
       }
-      throw err; // real request problem — retrying won't help
+      if (thinking && isShapeError(res.status, text)) {
+        thinking = false;
+        lastError = err;
+        continue;
+      }
+      if (json && isShapeError(res.status, text)) {
+        json = false;
+        lastError = err;
+        continue;
+      }
+      throw err;
     }
 
-    const data = (await res.json().catch(() => null)) as {
-      choices?: { message?: { content?: string } }[];
-    } | null;
-    const content = data?.choices?.[0]?.message?.content;
-    if (!content) {
+    const data = await res.json().catch(() => null);
+    const { content, finishReason } = extractMessageContent(data);
+    if (!content.trim()) {
       lastError = new DeepSeekError("DeepSeek returned an empty response.", 502);
-      continue; // occasionally transient — retry
+      // Thinking often burns the token budget on CoT and leaves `content` empty.
+      if (thinking) {
+        thinking = false;
+        continue;
+      }
+      if (finishReason === "length" && json) {
+        json = false;
+        continue;
+      }
+      continue;
     }
     return content;
   }
@@ -165,7 +204,7 @@ export async function chatJson<T>(
           `Error: ${firstError instanceof Error ? firstError.message : "invalid JSON"}`,
       },
     ];
-    const second = await chat(retryMessages, { ...options, json, temperature: 0.2 });
+    const second = await chat(retryMessages, { ...options, json, temperature: 0.2, thinking: false });
     return parse(second);
   }
 }

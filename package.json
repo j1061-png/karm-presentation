@@ -1,5 +1,5 @@
 {
-  "name": "studio",
+  "name": "webo",
   "version": "1.0.0",
   "private": true,
   "scripts": {
@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "setup": "node scripts/setup-supabase.mjs",
-    "test:validation": "tsx scripts/test-validation.ts",
+    "test:validation": "tsx scripts/test-validation.ts && tsx scripts/test-ai-resilience.ts && tsx scripts/smoke-web.ts",
     "test:web": "tsx scripts/smoke-web.ts",
     "test:generate": "tsx scripts/test-generate.ts"
   },

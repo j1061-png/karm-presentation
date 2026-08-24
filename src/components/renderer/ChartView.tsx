@@ -28,21 +28,32 @@ export function ChartView({
   theme: Theme;
   animate: boolean;
 }) {
+  const labels = Array.isArray(props.labels) ? props.labels : [];
+  const series = Array.isArray(props.series) ? props.series : [];
+
   const data = useMemo(
     () =>
-      props.labels.map((label, i) => {
+      labels.map((label, i) => {
         const row: Record<string, string | number> = { name: label };
-        for (const s of props.series) row[s.name] = s.data[i] ?? 0;
+        for (const s of series) row[s.name] = s.data[i] ?? 0;
         return row;
       }),
-    [props.labels, props.series]
+    [labels, series]
   );
 
-  const colors = props.series.map((s, i) => s.color || FALLBACK_COLORS[i % FALLBACK_COLORS.length]);
+  if (labels.length === 0 || series.length === 0) {
+    return (
+      <div className="w-full h-full flex items-center justify-center text-[12px] text-text-tertiary">
+        Chart has no data yet
+      </div>
+    );
+  }
+
+  const colors = series.map((s, i) => s.color || FALLBACK_COLORS[i % FALLBACK_COLORS.length]);
   const textColor = theme.colors.muted;
   const gridColor = theme.mode === "dark" ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)";
-  const showLegend = props.showLegend && props.series.length > 1;
-  const manyTicks = props.labels.length > 6;
+  const showLegend = props.showLegend && series.length > 1;
+  const manyTicks = labels.length > 6;
 
   const tooltipStyle = {
     background: theme.colors.surface,
@@ -85,7 +96,7 @@ export function ChartView({
       chart = (
         <LineChart data={data} margin={margin}>
           {axes}
-          {props.series.map((s, i) => (
+          {series.map((s, i) => (
             <Line key={s.name} type="monotone" dataKey={s.name} stroke={colors[i]} strokeWidth={2.5} dot={{ r: 3, fill: colors[i] }} isAnimationActive={animate} />
           ))}
         </LineChart>
@@ -95,7 +106,7 @@ export function ChartView({
       chart = (
         <AreaChart data={data} margin={margin}>
           {axes}
-          {props.series.map((s, i) => (
+          {series.map((s, i) => (
             <Area key={s.name} type="monotone" dataKey={s.name} stroke={colors[i]} fill={colors[i]} fillOpacity={0.18} strokeWidth={2.5} stackId={props.stacked ? "a" : undefined} isAnimationActive={animate} />
           ))}
         </AreaChart>
@@ -103,9 +114,9 @@ export function ChartView({
       break;
     case "pie":
     case "donut": {
-      const pieData = props.labels.map((label, i) => ({
+      const pieData = labels.map((label, i) => ({
         name: label,
-        value: props.series[0]?.data[i] ?? 0,
+        value: series[0]?.data[i] ?? 0,
       }));
       chart = (
         <PieChart margin={{ top: 4, right: 4, bottom: 4, left: 4 }}>
@@ -134,7 +145,7 @@ export function ChartView({
           <PolarGrid stroke={gridColor} />
           <PolarAngleAxis dataKey="name" tick={{ fill: textColor, fontSize: 11 }} />
           <Tooltip contentStyle={tooltipStyle} />
-          {props.series.map((s, i) => (
+          {series.map((s, i) => (
             <Radar key={s.name} name={s.name} dataKey={s.name} stroke={colors[i]} fill={colors[i]} fillOpacity={0.25} isAnimationActive={animate} />
           ))}
         </RadarChart>
@@ -144,7 +155,7 @@ export function ChartView({
       chart = (
         <BarChart data={data} margin={margin} barCategoryGap="18%">
           {axes}
-          {props.series.map((s, i) => (
+          {series.map((s, i) => (
             <Bar key={s.name} dataKey={s.name} fill={colors[i]} radius={[5, 5, 0, 0]} stackId={props.stacked ? "a" : undefined} isAnimationActive={animate} maxBarSize={48} />
           ))}
         </BarChart>
@@ -162,7 +173,7 @@ export function ChartView({
           )}
           {showLegend && (
             <div className="flex items-center gap-2.5 flex-shrink-0 ml-auto">
-              {props.series.map((s, i) => (
+              {series.map((s, i) => (
                 <span key={s.name} className="flex items-center gap-1.5 text-[11px]" style={{ color: textColor }}>
                   <span className="w-2 h-2 rounded-sm" style={{ background: colors[i] }} />
                   {s.name}

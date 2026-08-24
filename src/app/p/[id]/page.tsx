@@ -50,10 +50,10 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  if (!/^[\w-]+$/.test(id)) return { title: "Studio" };
+  if (!/^[\w-]+$/.test(id)) return { title: "webo" };
   const published = await getPublished(id).catch(() => null);
   if (!published || published.visibility === "private") {
-    return { title: "Studio", robots: { index: false } };
+    return { title: "webo", robots: { index: false } };
   }
 
   const p = published.presentation;
@@ -61,7 +61,7 @@ export async function generateMetadata({
   const description =
     p.description ||
     (isWebKind(p.kind)
-      ? `An interactive ${p.kind} built with Studio.`
+      ? `An interactive ${p.kind} built with webo.`
       : `An interactive presentation with ${p.slides.length} slides.`);
 
   return {
@@ -71,7 +71,7 @@ export async function generateMetadata({
     openGraph: {
       title,
       description,
-      siteName: "Studio",
+      siteName: "webo",
       type: "website",
     },
     twitter: {

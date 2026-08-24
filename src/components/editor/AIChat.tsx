@@ -220,7 +220,7 @@ export function AIChat() {
         {busy && (
           <div className="self-start flex items-center gap-2.5 bg-surface border border-border rounded-xl px-3.5 py-2.5">
             <Loader2 size={13} className="animate-spin text-accent" />
-            <span className="text-[12.5px] text-text-secondary">Editing your presentation...</span>
+            <span className="text-[12.5px] text-text-secondary">Applying your changes...</span>
           </div>
         )}
       </div>

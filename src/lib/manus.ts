@@ -74,7 +74,7 @@ Deliver the final file contents in the structured output: title, one-sentence de
       message: { content: brief.slice(0, 18000) },
       hide_in_task_list: true,
       agent_profile: "manus-1.6-lite",
-      title: `Studio: ${prompt.slice(0, 60)}`,
+      title: `webo: ${prompt.slice(0, 60)}`,
       structured_output_schema: OUTPUT_SCHEMA,
     }),
   });

@@ -66,12 +66,26 @@ export async function middleware(request: NextRequest) {
     // Unmapped custom domain: fall through to the normal app.
   }
 
+  // -------------------------------------------------------- public endpoints
+  if (PUBLIC_API.some((p) => path === p || path.startsWith(`${p}/`))) {
+    return NextResponse.next({ request });
+  }
+
   // -------------------------------------------------------- Supabase auth
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  if (!supabaseUrl || !supabaseKey) {
+    if (path.startsWith("/api")) {
+      return NextResponse.json({ error: "Server is not configured." }, { status: 503 });
+    }
+    return NextResponse.next({ request });
+  }
+
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    supabaseUrl,
+    supabaseKey,
     {
       cookies: {
         getAll() {

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { isWebKind, type Presentation, type ChatTurn } from "@/lib/schema";
+import { kindLabel, kindNoun, type Presentation, type ChatTurn } from "@/lib/schema";
 import { aiEdit, savePresentation } from "@/lib/api";
 import { assemblePreviewHtml } from "@/lib/web-preview";
 import { ShareModal } from "@/components/share/ShareModal";
@@ -145,7 +145,8 @@ export function WebProjectShell({
 
   const html = assemblePreviewHtml(doc.files, doc.entry);
   const file = doc.files?.find((f) => f.path === activeFile) ?? doc.files?.[0];
-  const kindLabel = isWebKind(doc.kind) ? doc.kind : "website";
+  const noun = kindNoun(doc.kind);
+  const label = kindLabel(doc.kind);
 
   async function downloadCode() {
     const { default: JSZip } = await import("jszip");
@@ -210,9 +211,14 @@ export function WebProjectShell({
             aria-label="Project title"
           />
           <span className="text-[11px] font-medium text-text-tertiary bg-surface-2 rounded-full px-2 py-0.5 capitalize">
-            {kindLabel}
+            {label}
           </span>
           <SaveIndicator />
+          {role === "editor" && (
+            <span className="text-[11px] font-medium text-text-tertiary bg-surface-2 rounded-full px-2 py-0.5">
+              Shared with you
+            </span>
+          )}
         </div>
 
         <div className="flex-1" />
@@ -252,7 +258,7 @@ export function WebProjectShell({
           className="flex items-center gap-1.5 text-[12.5px] font-medium bg-accent text-accent-text rounded-lg px-3.5 py-2 hover:bg-accent-hover transition-colors cursor-pointer"
         >
           <Share2 size={13} />
-          Publish
+          Share
         </button>
       </header>
 
@@ -334,7 +340,7 @@ export function WebProjectShell({
           <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto p-3 flex flex-col gap-2.5">
             {messages.length === 0 && (
               <div className="text-[12.5px] text-text-secondary leading-relaxed px-1 pt-2">
-                Ask for any change — the AI rewrites the {kindLabel} and the preview updates.
+                Ask for any change — the AI rewrites the {noun} and the preview updates.
               </div>
             )}
             {messages.map((m) =>
@@ -356,7 +362,7 @@ export function WebProjectShell({
             {busy && (
               <div className="self-start flex items-center gap-2 bg-surface border border-border rounded-xl px-3 py-2">
                 <Loader2 size={12} className="animate-spin text-accent" />
-                <span className="text-[12px] text-text-secondary">Rewriting the {kindLabel}...</span>
+                <span className="text-[12px] text-text-secondary">Rewriting the {noun}...</span>
               </div>
             )}
           </div>

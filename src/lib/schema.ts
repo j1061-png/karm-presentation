@@ -14,7 +14,7 @@ import { z } from "zod";
 // ---------------------------------------------------------------------------
 
 export const ThemeSchema = z.object({
-  name: z.string().default("Studio Dark"),
+  name: z.string().default("Webo Dark"),
   mode: z.enum(["dark", "light"]).default("dark"),
   colors: z
     .object({
@@ -444,6 +444,23 @@ export type Presentation = z.infer<typeof PresentationSchema>;
 export function isWebKind(kind: ProjectKind | undefined): boolean {
   return kind === "website" || kind === "game" || kind === "app";
 }
+
+/** Lowercase noun for UI copy. */
+export function kindNoun(kind?: ProjectKind | "chat"): string {
+  if (kind === "website") return "website";
+  if (kind === "game") return "game";
+  if (kind === "app") return "app";
+  return "presentation";
+}
+
+/** Title-case label for chrome. */
+export function kindLabel(kind?: ProjectKind): string {
+  if (kind === "website") return "Website";
+  if (kind === "game") return "Game";
+  if (kind === "app") return "App";
+  return "Presentation";
+}
+
 
 // ---------------------------------------------------------------------------
 // Listing metadata (stored in the per-user index)

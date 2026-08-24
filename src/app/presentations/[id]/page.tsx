@@ -19,12 +19,12 @@ export default async function PresentationPage({
   const result = await getAccessiblePresentation(user.id, id);
   if (!result) notFound();
 
-  return <StandalonePlayer presentation={result.presentation} />;
+  return <StandalonePlayer presentation={result.presentation} canShare isOwner={result.access.role === "owner"} />;
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const user = await getUser();
   const result = user ? await getAccessiblePresentation(user.id, id) : null;
-  return { title: result ? result.presentation.title : "Studio" };
+  return { title: result ? result.presentation.title : "webo" };
 }

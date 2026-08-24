@@ -10,7 +10,6 @@ import { Composer } from "./Composer";
 import { PresentationItem } from "./PresentationItem";
 import { NotificationsBell } from "./NotificationsBell";
 import { SettingsPanel } from "./SettingsPanel";
-import { NotebookView } from "./NotebookView";
 import {
   Search, Plus, Loader2, Presentation,
 } from "lucide-react";
@@ -75,13 +74,20 @@ export function DashboardShell({
     });
   }, [metas, query, sort]);
 
+  function handleNewChat() {
+    setView("home");
+    setOpenChatId(null);
+    setChatEpoch((n) => n + 1);
+    setThreadActive(false);
+  }
+
   async function handleNewBlank() {
     setBusy("new");
     try {
       const p = await api.createPresentation();
       router.push(`/editor/${p.id}`);
     } catch (e) {
-      setToast(e instanceof Error ? e.message : "Failed to create presentation");
+      setToast(e instanceof Error ? e.message : "Failed to create project");
       setBusy(null);
     }
   }
@@ -99,7 +105,7 @@ export function DashboardShell({
   async function handleDuplicate(id: string) {
     try {
       await api.duplicatePresentation(id);
-      setToast("Presentation duplicated");
+      setToast("Project duplicated");
       void refresh();
     } catch {
       setToast("Duplicate failed");
@@ -152,7 +158,7 @@ export function DashboardShell({
       <Sidebar
         view={view}
         onNavigate={setView}
-        onNew={handleNewBlank}
+        onNew={handleNewChat}
         recents={metas}
         user={user}
         onSignOut={() => void signOut()}
@@ -161,20 +167,22 @@ export function DashboardShell({
 
       <main
         className={`flex-1 min-w-0 min-h-0 flex flex-col ${
-          (threadActive && view === "home") || view === "notebook"
-            ? "overflow-hidden"
-            : "overflow-y-auto"
+          threadActive && view === "home" ? "overflow-hidden" : "overflow-y-auto"
         }`}
       >
-        <div className="h-12 flex items-center justify-between px-5 flex-shrink-0 border-b border-border">
+        <div
+          className={`flex items-center justify-between px-5 flex-shrink-0 ${
+            threadActive && view === "home" ? "h-10" : "h-12 border-b border-border"
+          }`}
+        >
           <div className="text-[13px] font-medium text-text-secondary">
             {view === "home"
-              ? "Home"
+              ? threadActive
+                ? ""
+                : "Home"
               : view === "presentations"
                 ? "Projects"
-                : view === "notebook"
-                  ? "Notebook"
-                  : "Settings"}
+                : "Settings"}
           </div>
           <NotificationsBell onChanged={() => void refresh()} />
         </div>
@@ -182,14 +190,14 @@ export function DashboardShell({
         {/* -------------------------------------------------- home view */}
         {view === "home" && (
           <div
-            className={`flex-1 flex flex-col px-6 ${
-              threadActive ? "min-h-0 pb-4" : "items-center justify-center py-12"
+            className={`flex-1 flex flex-col ${
+              threadActive ? "min-h-0" : "px-6 items-center justify-center py-12"
             }`}
           >
-            <div className={`w-full ${threadActive ? "flex-1 min-h-0 flex flex-col max-w-[760px] mx-auto" : "max-w-[680px]"}`}>
+            <div className={`w-full ${threadActive ? "flex-1 min-h-0 flex flex-col" : "max-w-[680px]"}`}>
               {!threadActive && (
-                <h1 className="text-[26px] font-semibold tracking-tight text-center mb-7 animate-rise">
-                  What do you want to create{firstName ? `, ${firstName}` : ""}?
+                <h1 className="font-serif text-[34px] tracking-tight text-center mb-7 animate-rise">
+                  What can I do for you{firstName ? `, ${firstName}` : ""}?
                 </h1>
               )}
               <Composer
@@ -330,9 +338,6 @@ export function DashboardShell({
             )}
           </div>
         )}
-
-        {/* --------------------------------------------- notebook view */}
-        {view === "notebook" && <NotebookView />}
 
         {/* --------------------------------------------- settings view */}
         {view === "settings" && (

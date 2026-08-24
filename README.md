@@ -1,4 +1,4 @@
-# Studio
+# webo
 
 AI workspace for presentations, websites, games, and apps. Sign in with Google, describe what you want to create (or drop in PDFs, PowerPoints, docs, CSVs and images), and the AI generates a structured, editable, fully interactive artifact — presentations with live charts, timelines, maps, tabs and quizzes, or self-contained websites and games that publish to a real URL (including custom domains).
 
@@ -32,7 +32,7 @@ prompt / files
 - **Dashboard** — big “What do you want to present?” prompt, polished drag-and-drop upload with progress/previews/errors, recent presentation cards with live slide thumbnails, search/sort, templates, settings.
 - **Staged generation experience** — Analysing → Planning → Designing (with slide progress) → Adding interactive elements → Finalising, streamed over SSE.
 - **Editor** — three panels: slide navigator (drag to reorder), live canvas (select, move, resize, inline text editing, drop images/components), inspector (position, style, animation, per-component data editors). Full undo/redo and debounced autosave with Saving/Saved/Unable-to-save states.
-- **AI editing** — “Ask Studio to change anything...” chat that understands the selected slide/element and applies validated operations to the model.
+- **AI editing** — “Ask webo to change anything...” chat that understands the selected slide/element and applies validated operations to the model.
 - **Modes** — Edit, Preview, and fullscreen Present with keyboard navigation and transitions. Every presentation is also a standalone site at `/presentations/<id>`.
 
 ## Setup
@@ -45,6 +45,16 @@ prompt / files
 3. Create the storage buckets (one time): `npm run setup`
 4. In Supabase → Authentication, enable Google and add your local URL (e.g. `http://localhost:3000/**`) to the redirect allowlist.
 5. Run: `npm run dev`
+
+## Production
+
+Vercel (and any host) deploys from `main`. Set these environment variables on the project **before** the first production request, or AI and saves will fail:
+
+- `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`
+- `DEEPSEEK_API_KEY` — required for chat, generation, and follow-up edits
+- `MANUS_API_KEY` — optional; websites/games/apps prefer Manus and fall back to DeepSeek
+
+A `GET /api/health` endpoint reports `{ ok, ai, storage }` (booleans only) so you can confirm secrets are present without logging in. Container deploys use the `Dockerfile` (standalone output). Vercel builds must **not** set `output: "standalone"` — `next.config.mjs` already skips it when `VERCEL=1`.
 
 ## Tests
 

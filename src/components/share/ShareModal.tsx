@@ -36,7 +36,7 @@ function XIcon() {
 type PublishStage = "idle" | "preparing" | "validating" | "building" | "deploying" | "done" | "error";
 
 const STAGE_LABELS: Record<Exclude<PublishStage, "idle" | "done" | "error">, string> = {
-  preparing: "Preparing presentation",
+  preparing: "Preparing project",
   validating: "Validating content",
   building: "Building interactive experience",
   deploying: "Deploying",
@@ -143,7 +143,7 @@ export function ShareModal({
     setTimeout(() => setCopied(false), 2000);
   }
 
-  const shareText = `${title} — made with Studio`;
+  const shareText = `${title} — made with webo`;
   const enc = encodeURIComponent;
   const shareTargets = [
     {

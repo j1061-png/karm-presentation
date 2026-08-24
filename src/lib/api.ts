@@ -1,8 +1,9 @@
 "use client";
 
 import type { Presentation, PresentationMeta } from "./schema";
+import { parseSseData } from "./sse";
 
-/** Thin client for the Studio API routes. */
+/** Thin client for the webo API routes. */
 
 async function json<T>(res: Response): Promise<T> {
   const body = await res.json().catch(() => ({}));
@@ -317,14 +318,20 @@ export async function generateProject(
     buffer += decoder.decode(value, { stream: true });
     const events = buffer.split("\n\n");
     buffer = events.pop() ?? "";
-    for (const evt of events) {
-      const line = evt.split("\n").find((l) => l.startsWith("data: "));
-      if (!line) continue;
-      const data = JSON.parse(line.slice(6));
-      if (data.stage === "complete") finishedId = data.presentationId;
-      else if (data.stage === "error") throw new Error(data.message);
-      else onStage?.({ stage: data.stage, detail: data.detail, done: data.done, total: data.total });
-    }
+        for (const evt of events) {
+          const data = parseSseData(evt) as {
+            stage?: string;
+            presentationId?: string;
+            message?: string;
+            detail?: string;
+            done?: number;
+            total?: number;
+          } | null;
+          if (!data || !data.stage) continue;
+          if (data.stage === "complete") finishedId = data.presentationId ?? null;
+          else if (data.stage === "error") throw new Error(data.message);
+          else onStage?.({ stage: data.stage, detail: data.detail, done: data.done, total: data.total });
+        }
   }
 
   if (!finishedId) throw new Error("Generation ended unexpectedly. Please try again.");

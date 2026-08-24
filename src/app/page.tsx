@@ -123,13 +123,28 @@ function LoginContent() {
     "w-full bg-surface border border-border rounded-xl px-4 py-2.5 text-[14px] outline-none focus:border-border-strong transition-colors placeholder:text-text-tertiary";
 
   return (
-    <main className="min-h-screen bg-bg flex flex-col">
-      {/* Top-left brand */}
-      <header className="flex items-center px-6 py-5">
+    <main className="min-h-screen bg-bg grid lg:grid-cols-2">
+      <section className="hidden lg:flex flex-col justify-between px-14 py-12 bg-sidebar border-r border-border">
+        <BrandWordmark height={28} />
+        <div>
+          <h1 className="font-serif text-[44px] leading-[1.12] tracking-tight max-w-md">
+            Chat on the left.
+            <br />
+            Watch it built on the right.
+          </h1>
+          <p className="mt-5 text-[15px] text-text-secondary max-w-sm leading-relaxed">
+            webo is an AI workspace for presentations, websites, games, and apps — closer to a
+            partner than a chat box.
+          </p>
+        </div>
+        <p className="text-[12px] text-text-tertiary">Presentations · Sites · Games · Apps</p>
+      </section>
+
+      <section className="flex flex-col min-h-screen">
+      <header className="flex items-center px-6 py-5 lg:hidden">
         <BrandWordmark height={26} />
       </header>
 
-      {/* Centered auth */}
       <div className="flex-1 flex items-center justify-center px-6 pb-16">
         <div className="w-full max-w-[352px] animate-rise">
           {view === "forgot" ? (
@@ -156,7 +171,7 @@ function LoginContent() {
               <p className="text-[13.5px] text-text-secondary mb-7 text-center">
                 {view === "signin"
                   ? "Sign in to continue."
-                  : "Build interactive presentations with AI."}
+                  : "Build presentations, sites, games, and apps with AI."}
               </p>
 
               <button
@@ -262,6 +277,7 @@ function LoginContent() {
       <footer className="text-center text-[11.5px] text-text-tertiary pb-5">
         AI workspace for presentations, sites, games, and apps
       </footer>
+      </section>
     </main>
   );
 }
