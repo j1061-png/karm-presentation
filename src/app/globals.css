@@ -100,23 +100,8 @@ body {
 }
 
 
-/* Manus-style chat | canvas split */
-.workspace-split {
-  display: grid;
-  grid-template-columns: minmax(320px, 40%) minmax(0, 1fr);
-  grid-template-areas: "chat canvas";
-  min-height: 0;
-  flex: 1;
-}
-.workspace-chat { grid-area: chat; }
-.workspace-canvas { grid-area: canvas; }
-@media (max-width: 900px) {
-  .workspace-split {
-    grid-template-columns: 1fr;
-    grid-template-rows: minmax(220px, 46%) minmax(0, 1fr);
-    grid-template-areas: "canvas" "chat";
-  }
-}
+/* Workspace canvas fills its pane; column sizes are set in JS. */
+.workspace-canvas { min-height: 0; }
 
 /* ------------------------------------------------------------------ */
 /* Slide entrance animations (used by the renderer)                    */

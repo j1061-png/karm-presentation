@@ -10,7 +10,7 @@ export function RightPanel({ width = 320 }: { width?: number }) {
 
   return (
     <aside
-      className="flex-shrink-0 border-l border-border bg-surface/40 flex flex-col min-h-0"
+      className="flex-shrink-0 bg-surface/40 flex flex-col min-h-0"
       style={{ width }}
     >
       <div className="flex border-b border-border flex-shrink-0">
