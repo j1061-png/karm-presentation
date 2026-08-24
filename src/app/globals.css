@@ -5,42 +5,42 @@
 /* ------------------------------------------------------------------ */
 
 :root {
-  /* light */
-  --bg: #ffffff;
-  --sidebar: #f9f9f9;
+  /* light — warm paper */
+  --bg: #f6f4f0;
+  --sidebar: #efece6;
   --surface: #ffffff;
-  --surface-2: #f1f1f2;
-  --surface-3: #e8e8e9;
-  --border: rgba(0, 0, 0, 0.09);
-  --border-strong: rgba(0, 0, 0, 0.18);
-  --text: #1a1a1a;
-  --text-secondary: #5d5d5d;
-  --text-tertiary: #9b9b9b;
-  --accent: #e8940e;
-  --accent-hover: #d6870a;
-  --accent-text: #ffffff;
-  --danger: #d93a32;
-  --success: #189662;
-  --shadow-color: rgba(0, 0, 0, 0.08);
+  --surface-2: #ece8e1;
+  --surface-3: #e4dfd6;
+  --border: rgba(28, 25, 21, 0.09);
+  --border-strong: rgba(28, 25, 21, 0.16);
+  --text: #1c1915;
+  --text-secondary: #6b645a;
+  --text-tertiary: #9a9288;
+  --accent: #1c1915;
+  --accent-hover: #3d3832;
+  --accent-text: #faf8f5;
+  --danger: #b42318;
+  --success: #2f6b4f;
+  --shadow-color: rgba(28, 25, 21, 0.08);
 }
 
 [data-theme="dark"] {
-  --bg: #212121;
-  --sidebar: #171717;
-  --surface: #2b2b2b;
-  --surface-2: #343434;
-  --surface-3: #3f3f3f;
-  --border: rgba(255, 255, 255, 0.09);
-  --border-strong: rgba(255, 255, 255, 0.19);
-  --text: #ededed;
-  --text-secondary: #b0b0b0;
-  --text-tertiary: #808080;
-  --accent: #f5a623;
-  --accent-hover: #ffb840;
-  --accent-text: #231804;
-  --danger: #f0554d;
-  --success: #43c98a;
-  --shadow-color: rgba(0, 0, 0, 0.35);
+  --bg: #161412;
+  --sidebar: #12110f;
+  --surface: #1e1c19;
+  --surface-2: #2a2723;
+  --surface-3: #35312c;
+  --border: rgba(244, 240, 234, 0.08);
+  --border-strong: rgba(244, 240, 234, 0.16);
+  --text: #f4f0ea;
+  --text-secondary: #b8b0a6;
+  --text-tertiary: #7a736b;
+  --accent: #f4f0ea;
+  --accent-hover: #ddd6cc;
+  --accent-text: #161412;
+  --danger: #f87171;
+  --success: #6ee7a8;
+  --shadow-color: rgba(0, 0, 0, 0.4);
 }
 
 @theme inline {
@@ -64,6 +64,7 @@
   --radius-xl: 16px;
 
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-serif: var(--font-instrument), "Iowan Old Style", Georgia, serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
 
@@ -96,6 +97,25 @@ body {
 }
 *::-webkit-scrollbar-track {
   background: transparent;
+}
+
+
+/* Manus-style chat | canvas split */
+.workspace-split {
+  display: grid;
+  grid-template-columns: minmax(320px, 40%) minmax(0, 1fr);
+  grid-template-areas: "chat canvas";
+  min-height: 0;
+  flex: 1;
+}
+.workspace-chat { grid-area: chat; }
+.workspace-canvas { grid-area: canvas; }
+@media (max-width: 900px) {
+  .workspace-split {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(220px, 46%) minmax(0, 1fr);
+    grid-template-areas: "canvas" "chat";
+  }
 }
 
 /* ------------------------------------------------------------------ */

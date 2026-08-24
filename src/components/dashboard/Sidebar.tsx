@@ -81,7 +81,7 @@ export function Sidebar({
   return (
     <aside
       className={`flex-shrink-0 bg-sidebar border-r border-border flex flex-col h-screen sticky top-0 transition-[width] duration-200 ${
-        collapsed ? "w-[56px]" : "w-[248px]"
+        collapsed ? "w-[56px]" : "w-[232px]"
       }`}
     >
       {/* Header: brand + collapse */}

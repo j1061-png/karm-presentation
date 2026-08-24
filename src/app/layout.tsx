@@ -1,8 +1,16 @@
 import type { Metadata } from "next";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
+import { Instrument_Serif } from "next/font/google";
 import { PwaProvider } from "@/components/pwa/PwaProvider";
 import "./globals.css";
+
+const instrument = Instrument_Serif({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-instrument",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Studio",
@@ -21,8 +29,8 @@ export const metadata: Metadata = {
 
 export const viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#171717" },
+    { media: "(prefers-color-scheme: light)", color: "#f6f4f0" },
+    { media: "(prefers-color-scheme: dark)", color: "#161412" },
   ],
   width: "device-width",
   initialScale: 1,
@@ -35,7 +43,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="en"
-      className={`${GeistSans.variable} ${GeistMono.variable}`}
+      className={`${GeistSans.variable} ${GeistMono.variable} ${instrument.variable}`}
       data-theme="dark"
       suppressHydrationWarning
     >

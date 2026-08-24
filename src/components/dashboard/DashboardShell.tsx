@@ -166,7 +166,9 @@ export function DashboardShell({
         <div className="h-12 flex items-center justify-between px-5 flex-shrink-0 border-b border-border">
           <div className="text-[13px] font-medium text-text-secondary">
             {view === "home"
-              ? "Home"
+              ? threadActive
+                ? ""
+                : "Home"
               : view === "presentations"
                 ? "Projects"
                 : "Settings"}
@@ -177,14 +179,14 @@ export function DashboardShell({
         {/* -------------------------------------------------- home view */}
         {view === "home" && (
           <div
-            className={`flex-1 flex flex-col px-6 ${
-              threadActive ? "min-h-0 pb-4" : "items-center justify-center py-12"
+            className={`flex-1 flex flex-col ${
+              threadActive ? "min-h-0" : "px-6 items-center justify-center py-12"
             }`}
           >
-            <div className={`w-full ${threadActive ? "flex-1 min-h-0 flex flex-col max-w-[760px] mx-auto" : "max-w-[680px]"}`}>
+            <div className={`w-full ${threadActive ? "flex-1 min-h-0 flex flex-col" : "max-w-[680px]"}`}>
               {!threadActive && (
-                <h1 className="text-[26px] font-semibold tracking-tight text-center mb-7 animate-rise">
-                  What do you want to create{firstName ? `, ${firstName}` : ""}?
+                <h1 className="font-serif text-[34px] tracking-tight text-center mb-7 animate-rise">
+                  What can I do for you{firstName ? `, ${firstName}` : ""}?
                 </h1>
               )}
               <Composer

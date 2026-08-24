@@ -1,20 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import {
-  ArrowUp, Plus, UploadCloud, AlertCircle, Check, Loader2, PencilRuler, Play, PlusCircle,
-  Presentation as PresentationIcon, Globe, Gamepad2, AppWindow, MessageCircle, Rocket, Copy,
+  ArrowUp, Plus, UploadCloud, AlertCircle, Loader2, PlusCircle,
+  Presentation as PresentationIcon, Globe, Gamepad2, AppWindow, MessageCircle,
 } from "lucide-react";
-import { aiEdit, chatWithAI, getPresentation, publishPresentation, savePresentation } from "@/lib/api";
+import { aiEdit, chatWithAI, getPresentation, savePresentation } from "@/lib/api";
 import { parseEffort, type Effort } from "@/lib/effort";
 import { parseSseData } from "@/lib/sse";
 import { ATTACH_ACCEPT, useAttachments } from "@/lib/use-attachments";
 import { EffortPicker } from "@/components/chat/EffortPicker";
 import { FileChips } from "@/components/chat/FileChips";
-import { SlideRenderer } from "@/components/renderer/SlideRenderer";
-import { assemblePreviewHtml } from "@/lib/web-preview";
-import { ShareButton } from "@/components/share/ShareButton";
+import { WorkspaceCanvas } from "./WorkspaceCanvas";
 import { isWebKind, type ChatTurn, type Presentation, type ProjectKind } from "@/lib/schema";
 
 interface GenProgress {
@@ -31,14 +28,6 @@ type ChatMessage =
   | { id: string; role: "assistant"; kind: "result"; presentationId: string }
   | { id: string; role: "assistant"; kind: "edit"; text: string }
   | { id: string; role: "assistant"; kind: "error"; text: string };
-
-const GEN_STAGES: { key: string; label: string }[] = [
-  { key: "analysing", label: "Analysing your request" },
-  { key: "planning", label: "Planning the structure" },
-  { key: "designing", label: "Designing and building" },
-  { key: "interactive", label: "Adding interactions" },
-  { key: "finalising", label: "Finalising" },
-];
 
 /** What the composer is set to make — a project kind, or plain conversation. */
 type ComposerMode = ProjectKind | "chat";
@@ -523,124 +512,7 @@ export function Composer({
     else await generate(text);
   }
 
-  return (
-    <div className={`w-full mx-auto flex flex-col ${threadActive ? "flex-1 min-h-0 max-w-[760px]" : "max-w-[680px]"}`}>
-      {dragging && (
-        <div className="fixed inset-0 z-40 bg-bg/85 backdrop-blur-sm flex items-center justify-center pointer-events-none animate-in-fade">
-          <div className="border-2 border-dashed border-accent rounded-2xl px-14 py-10 bg-surface flex flex-col items-center gap-3">
-            <UploadCloud size={32} className="text-accent" />
-            <div className="font-medium text-[14.5px]">Drop files to attach them</div>
-            <div className="text-[12.5px] text-text-secondary">PDF, PowerPoint, Word, CSV, images, text</div>
-          </div>
-        </div>
-      )}
-
-      {threadActive && (
-        <div className="flex items-center justify-between px-1 pb-3 flex-shrink-0">
-          <div className="min-w-0">
-            <div className="text-[13.5px] font-medium truncate">
-              {activeDoc?.title ?? "New project"}
-            </div>
-            {activeDoc && (
-              <div className="text-[11.5px] text-text-tertiary">
-                {isWebKind(activeDoc.kind)
-                  ? `${activeDoc.kind} · keep chatting to edit`
-                  : `${activeDoc.slides.length} slide${activeDoc.slides.length === 1 ? "" : "s"} · keep chatting to edit`}
-              </div>
-            )}
-          </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            {activeDoc && (
-              <>
-                <ShareButton
-                  presentationId={activeDoc.id}
-                  title={activeDoc.title}
-                />
-                <Link
-                  href={`/editor/${activeDoc.id}`}
-                  className="flex items-center gap-1.5 text-[12px] font-medium border border-border rounded-lg px-2.5 py-1.5 hover:bg-surface-2 transition-colors"
-                >
-                  <PencilRuler size={12} />
-                  Open editor
-                </Link>
-                <Link
-                  href={`/presentations/${activeDoc.id}`}
-                  target={isWebKind(activeDoc.kind) ? "_blank" : undefined}
-                  className="flex items-center gap-1.5 text-[12px] font-medium bg-accent text-accent-text rounded-lg px-2.5 py-1.5 hover:bg-accent-hover transition-colors"
-                >
-                  <Play size={12} />
-                  {isWebKind(activeDoc.kind) ? "Open" : "Present"}
-                </Link>
-              </>
-            )}
-            <button
-              type="button"
-              onClick={resetThread}
-              className="flex items-center gap-1.5 text-[12px] text-text-secondary hover:text-text border border-border rounded-lg px-2.5 py-1.5 hover:bg-surface-2 transition-colors cursor-pointer"
-            >
-              <PlusCircle size={12} />
-              New chat
-            </button>
-          </div>
-        </div>
-      )}
-
-      {threadActive && (
-        <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto px-1 pb-4 flex flex-col gap-3">
-          {messages.map((m) => (
-            <ThreadMessage
-              key={m.id}
-              message={m}
-              doc={activeDoc}
-              onCancelGenerate={
-                generating
-                  ? () => {
-                      abortRef.current?.abort();
-                      setGenerating(null);
-                    }
-                  : undefined
-              }
-            />
-          ))}
-          {editing && (
-            <div className="self-start flex items-center gap-2.5 bg-surface border border-border rounded-xl px-3.5 py-2.5">
-              <Loader2 size={13} className="animate-spin text-accent" />
-              <span className="text-[12.5px] text-text-secondary">Working on it...</span>
-            </div>
-          )}
-          {chatting && (
-            <div className="self-start flex items-center gap-2.5 bg-surface border border-border rounded-xl px-3.5 py-2.5">
-              <Loader2 size={13} className="animate-spin text-accent" />
-              <span className="text-[12.5px] text-text-secondary">Thinking...</span>
-            </div>
-          )}
-        </div>
-      )}
-
-      {!activeDoc && !threadActive && (
-        <div className="flex justify-center gap-1.5 mb-3">
-          {KIND_OPTIONS.map((opt) => {
-            const Icon = opt.icon;
-            const active = kind === opt.kind;
-            return (
-              <button
-                key={opt.kind}
-                type="button"
-                onClick={() => setKind(opt.kind)}
-                className={`flex items-center gap-1.5 text-[12.5px] font-medium rounded-full px-3.5 py-1.5 border transition-colors cursor-pointer ${
-                  active
-                    ? "bg-text text-bg border-transparent"
-                    : "border-border text-text-secondary hover:text-text hover:bg-surface-2"
-                }`}
-              >
-                <Icon size={13} />
-                {opt.label}
-              </button>
-            );
-          })}
-        </div>
-      )}
-
+  const composerBox = (
       <div
         className={`bg-surface border rounded-[26px] transition-colors flex-shrink-0 ${
           dragging ? "border-accent" : "border-border focus-within:border-border-strong"
@@ -721,6 +593,110 @@ export function Composer({
         </div>
       </div>
 
+  );
+
+  return (
+    <div className={`w-full flex flex-col ${threadActive ? "flex-1 min-h-0" : "max-w-[680px] mx-auto"}`}>
+      {dragging && (
+        <div className="fixed inset-0 z-40 bg-bg/85 backdrop-blur-sm flex items-center justify-center pointer-events-none animate-in-fade">
+          <div className="border-2 border-dashed border-accent rounded-2xl px-14 py-10 bg-surface flex flex-col items-center gap-3">
+            <UploadCloud size={32} className="text-accent" />
+            <div className="font-medium text-[14.5px]">Drop files to attach them</div>
+            <div className="text-[12.5px] text-text-secondary">PDF, PowerPoint, Word, CSV, images, text</div>
+          </div>
+        </div>
+      )}
+
+      {threadActive ? (
+        <div className="workspace-split flex-1 min-h-0">
+          <div className="workspace-chat flex flex-col min-h-0 min-w-0 border-r border-border bg-bg">
+            <div className="h-12 flex items-center justify-between px-4 flex-shrink-0">
+              <div className="text-[13px] text-text-secondary truncate">Chat</div>
+              <button
+                type="button"
+                onClick={resetThread}
+                className="flex items-center gap-1.5 text-[12px] text-text-secondary hover:text-text border border-border rounded-lg px-2.5 py-1.5 hover:bg-surface-2 transition-colors cursor-pointer"
+              >
+                <PlusCircle size={12} />
+                New chat
+              </button>
+            </div>
+            <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto px-4 pb-4 flex flex-col gap-3">
+          {messages.map((m) => (
+            <ThreadMessage
+              key={m.id}
+              message={m}
+              doc={activeDoc}
+              onCancelGenerate={
+                generating
+                  ? () => {
+                      abortRef.current?.abort();
+                      setGenerating(null);
+                    }
+                  : undefined
+              }
+            />
+          ))}
+          {editing && (
+            <div className="self-start flex items-center gap-2.5 bg-surface border border-border rounded-xl px-3.5 py-2.5">
+              <Loader2 size={13} className="animate-spin text-accent" />
+              <span className="text-[12.5px] text-text-secondary">Working on it...</span>
+            </div>
+          )}
+          {chatting && (
+            <div className="self-start flex items-center gap-2.5 bg-surface border border-border rounded-xl px-3.5 py-2.5">
+              <Loader2 size={13} className="animate-spin text-accent" />
+              <span className="text-[12.5px] text-text-secondary">Thinking...</span>
+            </div>
+          )}
+            </div>
+            <div className="px-3 pb-3 pt-1 flex-shrink-0">
+              {composerBox}
+            </div>
+          </div>
+          <WorkspaceCanvas
+            doc={activeDoc}
+            generating={generating}
+            editing={editing}
+            onCancelGenerate={
+              generating
+                ? () => {
+                    abortRef.current?.abort();
+                    setGenerating(null);
+                  }
+                : undefined
+            }
+            onNewChat={resetThread}
+          />
+        </div>
+      ) : (
+        <>
+      {!activeDoc && (
+        <div className="flex justify-center gap-1.5 mb-3">
+          {KIND_OPTIONS.map((opt) => {
+            const Icon = opt.icon;
+            const active = kind === opt.kind;
+            return (
+              <button
+                key={opt.kind}
+                type="button"
+                onClick={() => setKind(opt.kind)}
+                className={`flex items-center gap-1.5 text-[12.5px] font-medium rounded-full px-3.5 py-1.5 border transition-colors cursor-pointer ${
+                  active
+                    ? "bg-text text-bg border-transparent"
+                    : "border-border text-text-secondary hover:text-text hover:bg-surface-2"
+                }`}
+              >
+                <Icon size={13} />
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {composerBox}
+
       {!threadActive && prompt.length === 0 && files.length === 0 && (
         <div className="flex flex-wrap justify-center gap-2 mt-4">
           {SUGGESTIONS[kind].map((s) => (
@@ -737,6 +713,8 @@ export function Composer({
             </button>
           ))}
         </div>
+      )}
+        </>
       )}
     </div>
   );
@@ -763,7 +741,12 @@ function ThreadMessage({
   }
 
   if (message.kind === "progress") {
-    return <ProgressCard progress={message.progress} onCancel={onCancelGenerate} />;
+    return (
+      <div className="self-start flex items-center gap-2 text-[13px] text-text-secondary">
+        <Loader2 size={13} className="animate-spin flex-shrink-0" />
+        <span>{message.progress.detail || "Working on the canvas…"}</span>
+      </div>
+    );
   }
 
   if (message.kind === "error") {
@@ -789,292 +772,17 @@ function ThreadMessage({
     );
   }
 
-  if (isWebKind(doc.kind)) return <WebProjectCard doc={doc} />;
-  return <LiveDeckCard doc={doc} />;
-}
-
-function WebProjectCard({ doc }: { doc: Presentation }) {
-  const [tab, setTab] = useState<"preview" | "code">("preview");
-  const [activeFile, setActiveFile] = useState(doc.entry);
-  const [deploying, setDeploying] = useState(false);
-  const [liveUrl, setLiveUrl] = useState<string | null>(null);
-  const [deployError, setDeployError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
-  const html = assemblePreviewHtml(doc.files, doc.entry);
-  const label = doc.kind === "game" ? "game" : doc.kind === "app" ? "app" : "website";
-  const file = doc.files?.find((f) => f.path === activeFile) ?? doc.files?.[0];
-
-  async function deploy() {
-    if (deploying) return;
-    setDeploying(true);
-    setDeployError(null);
-    try {
-      await publishPresentation(doc.id, "link");
-      setLiveUrl(`${window.location.origin}/p/${doc.id}`);
-    } catch (e) {
-      setDeployError(e instanceof Error ? e.message : "Deploy failed.");
-    } finally {
-      setDeploying(false);
-    }
-  }
+  const kindLabel = isWebKind(doc.kind)
+    ? doc.kind
+    : `${doc.slides.length} slide${doc.slides.length === 1 ? "" : "s"}`;
   return (
-    <div className="self-stretch bg-surface border border-border rounded-2xl overflow-hidden">
-      <div className="px-4 pt-3.5 pb-2 flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="text-[14px] font-medium truncate">{doc.title}</div>
-          <div className="text-[12px] text-text-tertiary mt-0.5">
-            Your {label} is live below — try it, then type a change.
-          </div>
-        </div>
-        <div className="flex items-center bg-surface-2 border border-border rounded-lg p-0.5 flex-shrink-0">
-          {(
-            [
-              { key: "preview", label: "Preview" },
-              { key: "code", label: "Code" },
-            ] as const
-          ).map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={`text-[11.5px] px-2.5 py-1 rounded-[6px] transition-colors cursor-pointer ${
-                tab === t.key ? "bg-surface-3 text-text font-medium" : "text-text-secondary hover:text-text"
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-      </div>
-      {tab === "preview" ? (
-        <div className="px-4 pb-3">
-          <iframe
-            key={doc.updatedAt}
-            srcDoc={html}
-            sandbox="allow-scripts allow-forms allow-pointer-lock allow-modals"
-            className="w-full rounded-lg border border-border bg-white"
-            style={{ height: 420 }}
-            title={doc.title}
-          />
-        </div>
-      ) : (
-        <div className="px-4 pb-3">
-          <div className="rounded-lg border border-border overflow-hidden">
-            <div className="flex items-center gap-1 px-2 py-1.5 bg-surface-2 border-b border-border overflow-x-auto">
-              {(doc.files ?? []).map((f) => (
-                <button
-                  key={f.path}
-                  onClick={() => setActiveFile(f.path)}
-                  className={`text-[11.5px] font-mono px-2 py-1 rounded-md whitespace-nowrap cursor-pointer transition-colors ${
-                    f.path === (file?.path ?? "")
-                      ? "bg-surface-3 text-text"
-                      : "text-text-secondary hover:text-text"
-                  }`}
-                >
-                  {f.path}
-                </button>
-              ))}
-            </div>
-            <pre
-              className="m-0 p-3 overflow-auto text-[11.5px] font-mono leading-relaxed bg-bg text-text-secondary"
-              style={{ height: 420 }}
-            >
-              {file?.content ?? ""}
-            </pre>
-          </div>
-        </div>
-      )}
-      {liveUrl && (
-        <div className="mx-4 mb-2 flex items-center gap-2 bg-success/10 border border-success/30 rounded-xl px-3 py-2">
-          <span className="relative flex w-2 h-2 flex-shrink-0">
-            <span className="relative inline-flex rounded-full w-2 h-2 bg-success" />
-          </span>
-          <a
-            href={liveUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="text-[12px] font-mono text-success truncate hover:underline flex-1 min-w-0"
-          >
-            {liveUrl}
-          </a>
-          <button
-            onClick={() => {
-              void navigator.clipboard.writeText(liveUrl);
-              setCopied(true);
-              setTimeout(() => setCopied(false), 1500);
-            }}
-            className="text-success/80 hover:text-success cursor-pointer flex-shrink-0"
-            aria-label="Copy live URL"
-          >
-            {copied ? <Check size={13} /> : <Copy size={13} />}
-          </button>
-        </div>
-      )}
-      {deployError && (
-        <div className="mx-4 mb-2 text-[12px] text-danger flex items-center gap-1.5">
-          <AlertCircle size={12} className="flex-shrink-0" /> {deployError}
-        </div>
-      )}
-      <div className="px-4 pb-3 flex items-center gap-2">
-        <div className="flex-1" />
-        <Link
-          href={`/editor/${doc.id}`}
-          className="flex items-center gap-1.5 text-[12.5px] font-medium border border-border rounded-lg px-3 py-1.5 hover:bg-surface-2 transition-colors"
-        >
-          <PencilRuler size={13} />
-          Open editor
-        </Link>
-        <ShareButton presentationId={doc.id} title={doc.title} />
-        <Link
-          href={`/presentations/${doc.id}`}
-          target="_blank"
-          className="flex items-center gap-1.5 text-[12.5px] font-medium border border-border rounded-lg px-3 py-1.5 hover:bg-surface-2 transition-colors"
-        >
-          <Play size={13} />
-          Full screen
-        </Link>
-        <button
-          onClick={() => void deploy()}
-          disabled={deploying}
-          className="flex items-center gap-1.5 text-[12.5px] font-medium bg-accent text-accent-text rounded-lg px-3 py-1.5 hover:bg-accent-hover transition-colors cursor-pointer disabled:opacity-60"
-        >
-          {deploying ? <Loader2 size={13} className="animate-spin" /> : <Rocket size={13} />}
-          {liveUrl ? "Redeploy" : "Deploy"}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function LiveDeckCard({ doc }: { doc: Presentation }) {
-  const [index, setIndex] = useState(0);
-  const slide = doc.slides[Math.min(index, doc.slides.length - 1)];
-  return (
-    <div className="self-stretch bg-surface border border-border rounded-2xl overflow-hidden">
-      <div className="px-4 pt-3.5 pb-2">
-        <div className="text-[14px] font-medium">{doc.title}</div>
-        <div className="text-[12px] text-text-tertiary mt-0.5">
-          Click the slide — flip cards, tabs, quizzes, and buttons work. Then type a change below.
-        </div>
-      </div>
-      <div className="px-4 pb-3">
-        <SlideRenderer
-          slide={slide}
-          theme={doc.theme}
-          mode="live"
-          animateKey={slide.id}
-          rounded
-          className="border border-border"
-          onAction={(a) => {
-            if (a.type === "next-slide") setIndex((i) => Math.min(doc.slides.length - 1, i + 1));
-            if (a.type === "prev-slide") setIndex((i) => Math.max(0, i - 1));
-            if (a.type === "goto-slide" && a.targetSlide !== undefined) {
-              setIndex(Math.max(0, Math.min(doc.slides.length - 1, a.targetSlide)));
-            }
-          }}
-        />
-      </div>
-      <div className="px-4 pb-3 flex items-center gap-2">
-        <button
-          type="button"
-          onClick={() => setIndex((i) => Math.max(0, i - 1))}
-          disabled={index === 0}
-          className="text-[12px] text-text-secondary hover:text-text disabled:opacity-30 cursor-pointer"
-        >
-          Previous
-        </button>
-        <span className="text-[12px] text-text-tertiary tabular-nums">
-          {index + 1} / {doc.slides.length}
-        </span>
-        <button
-          type="button"
-          onClick={() => setIndex((i) => Math.min(doc.slides.length - 1, i + 1))}
-          disabled={index === doc.slides.length - 1}
-          className="text-[12px] text-text-secondary hover:text-text disabled:opacity-30 cursor-pointer"
-        >
-          Next
-        </button>
-        <div className="flex-1" />
-        <Link
-          href={`/editor/${doc.id}`}
-          className="flex items-center gap-1.5 text-[12.5px] font-medium border border-border rounded-lg px-3 py-1.5 hover:bg-surface-2 transition-colors"
-        >
-          <PencilRuler size={13} />
-          Open editor
-        </Link>
-        <ShareButton presentationId={doc.id} title={doc.title} />
-        <Link
-          href={`/presentations/${doc.id}`}
-          className="flex items-center gap-1.5 text-[12.5px] font-medium bg-accent text-accent-text rounded-lg px-3 py-1.5 hover:bg-accent-hover transition-colors"
-        >
-          <Play size={13} />
-          Present
-        </Link>
-      </div>
-    </div>
-  );
-}
-
-function ProgressCard({
-  progress,
-  onCancel,
-}: {
-  progress: GenProgress;
-  onCancel?: () => void;
-}) {
-  const activeStageIdx = Math.max(0, GEN_STAGES.findIndex((s) => s.key === progress.stage));
-  return (
-    <div className="self-stretch bg-surface border border-border rounded-2xl px-5 py-4">
-      <div className="flex flex-col gap-2">
-        {GEN_STAGES.map((stage, i) => {
-          const isDone = i < activeStageIdx;
-          const isActive = i === activeStageIdx;
-          return (
-            <div
-              key={stage.key}
-              className="flex items-center gap-2.5 transition-opacity duration-300"
-              style={{ opacity: isDone || isActive ? 1 : 0.35 }}
-            >
-              {isDone ? (
-                <Check size={13} className="text-success flex-shrink-0" strokeWidth={3} />
-              ) : isActive ? (
-                <Loader2 size={13} className="animate-spin text-accent flex-shrink-0" />
-              ) : (
-                <span className="w-[13px] h-[13px] rounded-full border border-border-strong flex-shrink-0" />
-              )}
-              <span className={`text-[13px] ${isActive ? "font-medium" : "text-text-secondary"}`}>
-                {stage.label}
-                {isActive && progress.detail ? (
-                  <span className="text-text-tertiary font-normal"> — {progress.detail}</span>
-                ) : null}
-              </span>
-              {isActive && progress.total ? (
-                <span className="ml-auto text-[11.5px] text-text-tertiary tabular-nums">
-                  {Math.min(progress.done ?? 0, progress.total)}/{progress.total}
-                </span>
-              ) : null}
-            </div>
-          );
-        })}
-      </div>
-      {progress.stage === "designing" && progress.total ? (
-        <div className="mt-3 h-1 rounded-full bg-surface-3 overflow-hidden">
-          <div
-            className="h-full bg-accent rounded-full transition-all duration-500"
-            style={{
-              width: `${Math.min(100, ((progress.done ?? 0) / progress.total) * 100)}%`,
-            }}
-          />
-        </div>
-      ) : null}
-      {onCancel && (
-        <button
-          type="button"
-          onClick={onCancel}
-          className="mt-3 text-[12px] text-text-tertiary hover:text-text transition-colors cursor-pointer"
-        >
-          Cancel
-        </button>
-      )}
+    <div className="self-start flex items-center gap-2 text-[13px] text-text-secondary">
+      <span className="w-1.5 h-1.5 rounded-full bg-success flex-shrink-0" />
+      <span>
+        <span className="font-medium text-text">{doc.title}</span>
+        {" "}is on the canvas
+        <span className="text-text-tertiary"> · {kindLabel}</span>
+      </span>
     </div>
   );
 }
