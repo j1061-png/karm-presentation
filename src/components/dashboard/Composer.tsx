@@ -497,15 +497,15 @@ export function Composer({
 
   function send() {
     if (!canSend) return;
-    if (activeDoc) {
-      void routeMessage();
+    const chatMode = kind === "chat" && !activeDoc;
+    // Attached files mean "build/edit with these" — except in pure chat mode,
+    // where they become conversation sources.
+    if (readySources.length > 0 && !chatMode) {
+      if (activeDoc) void editDeck();
+      else void generate();
       return;
     }
-    if (kind === "chat") {
-      void routeMessage();
-      return;
-    }
-    void generate();
+    void routeMessage();
   }
 
   /** Let the assistant decide: answer conversationally, or kick off a build/edit. */
