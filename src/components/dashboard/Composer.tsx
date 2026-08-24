@@ -12,6 +12,7 @@ import { ATTACH_ACCEPT, useAttachments } from "@/lib/use-attachments";
 import { EffortPicker } from "@/components/chat/EffortPicker";
 import { FileChips } from "@/components/chat/FileChips";
 import { WorkspaceCanvas } from "./WorkspaceCanvas";
+import { ResizeHandle, beginPanelResize } from "@/components/ui/ResizeHandle";
 import { inferProjectKind, isWebKind, kindLabel, kindNoun, type ChatTurn, type Presentation, type ProjectKind } from "@/lib/schema";
 
 interface GenProgress {
@@ -125,6 +126,9 @@ export function Composer({
   const [editing, setEditing] = useState(false);
   const [chatting, setChatting] = useState(false);
   const [effort, setEffort] = useState<Effort>("standard");
+  const [chatWidth, setChatWidth] = useState(380);
+  const [canvasPane, setCanvasPane] = useState(300);
+  const [narrowSplit, setNarrowSplit] = useState(false);
   const [kind, setKind] = useState<ComposerMode>(() => {
     try {
       const saved = localStorage.getItem("pk-kind");
@@ -204,9 +208,37 @@ export function Composer({
   useEffect(() => {
     try {
       setEffort(parseEffort(localStorage.getItem("pk-effort")));
+      const w = Number(localStorage.getItem("pk-chat-width"));
+      if (w >= 280 && w <= 720) setChatWidth(w);
+      const h = Number(localStorage.getItem("pk-canvas-pane"));
+      if (h >= 180 && h <= 720) setCanvasPane(h);
     } catch {
       /* ignore */
     }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("pk-chat-width", String(chatWidth));
+    } catch {
+      /* ignore */
+    }
+  }, [chatWidth]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("pk-canvas-pane", String(canvasPane));
+    } catch {
+      /* ignore */
+    }
+  }, [canvasPane]);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 900px)");
+    const apply = () => setNarrowSplit(mq.matches);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
   }, []);
 
   useEffect(() => {
@@ -700,26 +732,32 @@ export function Composer({
   );
 
   const chatHeader = (
-    <div className="h-11 flex items-center justify-between px-4 flex-shrink-0 border-b border-border gap-2">
-      <div className="min-w-0 truncate text-[13px] font-medium">
-        {activeDoc ? `${activeDoc.title} · ${kindLabel(activeDoc.kind)}` : "Chat"}
+    <div className="h-12 flex items-center gap-2 px-3 flex-shrink-0">
+      <div className="min-w-0 flex-1 truncate text-[13px] font-semibold tracking-tight">
+        {activeDoc ? activeDoc.title : "Chat"}
       </div>
-      <div className="flex items-center gap-2 flex-shrink-0">
+      {activeDoc && (
+        <span className="text-[11px] font-medium text-text-tertiary bg-surface-2 rounded-full px-2 py-0.5 flex-shrink-0">
+          {kindLabel(activeDoc.kind)}
+        </span>
+      )}
+      <div className="flex items-center gap-1 flex-shrink-0">
         {headerAccessory}
         <button
           type="button"
           onClick={resetThread}
-          className="flex items-center gap-1.5 text-[12px] text-text-secondary hover:text-text border border-border rounded-lg px-2.5 py-1.5 hover:bg-surface-2 transition-colors cursor-pointer"
+          className="flex items-center gap-1.5 text-[12px] text-text-secondary hover:text-text rounded-lg px-2 py-1.5 hover:bg-surface-2 transition-colors cursor-pointer"
+          title="New chat"
         >
-          <PlusCircle size={12} />
-          New chat
+          <PlusCircle size={14} />
+          <span className="max-[420px]:hidden">New</span>
         </button>
       </div>
     </div>
   );
 
   const chatMessages = (
-    <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto px-4 pb-4 flex flex-col gap-3">
+    <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto px-4 py-3 flex flex-col gap-3">
       {messages.map((m) => (
         <ThreadMessage
           key={m.id}
@@ -729,7 +767,7 @@ export function Composer({
         />
       ))}
       {chatting && (
-        <div className="self-start flex items-center gap-2.5 bg-surface border border-border rounded-xl px-3.5 py-2.5">
+        <div className="self-start flex items-center gap-2.5 bg-surface-2/80 rounded-xl px-3.5 py-2.5">
           <Loader2 size={13} className="animate-spin text-accent" />
           <span className="text-[12.5px] text-text-secondary">Thinking...</span>
         </div>
@@ -741,6 +779,14 @@ export function Composer({
     <div className="px-3 pb-3 pt-1 flex-shrink-0">
       {!activeDoc && !generating && <div className="mb-2">{kindChips}</div>}
       {composerBox}
+    </div>
+  );
+
+  const chatColumn = (
+    <div className="flex flex-col min-h-0 min-w-0 h-full bg-bg">
+      {chatHeader}
+      {chatMessages}
+      {chatFooter}
     </div>
   );
 
@@ -757,24 +803,55 @@ export function Composer({
       )}
 
       {threadActive && showCanvas ? (
-        <div className="workspace-split flex-1 min-h-0">
-          <div className="workspace-chat flex flex-col min-h-0 min-w-0 border-r border-border bg-bg">
-            {chatHeader}
-            {chatMessages}
-            {chatFooter}
-          </div>
-          <WorkspaceCanvas
-            doc={activeDoc}
-            generating={generating}
-            editing={editing}
-            onCancelGenerate={generating ? cancelRun : undefined}
-          />
+        <div
+          className={`flex-1 min-h-0 ${narrowSplit ? "flex flex-col" : "flex"}`}
+        >
+          {narrowSplit ? (
+            <>
+              <div className="min-h-0 flex-shrink-0" style={{ height: canvasPane }}>
+                <WorkspaceCanvas
+                  doc={activeDoc}
+                  generating={generating}
+                  editing={editing}
+                  onCancelGenerate={generating ? cancelRun : undefined}
+                />
+              </div>
+              <ResizeHandle
+                orientation="horizontal"
+                label="Resize canvas"
+                onBegin={(y) => {
+                  const max = Math.max(180, Math.round(window.innerHeight * 0.7));
+                  beginPanelResize(y, canvasPane, 1, 180, max, setCanvasPane, "y");
+                }}
+              />
+              <div className="flex-1 min-h-0 min-w-0">{chatColumn}</div>
+            </>
+          ) : (
+            <>
+              <div className="flex-shrink-0 min-h-0 h-full" style={{ width: chatWidth }}>
+                {chatColumn}
+              </div>
+              <ResizeHandle
+                label="Resize chat"
+                onBegin={(x) => {
+                  const max = Math.max(280, Math.min(640, Math.round(window.innerWidth * 0.52)));
+                  beginPanelResize(x, chatWidth, 1, 280, max, setChatWidth);
+                }}
+              />
+              <div className="flex-1 min-w-0 min-h-0 h-full">
+                <WorkspaceCanvas
+                  doc={activeDoc}
+                  generating={generating}
+                  editing={editing}
+                  onCancelGenerate={generating ? cancelRun : undefined}
+                />
+              </div>
+            </>
+          )}
         </div>
       ) : threadActive ? (
         <div className="flex-1 min-h-0 flex flex-col w-full max-w-[720px] mx-auto">
-          {chatHeader}
-          {chatMessages}
-          {chatFooter}
+          {chatColumn}
         </div>
       ) : (
         <>

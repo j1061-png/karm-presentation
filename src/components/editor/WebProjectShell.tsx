@@ -7,6 +7,7 @@ import { aiEdit, savePresentation } from "@/lib/api";
 import { assemblePreviewHtml } from "@/lib/web-preview";
 import { ShareModal } from "@/components/share/ShareModal";
 import { BrandMark } from "@/components/brand/BrandLogo";
+import { ResizeHandle, beginPanelResize } from "@/components/ui/ResizeHandle";
 import {
   ArrowLeft, ArrowUp, AlertCircle, Check, Code2, Download, ExternalLink, Loader2,
   AlertTriangle, RefreshCw, Share2, X,
@@ -43,6 +44,8 @@ export function WebProjectShell({
   const [saveState, setSaveState] = useState<SaveState>("saved");
   const [shareOpen, setShareOpen] = useState(false);
   const [codeOpen, setCodeOpen] = useState(true);
+  const [codeWidth, setCodeWidth] = useState(400);
+  const [chatWidth, setChatWidth] = useState(340);
   const [activeFile, setActiveFile] = useState(initial.entry);
   const [titleDraft, setTitleDraft] = useState(initial.title);
   const [reloadKey, setReloadKey] = useState(0);
@@ -61,6 +64,26 @@ export function WebProjectShell({
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, busy]);
+
+  useEffect(() => {
+    try {
+      const c = Number(localStorage.getItem("pk-code-width"));
+      const h = Number(localStorage.getItem("pk-web-chat-width"));
+      if (c >= 240 && c <= 720) setCodeWidth(c);
+      if (h >= 260 && h <= 560) setChatWidth(h);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("pk-code-width", String(codeWidth));
+      localStorage.setItem("pk-web-chat-width", String(chatWidth));
+    } catch {
+      /* ignore */
+    }
+  }, [codeWidth, chatWidth]);
 
   const doSave = useCallback(async (next: Presentation) => {
     setSaveState("saving");
@@ -283,17 +306,27 @@ export function WebProjectShell({
           />
         </div>
 
+        {codeOpen && (
+          <ResizeHandle
+            label="Resize code"
+            onBegin={(x) => {
+              const max = Math.max(240, Math.min(720, Math.round(window.innerWidth * 0.5)));
+              beginPanelResize(x, codeWidth, -1, 240, max, setCodeWidth);
+            }}
+          />
+        )}
+
         {/* ------------------------------------------------- code drawer */}
         {codeOpen && (
-          <div className="w-[420px] flex-shrink-0 border-l border-border flex flex-col min-h-0">
-            <div className="flex items-center gap-1 px-2 pt-2 pb-1 border-b border-border overflow-x-auto">
+          <div className="flex-shrink-0 flex flex-col min-h-0 bg-bg" style={{ width: codeWidth }}>
+            <div className="flex items-center gap-1 px-2 h-11 border-b border-border overflow-x-auto flex-shrink-0">
               {(doc.files ?? []).map((f) => (
                 <button
                   key={f.path}
                   onClick={() => setActiveFile(f.path)}
                   className={`text-[12px] font-mono px-2.5 py-1.5 rounded-md whitespace-nowrap cursor-pointer transition-colors ${
                     f.path === (file?.path ?? "")
-                      ? "bg-surface-3 text-text"
+                      ? "bg-surface-2 text-text"
                       : "text-text-secondary hover:text-text"
                   }`}
                 >
@@ -335,9 +368,20 @@ export function WebProjectShell({
           </div>
         )}
 
+        <ResizeHandle
+          label="Resize chat"
+          onBegin={(x) => {
+            const max = Math.max(260, Math.min(560, Math.round(window.innerWidth * 0.45)));
+            beginPanelResize(x, chatWidth, -1, 260, max, setChatWidth);
+          }}
+        />
+
         {/* ------------------------------------------------------ AI chat */}
-        <div className="w-[340px] flex-shrink-0 border-l border-border flex flex-col min-h-0">
-          <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto p-3 flex flex-col gap-2.5">
+        <div className="flex-shrink-0 flex flex-col min-h-0 bg-bg" style={{ width: chatWidth }}>
+          <div className="h-11 flex items-center px-3 flex-shrink-0">
+            <div className="text-[13px] font-semibold tracking-tight">Chat</div>
+          </div>
+          <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto px-3 pb-3 flex flex-col gap-2.5">
             {messages.length === 0 && (
               <div className="text-[12.5px] text-text-secondary leading-relaxed px-1 pt-2">
                 Ask for any change — the AI rewrites the {noun} and the preview updates.

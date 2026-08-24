@@ -130,7 +130,7 @@ export function SlidesPanel({ width = 200 }: { width?: number }) {
 
   return (
     <aside
-      className="flex-shrink-0 border-r border-border bg-surface/40 flex flex-col min-h-0"
+      className="flex-shrink-0 bg-surface/40 flex flex-col min-h-0"
       style={{ width }}
     >
       <div className="flex items-center justify-between px-4 h-10 border-b border-border flex-shrink-0">
