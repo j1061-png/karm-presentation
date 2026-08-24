@@ -4,8 +4,8 @@ import {
   generateWebProject,
   type GenerationStage,
   type SourceFile,
-  type WebKind,
 } from "@/lib/generate";
+import { inferProjectKind, isWebKind } from "@/lib/schema";
 import { savePresentation } from "@/lib/store";
 import { publicAiError } from "@/lib/public-error";
 
@@ -37,10 +37,15 @@ export async function POST(request: Request) {
     return Response.json({ error: "Describe what you want to create or attach files." }, { status: 400 });
   }
 
-  const kind: "presentation" | WebKind =
-    body?.kind === "website" || body?.kind === "game" || body?.kind === "app"
+  const picker =
+    body?.kind === "website" ||
+    body?.kind === "game" ||
+    body?.kind === "app" ||
+    body?.kind === "presentation" ||
+    body?.kind === "chat"
       ? body.kind
-      : "presentation";
+      : undefined;
+  const kind = inferProjectKind(prompt, picker);
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
@@ -49,21 +54,20 @@ export async function POST(request: Request) {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
       };
       try {
-        const presentation =
-          kind === "presentation"
-            ? await generatePresentation(
-                prompt || "A presentation based on the attached source material.",
-                files,
-                send,
-                body?.effort
-              )
-            : await generateWebProject(
-                prompt || `A ${kind} based on the attached source material.`,
-                files,
-                kind,
-                send,
-                body?.effort
-              );
+        const presentation = isWebKind(kind)
+          ? await generateWebProject(
+              prompt || `A ${kind} based on the attached source material.`,
+              files,
+              kind,
+              send,
+              body?.effort
+            )
+          : await generatePresentation(
+              prompt || "A presentation based on the attached source material.",
+              files,
+              send,
+              body?.effort
+            );
         await savePresentation(user.id, presentation);
         send({ stage: "complete", presentationId: presentation.id });
       } catch (e) {

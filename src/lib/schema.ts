@@ -441,7 +441,9 @@ export const PresentationSchema = z.object({
 export type Presentation = z.infer<typeof PresentationSchema>;
 
 /** True when the project is a web artifact served from its file tree. */
-export function isWebKind(kind: ProjectKind | undefined): boolean {
+export function isWebKind(
+  kind: ProjectKind | undefined
+): kind is Extract<ProjectKind, "website" | "game" | "app"> {
   return kind === "website" || kind === "game" || kind === "app";
 }
 
@@ -459,6 +461,36 @@ export function kindLabel(kind?: ProjectKind): string {
   if (kind === "game") return "Game";
   if (kind === "app") return "App";
   return "Presentation";
+}
+
+/**
+ * Resolve what to build. An explicit Website/Game/App picker always wins.
+ * Otherwise the prompt can override a Presentation/Chat default so
+ * "make a snake game" does not become a slide deck.
+ */
+export function inferProjectKind(
+  prompt: string,
+  picker?: ProjectKind | "chat"
+): ProjectKind {
+  if (picker === "website" || picker === "game" || picker === "app") return picker;
+  const t = prompt.toLowerCase();
+  const wantsDeck =
+    /\b(presentation|slide decks?|pitch decks?|slides|deck about)\b/.test(t);
+  // Require a real game request. "game-changing" / "game plan" must not match.
+  const wantsGame =
+    /\b(snake|tetris|pong|breakout|platformer|arcade|quiz game|memory (card )?game|card game)\b/.test(t) ||
+    /\b(make|build|create|play)\b.{0,40}\bgames?\b(?!-)/.test(t);
+  const wantsSite =
+    /\b(website|web site|landing page|portfolio site|web ?page|homepage|microsite|marketing site)\b/.test(t);
+  const wantsApp =
+    /\b(todo app|habit tracker|pomodoro|expense splitter|notes app|markdown notes|web app)\b/.test(t) ||
+    /\b(make|build|create)\b.{0,40}\bapps?\b/.test(t) ||
+    /\ban app\b/.test(t);
+  if (wantsDeck && !wantsGame && !wantsSite && !wantsApp) return "presentation";
+  if (wantsGame) return "game";
+  if (wantsSite) return "website";
+  if (wantsApp) return "app";
+  return "presentation";
 }
 
 

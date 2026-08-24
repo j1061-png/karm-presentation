@@ -53,6 +53,8 @@ export interface SlideRendererProps {
   hideElementId?: string | null;
   className?: string;
   rounded?: boolean;
+  /** width = 16:9 from container width (thumbs/editor). contain = letterbox in a fixed-height parent. */
+  fit?: "width" | "contain";
 }
 
 /**
@@ -70,6 +72,7 @@ export function SlideRenderer({
   hideElementId,
   className,
   rounded,
+  fit = "width",
 }: SlideRendererProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0);
@@ -77,30 +80,42 @@ export function SlideRenderer({
   useEffect(() => {
     const node = containerRef.current;
     if (!node) return;
-    const update = () => setScale(node.clientWidth / SLIDE_W);
+    const update = () => {
+      const w = node.clientWidth;
+      const h = node.clientHeight;
+      if (w <= 0) return;
+      if (fit === "contain" && h > 0) {
+        setScale(Math.min(w / SLIDE_W, h / SLIDE_H));
+      } else {
+        setScale(w / SLIDE_W);
+      }
+    };
     update();
     const ro = new ResizeObserver(update);
     ro.observe(node);
     return () => ro.disconnect();
-  }, []);
+  }, [fit]);
 
   const ctx: RenderContext = { theme, mode, onAction };
   const animate = mode === "live";
   const sorted = [...slide.elements].sort((a, b) => a.z - b.z);
 
+  const letterbox = fit === "contain";
   return (
     <div
       ref={containerRef}
       className={className}
       style={{
-        aspectRatio: "16 / 9",
+        aspectRatio: letterbox ? undefined : "16 / 9",
+        width: letterbox ? "100%" : undefined,
+        height: letterbox ? "100%" : undefined,
         position: "relative",
         overflow: "hidden",
         borderRadius: rounded ? 10 : 0,
-        ...slideBackgroundCss(slide, theme),
+        ...(letterbox ? { background: "transparent" } : slideBackgroundCss(slide, theme)),
       }}
     >
-      {slide.background?.particles && mode !== "thumb" && (
+      {slide.background?.particles && mode !== "thumb" && !letterbox && (
         <ParticleField color={theme.colors.accent} />
       )}
       {scale > 0 && (
@@ -110,12 +125,19 @@ export function SlideRenderer({
             width: SLIDE_W,
             height: SLIDE_H,
             transform: `scale(${scale})`,
-            transformOrigin: "top left",
+            transformOrigin: letterbox ? "center center" : "top left",
             position: "absolute",
-            top: 0,
-            left: 0,
+            top: letterbox ? "50%" : 0,
+            left: letterbox ? "50%" : 0,
+            marginTop: letterbox ? -SLIDE_H / 2 : 0,
+            marginLeft: letterbox ? -SLIDE_W / 2 : 0,
+            overflow: letterbox ? "hidden" : undefined,
+            ...(letterbox ? slideBackgroundCss(slide, theme) : {}),
           }}
         >
+          {letterbox && slide.background?.particles && mode !== "thumb" && (
+            <ParticleField color={theme.colors.accent} />
+          )}
           {sorted.map((el) => {
             const inner = (
               <div
