@@ -10,6 +10,7 @@ import {
 } from "./schema";
 import { createModelObject, defaultMaterial, emptyModelScene, vec } from "./model-object";
 import { solarCleaningScene, solarPanelScene, solarSurroundScene } from "./solar-kit";
+import { latticeScene, workshopScene } from "./structure-kit";
 
 export { createModelObject, defaultMaterial, emptyModelScene, vec };
 export {
@@ -112,6 +113,12 @@ export function sceneFromPrompt(prompt: string): ModelScene {
     /\b(solar panels?|photovoltaic|pv module|self[- ]clean(?:ing)?|soiling|cleaning (robot|gantry|brush))\b/.test(t)
   ) {
     return solarPanelScene();
+  } else if (
+    /\b(lattice|truss|scaffold|space ?frame|metal (frame|grid|mesh|structure|lattice)|gantry|trellis|grille|fence)\b/.test(
+      t
+    )
+  ) {
+    return latticeScene(t);
   } else if (/\b(planet|solar system|outer space|galaxy|orbit)\b/.test(t)) {
     scene.grid = false;
     scene.background = "#07080c";
@@ -142,7 +149,7 @@ export function sceneFromPrompt(prompt: string): ModelScene {
       createModelObject("cube", { name: "Leg R", position: vec(0.18, 0.4, 0), scale: vec(0.2, 0.8, 0.2), material: defaultMaterial("#3d3832") })
     );
   } else {
-    return defaultStudioScene();
+    return workshopScene();
   }
   return scene;
 }

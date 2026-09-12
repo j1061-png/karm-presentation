@@ -209,6 +209,18 @@ test("solar row prompt builds a cleaning row", () => {
   expect(scene.keyframes.length > 0, "cleaner is keyframed");
 });
 
+test("metal lattice prompt builds a lattice, not a solar farm", () => {
+  const scene = sceneFromPrompt("steel lattice pavilion");
+  expect(scene.objects.some((o) => o.type === "lattice"), "has a lattice");
+  expect(scene.objects.every((o) => o.type !== "solarPanel"), "does not force solar panels");
+});
+
+test("unrelated prompt does not dump the solar bench", () => {
+  const scene = sceneFromPrompt("a wooden stool");
+  expect(scene.objects.every((o) => o.type !== "solarPanel"), "chair is not a solar array");
+  expect(scene.objects.some((o) => o.type === "plane"), "still has a ground");
+});
+
 console.log("\nlayoutSlide:");
 
 test("snaps a messy title slide onto non-overlapping boxes", () => {
@@ -295,6 +307,9 @@ test("photovoltaic prompt infers a model", () => {
 });
 test("surrounding solar prompt infers a model", () => {
   expect(inferProjectKind("surrounding solar array with a self-cleaning robot", "chat") === "model", "should infer model");
+});
+test("metal lattice prompt infers a model", () => {
+  expect(inferProjectKind("build a metal lattice pavilion", "chat") === "model", "should infer model");
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

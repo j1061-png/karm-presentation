@@ -47,6 +47,7 @@ const PRIMITIVE_ADD: { type: ModelObjectType; label: string; icon: typeof Box }[
   { type: "plane", label: "Plane", icon: BoxSelect },
   { type: "torus", label: "Torus", icon: Circle },
   { type: "ico", label: "Ico Sphere", icon: Circle },
+  { type: "lattice", label: "Metal lattice", icon: BoxSelect },
   { type: "light", label: "Light", icon: Lamp },
   { type: "camera", label: "Camera", icon: Camera },
   { type: "empty", label: "Empty", icon: Plus },
@@ -381,7 +382,7 @@ export function ModelStudioShell({
           <input
             value={aiText}
             onChange={(e) => setAiText(e.target.value)}
-            placeholder="Ask Injaz to change the brush path or add another nozzle…"
+            placeholder="Ask Injaz to add a steel lattice, move the brush, or rebuild this as anything…"
             className="flex-1 bg-surface-2 border border-border rounded-lg px-3 py-1.5 text-[13px] outline-none"
           />
           <button type="submit" disabled={aiBusy || !aiText.trim()} className="text-[12.5px] px-3 py-1.5 rounded-lg bg-text text-bg disabled:opacity-30">
