@@ -77,6 +77,8 @@ export class StudioEngine {
   private handlers: EngineHandlers;
   private interactive = true;
   private resizeObserver: ResizeObserver | null = null;
+  private downX = 0;
+  private downY = 0;
 
   constructor(canvas: HTMLCanvasElement, model: ModelScene, handlers: EngineHandlers, interactive = true) {
     this.model = model;
@@ -116,7 +118,8 @@ export class StudioEngine {
 
     this.rebuild(model);
     this.resize();
-    this.renderer.domElement.addEventListener("pointerdown", this.onPointer);
+    this.renderer.domElement.addEventListener("pointerdown", this.onPointerDown);
+    this.renderer.domElement.addEventListener("pointerup", this.onPointerUp);
     window.addEventListener("resize", this.resize);
     if (typeof ResizeObserver !== "undefined") {
       this.resizeObserver = new ResizeObserver(() => this.resize());
@@ -138,8 +141,16 @@ export class StudioEngine {
     });
   }
 
-  private onPointer = (e: PointerEvent) => {
+  private onPointerDown = (e: PointerEvent) => {
+    this.downX = e.clientX;
+    this.downY = e.clientY;
+  };
+
+  private onPointerUp = (e: PointerEvent) => {
     if (!this.interactive || this.transform.dragging) return;
+    const dx = e.clientX - this.downX;
+    const dy = e.clientY - this.downY;
+    if (dx * dx + dy * dy > 16) return;
     const rect = this.renderer.domElement.getBoundingClientRect();
     this.pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
     this.pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
@@ -383,7 +394,8 @@ export class StudioEngine {
   dispose() {
     this.disposed = true;
     cancelAnimationFrame(this.raf);
-    this.renderer.domElement.removeEventListener("pointerdown", this.onPointer);
+    this.renderer.domElement.removeEventListener("pointerdown", this.onPointerDown);
+    this.renderer.domElement.removeEventListener("pointerup", this.onPointerUp);
     window.removeEventListener("resize", this.resize);
     this.resizeObserver?.disconnect();
     this.transform.dispose();

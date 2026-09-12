@@ -275,7 +275,7 @@ function LoginContent() {
       </div>
 
       <footer className="text-center text-[11.5px] text-text-tertiary pb-5">
-        AI workspace for presentations, sites, games, and apps
+        AI workspace for presentations, sites, games, apps, and 3D models
       </footer>
       </section>
     </main>
