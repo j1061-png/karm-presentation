@@ -1,22 +1,28 @@
-import { createAdminClient } from "./supabase/admin";
 import type { Presentation, PresentationMeta } from "./schema";
 import { PresentationSchema } from "./schema";
+import {
+  PRESENTATIONS_BUCKET,
+  UPLOADS_BUCKET,
+  downloadJson,
+  removeObjects,
+  uploadJson,
+  uploadPublicBytes,
+} from "./object-store";
+
+export { PRESENTATIONS_BUCKET, UPLOADS_BUCKET };
 
 /**
- * Persistence layer backed by a private Supabase Storage bucket.
+ * Persistence layer for presentation JSON.
  *
  * Every presentation is stored as an isolated JSON document at
  *   presentations/{userId}/{presentationId}.json
  * plus a lightweight per-user index at
  *   presentations/{userId}/index.json
  *
- * Ownership is enforced here: all reads/writes are scoped to the
- * authenticated user's prefix, and this module only runs server-side
- * (clients never receive the secret key).
+ * Backed by Supabase Storage when a service-role key is present, otherwise
+ * Vercel Blob. Ownership is enforced here: all reads/writes are scoped to
+ * the authenticated user's prefix, and this module only runs server-side.
  */
-
-export const PRESENTATIONS_BUCKET = "presentations";
-export const UPLOADS_BUCKET = "uploads";
 
 function docPath(userId: string, id: string) {
   // Guard against path traversal in ids.
@@ -29,22 +35,11 @@ function indexPath(userId: string) {
 }
 
 async function download(path: string): Promise<unknown | null> {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase.storage.from(PRESENTATIONS_BUCKET).download(path);
-  if (error || !data) return null;
-  try {
-    return JSON.parse(await data.text());
-  } catch {
-    return null;
-  }
+  return downloadJson(PRESENTATIONS_BUCKET, path);
 }
 
 async function upload(path: string, body: unknown): Promise<void> {
-  const supabase = createAdminClient();
-  const { error } = await supabase.storage
-    .from(PRESENTATIONS_BUCKET)
-    .upload(path, JSON.stringify(body), { contentType: "application/json", upsert: true });
-  if (error) throw new Error(`Failed to save: ${error.message}`);
+  await uploadJson(PRESENTATIONS_BUCKET, path, body);
 }
 
 export function toMeta(p: Presentation): PresentationMeta {
@@ -110,11 +105,8 @@ export async function savePresentation(userId: string, p: Presentation): Promise
 }
 
 export async function deletePresentation(userId: string, id: string): Promise<void> {
-  const supabase = createAdminClient();
   // Remove the draft and any published snapshot so deleted decks go offline.
-  await supabase.storage
-    .from(PRESENTATIONS_BUCKET)
-    .remove([docPath(userId, id), `public/${id}.json`]);
+  await removeObjects(PRESENTATIONS_BUCKET, [docPath(userId, id), `public/${id}.json`]);
   const metas = await listPresentations(userId);
   await writeIndex(userId, metas.filter((m) => m.id !== id));
 }
@@ -255,8 +247,7 @@ export async function setVisibility(
 export async function unpublishPresentation(userId: string, id: string): Promise<boolean> {
   const existing = await getPublished(id);
   if (!existing || existing.ownerId !== userId) return false;
-  const supabase = createAdminClient();
-  await supabase.storage.from(PRESENTATIONS_BUCKET).remove([publicPath(id)]);
+  await removeObjects(PRESENTATIONS_BUCKET, [publicPath(id)]);
   await updateIndexPublishState(userId, id, null);
   return true;
 }
@@ -268,13 +259,7 @@ export async function uploadImage(
   bytes: ArrayBuffer,
   contentType: string
 ): Promise<string> {
-  const supabase = createAdminClient();
   const safeName = fileName.replace(/[^\w.-]+/g, "_").slice(-80);
   const path = `${userId}/${Date.now()}-${safeName}`;
-  const { error } = await supabase.storage
-    .from(UPLOADS_BUCKET)
-    .upload(path, bytes, { contentType, upsert: false });
-  if (error) throw new Error(`Image upload failed: ${error.message}`);
-  const { data } = supabase.storage.from(UPLOADS_BUCKET).getPublicUrl(path);
-  return data.publicUrl;
+  return uploadPublicBytes(UPLOADS_BUCKET, path, bytes, contentType);
 }

@@ -11,9 +11,14 @@ import type { Presentation } from "@/lib/schema";
 export async function GET() {
   const user = await getUser();
   if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  await registerDirectory(profileFromUser(user));
-  const presentations = await listAccessiblePresentations(user.id);
-  return NextResponse.json({ presentations });
+  try {
+    await registerDirectory(profileFromUser(user));
+    const presentations = await listAccessiblePresentations(user.id);
+    return NextResponse.json({ presentations });
+  } catch (e) {
+    console.error("[presentations]", e);
+    return NextResponse.json({ presentations: [] });
+  }
 }
 
 /** Create a presentation — blank, or from a provided document (templates). */

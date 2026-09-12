@@ -1,12 +1,12 @@
-import { createAdminClient } from "./supabase/admin";
 import { PRESENTATIONS_BUCKET } from "./store";
+import { downloadJson, removeObjects, uploadJson } from "./object-store";
 
 /**
  * Custom domain layer: buy a domain (Stripe checkout → Porkbun registration)
  * or connect one you already own, attach it to the deployment (Vercel), and
  * map the hostname to a published project.
  *
- * Records live in Supabase Storage:
+ * Records live in object storage:
  *   domains/hosts/{hostname}.json  — one record per domain
  *   domains/users/{userId}.json    — hostnames owned by a user
  *
@@ -82,22 +82,11 @@ function userDomainsPath(userId: string) {
 }
 
 async function download(path: string): Promise<unknown | null> {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase.storage.from(PRESENTATIONS_BUCKET).download(path);
-  if (error || !data) return null;
-  try {
-    return JSON.parse(await data.text());
-  } catch {
-    return null;
-  }
+  return downloadJson(PRESENTATIONS_BUCKET, path);
 }
 
 async function upload(path: string, body: unknown): Promise<void> {
-  const supabase = createAdminClient();
-  const { error } = await supabase.storage
-    .from(PRESENTATIONS_BUCKET)
-    .upload(path, JSON.stringify(body), { contentType: "application/json", upsert: true });
-  if (error) throw new Error(`Failed to save domain record: ${error.message}`);
+  await uploadJson(PRESENTATIONS_BUCKET, path, body);
 }
 
 export async function getDomainByHost(hostname: string): Promise<DomainRecord | null> {
@@ -130,8 +119,7 @@ export async function saveDomain(record: DomainRecord): Promise<void> {
 export async function deleteDomain(userId: string, hostname: string): Promise<boolean> {
   const record = await getDomainByHost(hostname);
   if (!record || record.ownerId !== userId) return false;
-  const supabase = createAdminClient();
-  await supabase.storage.from(PRESENTATIONS_BUCKET).remove([hostPath(record.hostname)]);
+  await removeObjects(PRESENTATIONS_BUCKET, [hostPath(record.hostname)]);
   const index = await download(userDomainsPath(userId));
   const hosts = (Array.isArray(index) ? index : []).filter(
     (h): h is string => typeof h === "string" && h !== record.hostname
