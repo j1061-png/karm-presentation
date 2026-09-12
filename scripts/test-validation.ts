@@ -179,19 +179,25 @@ test("empty model scene gets a studio fallback", () => {
   });
   expect((p.scene?.objects.length ?? 0) > 0, "fallback studio scene");
   const panels = p.scene?.objects.filter((o) => o.type === "solarPanel") ?? [];
-  expect(panels.length >= 6, "fallback surrounds the yard with panels");
+  expect(panels.length === 1, "fallback is a single panel");
   expect(p.scene?.objects.some((o) => o.type === "cleaner") === true, "fallback includes the cleaner");
-  const zs = panels.map((o) => o.position.z);
-  expect(Math.max(...zs) - Math.min(...zs) > 2, "panels wrap more than one row");
+  expect(p.scene?.objects.some((o) => o.type === "rail") === true, "fallback includes rails");
+  expect(p.scene?.objects.some((o) => o.type === "tank") === true, "fallback includes the tank");
 });
 
-test("solar prompt builds a surrounding self-cleaning array", () => {
-  const scene = sceneFromPrompt("surrounding solar array with a cleaning robot");
-  expect(scene.objects.filter((o) => o.type === "solarPanel").length >= 6, "has a surrounding array");
+test("solar prompt builds a single-panel self-cleaning bench", () => {
+  const scene = sceneFromPrompt("solar self-cleaning system");
+  expect(scene.objects.filter((o) => o.type === "solarPanel").length === 1, "one panel to design against");
   expect(scene.objects.some((o) => o.type === "cleaner"), "has cleaner");
   expect(scene.objects.some((o) => o.type === "rail"), "has rails");
   expect(scene.objects.some((o) => o.type === "tank"), "has water tank");
   expect(scene.keyframes.length > 0, "cleaner is keyframed");
+});
+
+test("surrounding array prompt still builds a courtyard", () => {
+  const scene = sceneFromPrompt("surrounding solar array with a cleaning robot");
+  expect(scene.objects.filter((o) => o.type === "solarPanel").length >= 6, "has a surrounding array");
+  expect(scene.objects.some((o) => o.type === "cleaner"), "has cleaner");
 });
 
 test("solar row prompt builds a cleaning row", () => {

@@ -184,7 +184,7 @@ export function modelSystemPrompt(): string {
 Build a complete 3D SCENE as JSON only. Prefer solar kit types (solarPanel, mount, rail, cleaner, brush, nozzle, tank) over generic cubes. You may also use cube, sphere, cylinder, cone, plane, torus, ico, light, camera, empty.
 
 HARD RULES:
-- Coordinates are metres. Default layout is a SURROUNDING courtyard: a back row of 4 panels (z ≈ -2.2) plus east/west wings (yaw ±90°) so panels wrap the cleaning robot. A single row along X is fine when the user asks for a row.
+- Coordinates are metres. Default layout is ONE PV module on a tilt mount with the self-cleaning rig (rails, robot, brush, nozzles, tank) designed against that panel. Only add more panels when the user asks for a row, array, or farm.
 - Each module is ~1.7m wide × 1.0m tall, tilted about -28° on X.
 - Every mesh needs a material { color (hex), metalness 0-1, roughness 0-1 }.
 - Include a ground plane, a sun (directional light), and a fill light.
@@ -225,7 +225,7 @@ Respond with ONLY:
 }
 
 export function modelEditSystemPrompt(): string {
-  return `You edit a 3D scene in Injaz Studio. The usual subject is a solar self-cleaning system: a surrounding courtyard of PV modules, tilt mounts, guide rails, a cleaning robot, brush roller, spray nozzles, and a water tank. You receive the current scene JSON and a request.
+  return `You edit a 3D scene in Injaz Studio. The usual subject is a solar self-cleaning system designed on a single PV module: tilt mount, guide rails, a cleaning robot, brush roller, spray nozzles, and a water tank. You receive the current scene JSON and a request.
 
 Respond with ONLY:
 {
