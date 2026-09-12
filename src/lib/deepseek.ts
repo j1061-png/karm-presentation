@@ -6,13 +6,14 @@
 const DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
 
 /**
- * V4 model ids. The old `deepseek-chat` / `deepseek-reasoner` aliases were
- * retired on 2026-07-24 and now fail every request, so nothing may use them.
- * Both V4 models think by default — structured JSON work is faster, cheaper
+ * Current DeepSeek model ids. `deepseek-chat` / `deepseek-reasoner` were
+ * retired on 2026-07-24. `deepseek-v4-flash` is a legacy alias for Flash
+ * and is billed as Flash; prefer `deepseek-flash`.
+ * Both models think by default — structured JSON work is faster, cheaper
  * and more reliable with thinking off, so `chat` disables it unless asked.
  */
-export type DeepSeekModel = "deepseek-v4-flash" | "deepseek-v4-pro";
-const DEFAULT_MODEL: DeepSeekModel = "deepseek-v4-flash";
+export type DeepSeekModel = "deepseek-flash" | "deepseek-v4-pro";
+const DEFAULT_MODEL: DeepSeekModel = "deepseek-flash";
 
 /** Hard cap per upstream attempt so a hung connection fails fast enough to retry. */
 const ATTEMPT_TIMEOUT_MS = 90_000;

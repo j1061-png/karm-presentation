@@ -521,7 +521,7 @@ export async function generateWebEdit(
       },
     ],
     (raw) => parseWebEditResponse(extractJson(raw)),
-    { maxTokens: 8000, temperature: 0.3, model: "deepseek-v4-flash", json: true }
+    { maxTokens: 8000, temperature: 0.3, model: "deepseek-flash", json: true }
   );
 }
 
@@ -752,7 +752,7 @@ export async function generateEdit(
       },
     ],
     (raw) => parseEditResponse(extractJson(raw), presentation),
-    { maxTokens: 10000, temperature: 0.2, model: "deepseek-v4-flash", json: true }
+    { maxTokens: 10000, temperature: 0.2, model: "deepseek-flash", json: true }
   );
 }
 
