@@ -9,19 +9,21 @@ import {
   type Vec3,
 } from "./schema";
 import { createModelObject, defaultMaterial, emptyModelScene, vec } from "./model-object";
-import { solarCleaningScene, solarSurroundScene } from "./solar-kit";
+import { solarCleaningScene, solarPanelScene, solarSurroundScene } from "./solar-kit";
 
 export { createModelObject, defaultMaterial, emptyModelScene, vec };
 export {
   insertSolarCleaningKit,
+  insertSolarPanelKit,
   insertSolarSurroundKit,
   solarCleaningScene,
+  solarPanelScene,
   solarSurroundScene,
 } from "./solar-kit";
 
-/** Blank models start as a surrounding solar array with a self-cleaning robot. */
+/** Blank models start as one PV module with a self-cleaning rig to design against. */
 export function defaultStudioScene(): ModelScene {
-  return solarSurroundScene();
+  return solarPanelScene();
 }
 
 /** Deterministic scene when the AI is unavailable. */
@@ -104,12 +106,12 @@ export function sceneFromPrompt(prompt: string): ModelScene {
     );
   } else if (/\b(solar row|cleaning row|self[- ]clean(?:ing)? row)\b/.test(t)) {
     return solarCleaningScene();
-  } else if (
-    /\b(solar panels?|solar array|solar farm|surrounding (solar|array|panels?)|photovoltaic|pv (module|array|farm)|self[- ]clean(?:ing)?|soiling|cleaning (robot|gantry|brush))\b/.test(
-      t
-    )
-  ) {
+  } else if (/\b(solar array|solar farm|surrounding (solar|array|panels?)|pv array|pv farm)\b/.test(t)) {
     return solarSurroundScene();
+  } else if (
+    /\b(solar panels?|photovoltaic|pv module|self[- ]clean(?:ing)?|soiling|cleaning (robot|gantry|brush))\b/.test(t)
+  ) {
+    return solarPanelScene();
   } else if (/\b(planet|solar system|outer space|galaxy|orbit)\b/.test(t)) {
     scene.grid = false;
     scene.background = "#07080c";

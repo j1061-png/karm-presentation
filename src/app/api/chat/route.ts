@@ -59,7 +59,7 @@ Respond with ONLY the JSON object. No other text.`;
 function systemPrompt(hasProject: boolean, kind: string): string {
   const buildMeaning = hasProject
     ? `asks you to CHANGE, EDIT, ADD TO, or REDESIGN the currently open ${kind} (e.g. "make the header blue", "add a slide about pricing", "fix the bug")`
-    : `asks you to CREATE or BUILD something (a presentation, website, game, app, or 3D solar model — e.g. "make me a snake game", "build a portfolio site", "create a pitch deck", "model a solar self-cleaning row")`;
+    : `asks you to CREATE or BUILD something (a presentation, website, game, app, or 3D solar model — e.g. "make me a snake game", "build a portfolio site", "create a pitch deck", "model a single solar panel with a self-cleaning robot")`;
 
   return `You are Injaz Studio, a friendly AI workspace assistant. You chat naturally AND you can build presentations, websites, games, apps, and shareable 3D models of solar self-cleaning systems.
 

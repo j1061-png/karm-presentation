@@ -218,6 +218,31 @@ function addTankAndHose(scene: ModelScene, tank: Vec3, hoseTo: Vec3) {
   );
 }
 
+/**
+ * Default design bench: one PV module, its mount, and the self-cleaning
+ * hardware (rails, robot, brush, nozzles, tank) so the cleaner can be
+ * designed against a single panel.
+ */
+export function solarPanelScene(): ModelScene {
+  const scene = emptyModelScene();
+  scene.background = "#1a222c";
+  scene.duration = 96;
+  scene.fps = 24;
+
+  addYardAndLights(scene, {
+    yard: 8,
+    camera: vec(3.05, 1.55, 3.55),
+    target: vec(0.05, 0.88, 0.05),
+    fov: 40,
+  });
+
+  scene.objects.push(addModule(scene, "Solar panel", vec(0, 1.15, 0)));
+  const travel = PANEL_W / 2 + 0.12;
+  addCleaningRig(scene, -travel, travel, 0.78, PANEL_W + 0.55);
+  addTankAndHose(scene, vec(-1.75, 0.48, 1.05), vec(-0.15, 0.2, 0.78));
+  return scene;
+}
+
 /** A 4-panel row with mounts, rails, a water tank, and an animated cleaner. */
 export function solarCleaningScene(): ModelScene {
   const scene = emptyModelScene();
@@ -238,10 +263,7 @@ export function solarCleaningScene(): ModelScene {
   return scene;
 }
 
-/**
- * Default studio scene: panels wrap three sides of a courtyard so the
- * self-cleaning robot sits in the middle of an array, not on a lone row.
- */
+/** Optional courtyard: panels wrap three sides so the robot sits in an array. */
 export function solarSurroundScene(): ModelScene {
   const scene = emptyModelScene();
   scene.background = "#1a222c";
@@ -295,6 +317,11 @@ function insertKit(scene: ModelScene, kit: ModelScene): ModelScene {
     objects: [...scene.objects, ...shifted],
     keyframes: [...scene.keyframes, ...keys],
   };
+}
+
+/** Append a single-panel design bench beside whatever is already in the scene. */
+export function insertSolarPanelKit(scene: ModelScene): ModelScene {
+  return insertKit(scene, solarPanelScene());
 }
 
 /** Append a cleaning-row kit beside whatever is already in the scene. */

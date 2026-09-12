@@ -16,6 +16,7 @@ import {
   duplicateModelObject,
   insertKeyframe,
   insertSolarCleaningKit,
+  insertSolarPanelKit,
   insertSolarSurroundKit,
   repairScene,
 } from "@/lib/model-scene";
@@ -127,6 +128,11 @@ export function ModelStudioShell({
     const obj = createModelObject(type);
     updateScene((s) => ({ ...s, objects: [...s.objects, obj] }));
     setSelectedId(obj.id);
+    setAddOpen(false);
+  }
+
+  function addSinglePanel() {
+    updateScene((s) => insertSolarPanelKit(s));
     setAddOpen(false);
   }
 
@@ -310,10 +316,10 @@ export function ModelStudioShell({
               </div>
               <button
                 type="button"
-                onClick={addSurroundingArray}
+                onClick={addSinglePanel}
                 className="w-full flex items-center gap-2 px-3 py-1.5 text-[12.5px] hover:bg-surface-2"
               >
-                <Sun size={13} /> Surrounding array
+                <Sun size={13} /> Single panel
               </button>
               <button
                 type="button"
@@ -321,6 +327,13 @@ export function ModelStudioShell({
                 className="w-full flex items-center gap-2 px-3 py-1.5 text-[12.5px] hover:bg-surface-2"
               >
                 <Minus size={13} /> Cleaning row
+              </button>
+              <button
+                type="button"
+                onClick={addSurroundingArray}
+                className="w-full flex items-center gap-2 px-3 py-1.5 text-[12.5px] hover:bg-surface-2"
+              >
+                <Sun size={13} /> Surrounding array
               </button>
               {SOLAR_ADD.map((item) => (
                 <button
@@ -368,7 +381,7 @@ export function ModelStudioShell({
           <input
             value={aiText}
             onChange={(e) => setAiText(e.target.value)}
-            placeholder="Ask Injaz to surround the yard with panels or add a cleaning pass…"
+            placeholder="Ask Injaz to change the brush path or add another nozzle…"
             className="flex-1 bg-surface-2 border border-border rounded-lg px-3 py-1.5 text-[13px] outline-none"
           />
           <button type="submit" disabled={aiBusy || !aiText.trim()} className="text-[12.5px] px-3 py-1.5 rounded-lg bg-text text-bg disabled:opacity-30">
