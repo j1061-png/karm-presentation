@@ -1,9 +1,10 @@
 import { notFound, redirect } from "next/navigation";
 import { getUser } from "@/lib/supabase/server";
 import { getAccessiblePresentation } from "@/lib/collab";
-import { isWebKind } from "@/lib/schema";
+import { isModelKind, isWebKind } from "@/lib/schema";
 import { EditorShell } from "@/components/editor/EditorShell";
 import { WebProjectShell } from "@/components/editor/WebProjectShell";
+import { ModelStudioShell } from "@/components/model/ModelStudioShell";
 
 export default async function EditorPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -15,6 +16,9 @@ export default async function EditorPage({ params }: { params: Promise<{ id: str
 
   if (isWebKind(result.presentation.kind)) {
     return <WebProjectShell initial={result.presentation} role={result.access.role} />;
+  }
+  if (isModelKind(result.presentation.kind)) {
+    return <ModelStudioShell initial={result.presentation} role={result.access.role} />;
   }
   return <EditorShell initial={result.presentation} role={result.access.role} />;
 }

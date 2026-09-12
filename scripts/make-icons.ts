@@ -1,11 +1,11 @@
 /**
- * Generate webo app icons (favicon + PWA) from the browser/code mark.
+ * Generate Injaz Studio app icons (favicon + PWA) from the cube mark.
  * Run: npx tsx scripts/make-icons.ts
  */
 import { chromium } from "playwright";
 import { mkdirSync, readFileSync } from "node:fs";
 
-const MARK = readFileSync("public/brand/webo-mark.svg", "utf8");
+const MARK = readFileSync("public/brand/injaz-mark.svg", "utf8");
 
 const ICONS: { path: string; size: number; padPct: number; radiusPct: number }[] = [
   { path: "public/favicon.png", size: 64, padPct: 10, radiusPct: 22 },

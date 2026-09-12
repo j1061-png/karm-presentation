@@ -53,7 +53,7 @@ export function toMeta(p: Presentation): PresentationMeta {
     title: p.title,
     description: p.description,
     kind: p.kind ?? "presentation",
-    slideCount: p.slides.length,
+    slideCount: p.kind === "model" ? p.scene?.objects.length ?? 0 : p.slides.length,
     createdAt: p.createdAt,
     updatedAt: p.updatedAt,
     themeColors: {

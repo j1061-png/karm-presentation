@@ -2,12 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { isWebKind, ThemeSchema, type PresentationMeta } from "@/lib/schema";
+import { isModelKind, kindLabel, ThemeSchema, viewActionLabel, type PresentationMeta } from "@/lib/schema";
 import { SlideRenderer } from "@/components/renderer/SlideRenderer";
 import { ShareModal } from "@/components/share/ShareModal";
 import {
   MoreHorizontal, Pencil, PencilRuler, Copy, Trash2, Play, Share2, Layers, UserPlus, LogOut,
-  Globe, Gamepad2, AppWindow,
+  Globe, Gamepad2, AppWindow, Box,
 } from "lucide-react";
 
 function timeAgo(iso: string): string {
@@ -96,6 +96,8 @@ export function PresentationItem({
               <AppWindow size={14} className="text-text-tertiary" />
             ) : meta.kind === "website" ? (
               <Globe size={14} className="text-text-tertiary" />
+            ) : isModelKind(meta.kind) ? (
+              <Box size={14} className="text-text-tertiary" />
             ) : (
               <Layers size={14} className="text-text-tertiary" />
             )}
@@ -128,9 +130,11 @@ export function PresentationItem({
           <span className="block text-[13.5px] font-medium truncate">{meta.title}</span>
         )}
         <span className="block text-[12px] text-text-tertiary mt-0.5">
-          {meta.kind && meta.kind !== "presentation"
-            ? `${meta.kind[0].toUpperCase()}${meta.kind.slice(1)}`
-            : `${meta.slideCount} slide${meta.slideCount === 1 ? "" : "s"}`}
+          {isModelKind(meta.kind)
+            ? `${kindLabel(meta.kind)} · ${meta.slideCount} object${meta.slideCount === 1 ? "" : "s"}`
+            : meta.kind && meta.kind !== "presentation"
+              ? kindLabel(meta.kind)
+              : `${meta.slideCount} slide${meta.slideCount === 1 ? "" : "s"}`}
           {" · "}
           {timeAgo(meta.updatedAt)}
           {meta.role === "editor" && meta.ownerName ? ` · Shared by ${meta.ownerName}` : ""}
@@ -155,8 +159,8 @@ export function PresentationItem({
         <button
           onClick={() => window.open(`/presentations/${meta.id}`, "_blank")}
           className="p-2 rounded-lg text-text-tertiary hover:text-text hover:bg-surface-3 transition-colors cursor-pointer opacity-0 group-hover:opacity-100 focus-within:opacity-100"
-          title={isWebKind(meta.kind) ? "Open" : "Present"}
-          aria-label={isWebKind(meta.kind) ? "Open" : "Present"}
+          title={viewActionLabel(meta.kind)}
+          aria-label={viewActionLabel(meta.kind)}
         >
           <Play size={14} />
         </button>

@@ -11,7 +11,7 @@ import { PresentationItem } from "./PresentationItem";
 import { NotificationsBell } from "./NotificationsBell";
 import { SettingsPanel } from "./SettingsPanel";
 import {
-  Search, Plus, Presentation,
+  Search, Plus, Box, Presentation,
 } from "lucide-react";
 
 type SortKey = "updated" | "created" | "title";
@@ -78,6 +78,15 @@ export function DashboardShell({
     setOpenChatId(null);
     setChatEpoch((n) => n + 1);
     setThreadActive(false);
+  }
+
+  async function handleNewModel() {
+    try {
+      const doc = await api.createPresentation({ title: "Untitled model", kind: "model" });
+      router.push(`/editor/${doc.id}`);
+    } catch {
+      setToast("Could not create a model.");
+    }
   }
 
 
@@ -250,6 +259,13 @@ export function DashboardShell({
                   <option value="created">Newest</option>
                   <option value="title">A–Z</option>
                 </select>
+                <button
+                  onClick={() => void handleNewModel()}
+                  className="flex items-center gap-1.5 text-[13px] font-medium border border-border rounded-lg px-3 py-1.5 hover:bg-surface-2 transition-colors cursor-pointer"
+                >
+                  <Box size={13} />
+                  New model
+                </button>
                 <button
                   onClick={handleNewChat}
                   className="flex items-center gap-1.5 text-[13px] font-medium bg-accent text-accent-text rounded-lg px-3 py-1.5 hover:bg-accent-hover transition-colors cursor-pointer"

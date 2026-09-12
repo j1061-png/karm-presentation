@@ -3,7 +3,7 @@
 import type { Presentation, PresentationMeta } from "./schema";
 import { parseSseData } from "./sse";
 
-/** Thin client for the webo API routes. */
+/** Thin client for the Injaz Studio API routes. */
 
 async function json<T>(res: Response): Promise<T> {
   const body = await res.json().catch(() => ({}));
@@ -27,6 +27,7 @@ export async function getPresentation(id: string): Promise<Presentation> {
 
 export async function createPresentation(input?: {
   title?: string;
+  kind?: Presentation["kind"];
   presentation?: Partial<Presentation>;
 }): Promise<Presentation> {
   const { presentation } = await json<{ presentation: Presentation }>(

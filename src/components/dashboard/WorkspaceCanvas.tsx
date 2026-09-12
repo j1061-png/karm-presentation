@@ -9,7 +9,8 @@ import { publishPresentation } from "@/lib/api";
 import { SlideRenderer } from "@/components/renderer/SlideRenderer";
 import { assemblePreviewHtml } from "@/lib/web-preview";
 import { ShareButton } from "@/components/share/ShareButton";
-import { isWebKind, kindLabel, type Presentation } from "@/lib/schema";
+import { ModelViewer } from "@/components/model/ModelViewer";
+import { isModelKind, isWebKind, kindLabel, viewActionLabel, type Presentation } from "@/lib/schema";
 
 export interface GenProgress {
   stage: string;
@@ -39,6 +40,7 @@ export function WorkspaceCanvas({
   onCancelGenerate?: () => void;
 }) {
   const web = !!doc && isWebKind(doc.kind);
+  const model = !!doc && isModelKind(doc.kind);
   const [tab, setTab] = useState<"preview" | "code">("preview");
   const [deploying, setDeploying] = useState(false);
   const [liveUrl, setLiveUrl] = useState<string | null>(null);
@@ -116,11 +118,11 @@ export function WorkspaceCanvas({
               </Link>
               <Link
                 href={`/presentations/${doc.id}`}
-                target={web ? "_blank" : undefined}
+                target={web || model ? "_blank" : undefined}
                 className="flex items-center gap-1.5 text-[12px] font-medium bg-accent text-accent-text rounded-lg px-2.5 py-1.5 hover:bg-accent-hover transition-colors"
               >
                 <Play size={12} />
-                {web ? "Open" : "Present"}
+                {viewActionLabel(doc.kind)}
               </Link>
             </div>
           )}
@@ -145,7 +147,9 @@ export function WorkspaceCanvas({
 
           {!generating && doc && web && tab === "code" && <CodePanel doc={doc} />}
 
-          {!generating && doc && !web && <LiveDeck doc={doc} />}
+          {!generating && doc && model && <ModelViewer presentation={doc} />}
+
+          {!generating && doc && !web && !model && <LiveDeck doc={doc} />}
 
           {!generating && !doc && (
             <div className="h-full flex flex-col items-center justify-center text-center px-8">
@@ -154,7 +158,7 @@ export function WorkspaceCanvas({
               </div>
               <p className="font-serif text-[22px] tracking-tight text-text mb-1.5">Preview</p>
               <p className="text-[13px] text-text-secondary max-w-sm">
-                The live site, game, app, or deck fills this panel while you chat.
+                The live site, game, app, deck, or 3D model fills this panel while you chat.
               </p>
             </div>
           )}

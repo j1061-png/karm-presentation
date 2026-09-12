@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { getUser } from "@/lib/supabase/server";
 import { getPublished } from "@/lib/store";
-import { isWebKind } from "@/lib/schema";
+import { isModelKind, isWebKind, kindNoun } from "@/lib/schema";
 import { StandalonePlayer } from "@/app/presentations/[id]/player-client";
 
 /**
@@ -50,19 +50,21 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  if (!/^[\w-]+$/.test(id)) return { title: "webo" };
+  if (!/^[\w-]+$/.test(id)) return { title: "Injaz Studio" };
   const published = await getPublished(id).catch(() => null);
   if (!published || published.visibility === "private") {
-    return { title: "webo", robots: { index: false } };
+    return { title: "Injaz Studio", robots: { index: false } };
   }
 
   const p = published.presentation;
   const title = p.title;
   const description =
     p.description ||
-    (isWebKind(p.kind)
-      ? `An interactive ${p.kind} built with webo.`
-      : `An interactive presentation with ${p.slides.length} slides.`);
+    (isModelKind(p.kind)
+      ? `A 3D model with ${p.scene?.objects.length ?? 0} objects, built in Injaz Studio.`
+      : isWebKind(p.kind)
+        ? `An interactive ${kindNoun(p.kind)} built with Injaz Studio.`
+        : `An interactive presentation with ${p.slides.length} slides.`);
 
   return {
     title,
@@ -71,7 +73,7 @@ export async function generateMetadata({
     openGraph: {
       title,
       description,
-      siteName: "webo",
+      siteName: "Injaz Studio",
       type: "website",
     },
     twitter: {

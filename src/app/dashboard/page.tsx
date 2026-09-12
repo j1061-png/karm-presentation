@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getUser } from "@/lib/supabase/server";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 
-export const metadata = { title: "webo" };
+export const metadata = { title: "Injaz Studio" };
 
 export default async function DashboardPage() {
   const user = await getUser();

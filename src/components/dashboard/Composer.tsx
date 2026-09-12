@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import {
   ArrowUp, Plus, UploadCloud, AlertCircle, Loader2, PlusCircle,
-  Presentation as PresentationIcon, Globe, Gamepad2, AppWindow, MessageCircle,
+  Presentation as PresentationIcon, Globe, Gamepad2, AppWindow, MessageCircle, Box,
 } from "lucide-react";
 import { aiEdit, chatWithAI, getPresentation, savePresentation } from "@/lib/api";
 import { parseEffort, type Effort } from "@/lib/effort";
@@ -13,7 +13,7 @@ import { EffortPicker } from "@/components/chat/EffortPicker";
 import { FileChips } from "@/components/chat/FileChips";
 import { WorkspaceCanvas } from "./WorkspaceCanvas";
 import { ResizeHandle, beginPanelResize } from "@/components/ui/ResizeHandle";
-import { inferProjectKind, isWebKind, kindLabel, kindNoun, type ChatTurn, type Presentation, type ProjectKind } from "@/lib/schema";
+import { inferProjectKind, isModelKind, isWebKind, kindLabel, kindNoun, type ChatTurn, type Presentation, type ProjectKind } from "@/lib/schema";
 
 interface GenProgress {
   stage: string;
@@ -39,14 +39,16 @@ const KIND_OPTIONS: { kind: ComposerMode; label: string; icon: typeof Globe }[] 
   { kind: "website", label: "Website", icon: Globe },
   { kind: "game", label: "Game", icon: Gamepad2 },
   { kind: "app", label: "App", icon: AppWindow },
+  { kind: "model", label: "Model", icon: Box },
 ];
 
 const KIND_PLACEHOLDER: Record<ComposerMode, string> = {
-  chat: "Chat with webo about anything...",
+  chat: "Chat with Injaz Studio about anything...",
   presentation: "Chat, or describe the presentation you want to create...",
   website: "Chat, or describe the website you want to build...",
   game: "Chat, or describe the game you want to play...",
   app: "Chat, or describe the app you want to build...",
+  model: "Chat, or describe the solar array or self-cleaning rig…",
 };
 
 const SUGGESTIONS: Record<ComposerMode, string[]> = {
@@ -80,7 +82,24 @@ const SUGGESTIONS: Record<ComposerMode, string[]> = {
     "Habit tracker with streaks",
     "Markdown notes app",
   ],
+  model: [
+    "Surrounding solar array with a self-cleaning robot",
+    "Solar self-cleaning row with a rail robot",
+    "Single PV module on a tilt mount",
+    "Water tank and brush gantry over four panels",
+  ],
 };
+
+function isComposerMode(value: string | null): value is ComposerMode {
+  return (
+    value === "chat" ||
+    value === "presentation" ||
+    value === "website" ||
+    value === "game" ||
+    value === "app" ||
+    value === "model"
+  );
+}
 
 function toChatTurns(messages: ChatMessage[]): ChatTurn[] {
   return messages
@@ -132,7 +151,7 @@ export function Composer({
   const [kind, setKind] = useState<ComposerMode>(() => {
     try {
       const saved = localStorage.getItem("pk-kind");
-      if (saved === "chat" || saved === "presentation" || saved === "website" || saved === "game" || saved === "app") {
+      if (isComposerMode(saved)) {
         return saved;
       }
     } catch {
@@ -167,7 +186,7 @@ export function Composer({
         const doc = await getPresentation(continueId);
         if (myRun !== runId.current) return;
         setActiveDoc(doc);
-        if (doc.kind === "website" || doc.kind === "game" || doc.kind === "app" || doc.kind === "presentation") {
+        if (isComposerMode(doc.kind)) {
           setKind(doc.kind);
         }
         setMessages(
@@ -299,13 +318,7 @@ export function Composer({
     loadedId.current = null;
     try {
       const saved = localStorage.getItem("pk-kind");
-      if (
-        saved === "chat" ||
-        saved === "presentation" ||
-        saved === "website" ||
-        saved === "game" ||
-        saved === "app"
-      ) {
+      if (isComposerMode(saved)) {
         setKind(saved);
       } else {
         setKind("chat");
@@ -941,9 +954,11 @@ function ThreadMessage({
     );
   }
 
-  const meta = isWebKind(doc.kind)
-    ? kindLabel(doc.kind)
-    : `${doc.slides.length} slide${doc.slides.length === 1 ? "" : "s"}`;
+  const meta = isModelKind(doc.kind)
+    ? `${doc.scene?.objects.length ?? 0} object${(doc.scene?.objects.length ?? 0) === 1 ? "" : "s"}`
+    : isWebKind(doc.kind)
+      ? kindLabel(doc.kind)
+      : `${doc.slides.length} slide${doc.slides.length === 1 ? "" : "s"}`;
   return (
     <div className="self-start flex items-center gap-2 text-[13px] text-text-secondary">
       <span className="w-1.5 h-1.5 rounded-full bg-success flex-shrink-0" />

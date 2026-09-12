@@ -3,8 +3,8 @@ import { getUser } from "@/lib/supabase/server";
 import { savePresentation } from "@/lib/store";
 import { getAccessiblePresentation, refreshSharedIndexes } from "@/lib/collab";
 import { publicAiError } from "@/lib/public-error";
-import { applyOperations, applyWebEdit, generateEdit, generateWebEdit } from "@/lib/generate";
-import { isWebKind } from "@/lib/schema";
+import { applyOperations, applyWebEdit, generateEdit, generateModelEdit, generateWebEdit } from "@/lib/generate";
+import { isModelKind, isWebKind } from "@/lib/schema";
 import { repairPresentation } from "@/lib/validate";
 
 export const maxDuration = 180;
@@ -58,6 +58,24 @@ export async function POST(request: Request) {
 
   try {
     // Web projects (website / game / app) are edited as whole files.
+    if (isModelKind(workingDoc.kind)) {
+      const modelResponse = await generateModelEdit(workingDoc, instruction, files);
+      const updatedModel = {
+        ...workingDoc,
+        scene: modelResponse.scene,
+        updatedAt: new Date().toISOString(),
+      };
+      if (modelResponse.changed) {
+        await savePresentation(result.access.ownerId, updatedModel);
+        await refreshSharedIndexes(presentationId);
+      }
+      return NextResponse.json({
+        summary: modelResponse.summary,
+        presentation: modelResponse.changed ? updatedModel : workingDoc,
+        changed: modelResponse.changed,
+      });
+    }
+
     if (isWebKind(workingDoc.kind)) {
       const webResponse = await generateWebEdit(workingDoc, instruction, files);
       if (webResponse.files.length === 0 && webResponse.deleteFiles.length === 0) {

@@ -143,7 +143,7 @@ export function ShareModal({
     setTimeout(() => setCopied(false), 2000);
   }
 
-  const shareText = `${title} — made with webo`;
+  const shareText = `${title} — made with Injaz Studio`;
   const enc = encodeURIComponent;
   const shareTargets = [
     {
@@ -340,7 +340,7 @@ export function ShareModal({
               {qrDataUrl && (
                 <div className="flex items-center gap-4 bg-surface-2 border border-border rounded-xl p-3.5">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={qrDataUrl} alt="QR code for presentation" className="w-[88px] h-[88px] rounded-lg bg-white p-1" />
+                  <img src={qrDataUrl} alt="QR code for this project" className="w-[88px] h-[88px] rounded-lg bg-white p-1" />
                   <div className="flex-1">
                     <div className="text-[12.5px] font-medium mb-0.5">QR code</div>
                     <div className="text-[11.5px] text-text-secondary mb-2">

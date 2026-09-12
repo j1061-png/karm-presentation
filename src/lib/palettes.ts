@@ -53,7 +53,7 @@ export const PALETTES: Palette[] = [
     radius: 18,
   },
   {
-    name: "Webo",
+    name: "Injaz",
     mode: "dark",
     keywords: /brand|campaign|market|hello|social|culture|story|creative/,
     colors: {
@@ -182,6 +182,7 @@ export function resolveDeckTheme(prompt: string, planned?: Theme): Theme {
     planned.name === "Karm Dark" ||
     planned.name === "Studio Dark" ||
     planned.name === "Webo Dark" ||
+    planned.name === "Injaz Dark" ||
     planned.name === "default";
   if (!copiedDefault && planned) return ThemeSchema.parse(planned);
   return themeFromPalette(pickPalette(prompt));

@@ -5,6 +5,7 @@ const nextConfig = {
   // assets and fails production deploys from main.
   ...(process.env.VERCEL ? {} : { output: "standalone" }),
   serverExternalPackages: ["unpdf", "mammoth", "jszip"],
+  transpilePackages: ["three"],
   async headers() {
     return [
       {
