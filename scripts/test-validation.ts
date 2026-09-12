@@ -181,7 +181,8 @@ test("empty model scene gets a studio fallback", () => {
   const panels = p.scene?.objects.filter((o) => o.type === "solarPanel") ?? [];
   expect(panels.length >= 6, "fallback surrounds the yard with panels");
   expect(p.scene?.objects.some((o) => o.type === "cleaner") === true, "fallback includes the cleaner");
-  expect(panels.some((o) => o.rotation.y !== 0), "fallback has wing panels");
+  const zs = panels.map((o) => o.position.z);
+  expect(Math.max(...zs) - Math.min(...zs) > 2, "panels wrap more than one row");
 });
 
 test("solar prompt builds a surrounding self-cleaning array", () => {

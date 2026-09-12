@@ -124,9 +124,9 @@ export function buildSolarPart(group: THREE.Group, src: ModelObject, shading: Sh
       const body = mat(base ?? "#c4a265", shading, { metalness: 0.35, roughness: 0.4 });
       const dark = mat("#2a2a2a", shading, { metalness: 0.4, roughness: 0.5 });
       const glass = mat("#1b3358", shading, { metalness: 0.6, roughness: 0.2 });
-      box(group, 0.58, 0.2, 0.4, 0, 0, 0, body, true);
-      box(group, 0.36, 0.1, 0.22, 0, 0.14, -0.02, dark);
-      box(group, 0.28, 0.02, 0.18, 0, 0.2, -0.02, glass);
+      box(group, 0.78, 0.28, 0.5, 0, 0, 0, body, true);
+      box(group, 0.46, 0.14, 0.28, 0, 0.18, -0.02, dark);
+      box(group, 0.34, 0.03, 0.22, 0, 0.26, -0.02, glass);
       cyl(group, 0.07, 0.07, 0.08, -0.22, -0.12, 0.12, dark, 0, Math.PI / 2);
       cyl(group, 0.07, 0.07, 0.08, 0.22, -0.12, 0.12, dark, 0, Math.PI / 2);
       cyl(group, 0.07, 0.07, 0.08, -0.22, -0.12, -0.12, dark, 0, Math.PI / 2);

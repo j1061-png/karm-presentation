@@ -64,7 +64,11 @@ export function ModelStudioShell({
   }));
   const [titleDraft, setTitleDraft] = useState(initial.title);
   const [saveState, setSaveState] = useState<SaveState>("saved");
-  const [selectedId, setSelectedId] = useState<string | null>(doc.scene?.objects[1]?.id ?? doc.scene?.objects[0]?.id ?? null);
+  const [selectedId, setSelectedId] = useState<string | null>(
+    doc.scene?.objects.find((o) => o.type === "cleaner")?.id ??
+      doc.scene?.objects.find((o) => o.type === "solarPanel")?.id ??
+      null
+  );
   const [mode, setMode] = useState<TransformMode>("translate");
   const [shading, setShading] = useState<ShadingMode>("material");
   const [frame, setFrame] = useState(0);

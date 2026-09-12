@@ -30,7 +30,6 @@ const TILT = -28;
 const COUNT = 4;
 const SPACING = 1.9;
 const BACK_Z = -2.2;
-const WING_X = 4.55;
 
 function panelX(i: number, count = COUNT) {
   return (i - (count - 1) / 2) * SPACING;
@@ -166,29 +165,28 @@ function addCleaningRig(
 
 function addYardAndLights(
   scene: ModelScene,
-  opts: { yard: number; camera: Vec3; target: Vec3; fov: number; pathZ?: number }
+  opts: { yard: number; camera: Vec3; target: Vec3; fov: number }
 ) {
   scene.objects.push(
     createModelObject("plane", {
       name: "Yard",
-      material: defaultMaterial("#4a4034"),
+      material: defaultMaterial("#7a6d5a"),
       scale: vec(opts.yard, opts.yard, 1),
-    }),
-    createModelObject("cube", {
-      name: "Service path",
-      position: vec(0, 0.015, opts.pathZ ?? 0.45),
-      scale: vec(opts.yard * 0.55, 0.03, 3.1),
-      material: defaultMaterial("#5c5348"),
     }),
     createModelObject("light", {
       name: "Sun",
-      position: vec(7, 11, 5),
-      light: { kind: "directional", intensity: 1.85, color: "#fff1cc" },
+      position: vec(8, 12, 6),
+      light: { kind: "directional", intensity: 2.15, color: "#fff1cc" },
     }),
     createModelObject("light", {
       name: "Sky fill",
-      position: vec(-5, 3.8, -2),
-      light: { kind: "point", intensity: 0.45, color: "#9eb6d4" },
+      position: vec(-4, 4, 3),
+      light: { kind: "point", intensity: 0.7, color: "#b7c8dc" },
+    }),
+    createModelObject("light", {
+      name: "Ambient",
+      position: vec(0, 3, 0),
+      light: { kind: "ambient", intensity: 0.38, color: "#c5d0dc" },
     }),
     createModelObject("camera", { name: "Camera", position: opts.camera })
   );
@@ -196,22 +194,25 @@ function addYardAndLights(
 }
 
 function addTankAndHose(scene: ModelScene, tank: Vec3, hoseTo: Vec3) {
-  const dx = hoseTo.x - tank.x;
-  const dz = hoseTo.z - tank.z;
-  const len = Math.max(0.8, Math.hypot(dx, dz));
-  const yaw = (Math.atan2(dx, dz) * 180) / Math.PI;
+  const yaw = (Math.atan2(hoseTo.x - tank.x, hoseTo.z - tank.z) * 180) / Math.PI;
   scene.objects.push(
+    createModelObject("cube", {
+      name: "Tank pad",
+      position: vec(tank.x, 0.03, tank.z),
+      scale: vec(1.15, 0.06, 1.15),
+      material: defaultMaterial("#5c5348"),
+    }),
     createModelObject("tank", {
       name: "Water tank",
       position: tank,
       material: defaultMaterial("#d5e1e8"),
-      params: { radius: 0.42, height: 0.85 },
+      params: { radius: 0.38, height: 1.05 },
     }),
     createModelObject("cylinder", {
       name: "Supply hose",
-      position: vec((tank.x + hoseTo.x) / 2, 0.16, (tank.z + hoseTo.z) / 2),
+      position: vec(tank.x + 0.15, 0.14, tank.z - 0.55),
       rotation: vec(90, yaw, 0),
-      scale: vec(0.045, len, 0.045),
+      scale: vec(0.04, 1.15, 0.04),
       material: defaultMaterial("#4a90c8"),
     })
   );
@@ -226,10 +227,9 @@ export function solarCleaningScene(): ModelScene {
 
   addYardAndLights(scene, {
     yard: 14,
-    camera: vec(6.8, 3.1, 8.6),
-    target: vec(0.2, 0.85, 0.15),
-    fov: 42,
-    pathZ: 0.7,
+    camera: vec(6.2, 1.85, 7.6),
+    target: vec(0.2, 0.7, 0.25),
+    fov: 46,
   });
   addRow(scene, "Panel", 0);
   const railLen = (COUNT - 1) * SPACING + PANEL_W + 0.4;
@@ -250,42 +250,26 @@ export function solarSurroundScene(): ModelScene {
 
   addYardAndLights(scene, {
     yard: 22,
-    camera: vec(8.6, 3.8, 10.2),
-    target: vec(0.1, 0.9, -0.45),
-    fov: 40,
-    pathZ: 0.15,
+    camera: vec(5.8, 1.72, 7.15),
+    target: vec(0.35, 0.68, 0.55),
+    fov: 46,
   });
 
   addRow(scene, "Back panel", BACK_Z);
+  addRow(scene, "Front panel", 0);
 
-  const left: ModelObject[] = [];
-  const right: ModelObject[] = [];
-  for (const [i, z] of [-2.2, -0.3].entries()) {
-    left.push(addModule(scene, `West panel ${i + 1}`, vec(-WING_X, 1.15, z), 90));
-    right.push(addModule(scene, `East panel ${i + 1}`, vec(WING_X, 1.15, z), -90));
+  const wingX = panelX(0) - SPACING;
+  const eastX = panelX(COUNT - 1) + SPACING;
+  const wings: ModelObject[] = [];
+  for (const [i, z] of [2.05, 3.55].entries()) {
+    wings.push(addModule(scene, `West panel ${i + 1}`, vec(wingX, 1.15, z)));
+    wings.push(addModule(scene, `East panel ${i + 1}`, vec(eastX, 1.15, z)));
   }
-  scene.objects.push(...left, ...right);
-
-  scene.objects.push(
-    createModelObject("rail", {
-      name: "West rail",
-      position: vec(-WING_X + 0.82, 0.58, -1.25),
-      rotation: vec(0, 90, 0),
-      material: aluminumMaterial(),
-      params: { length: 3.6 },
-    }),
-    createModelObject("rail", {
-      name: "East rail",
-      position: vec(WING_X - 0.82, 0.58, -1.25),
-      rotation: vec(0, 90, 0),
-      material: aluminumMaterial(),
-      params: { length: 3.6 },
-    })
-  );
+  scene.objects.push(...wings);
 
   const railLen = (COUNT - 1) * SPACING + PANEL_W + 0.4;
-  addCleaningRig(scene, panelX(0) - 0.55, panelX(COUNT - 1) + 0.55, BACK_Z + 0.82, railLen);
-  addTankAndHose(scene, vec(-2.55, 0.48, 1.65), vec(panelX(0), 0.2, BACK_Z + 0.82));
+  addCleaningRig(scene, -0.25, panelX(COUNT - 1) + 0.55, 0.78, railLen);
+  addTankAndHose(scene, vec(-2.15, 0.52, 3.35), vec(-0.25, 0.2, 0.78));
   return scene;
 }
 
