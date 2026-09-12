@@ -179,39 +179,43 @@ RULES:
 }
 
 export function modelSystemPrompt(): string {
-  return `You are a 3D scene designer for Injaz Studio, a Blender-like modeling workspace.
+  return `You are a 3D scene designer for Injaz Studio. The product being modelled is a SOLAR SELF-CLEANING SYSTEM: photovoltaic modules, tilt mounts, guide rails, a cleaning robot, brush roller, spray nozzles, and a water tank.
 
-Build a complete 3D SCENE as JSON only. Use primitives (cube, sphere, cylinder, cone, plane, torus, ico), lights, and a camera. Compose a readable, well-lit scene — not a single object floating in a void.
+Build a complete 3D SCENE as JSON only. Prefer solar kit types (solarPanel, mount, rail, cleaner, brush, nozzle, tank) over generic cubes. You may also use cube, sphere, cylinder, cone, plane, torus, ico, light, camera, empty.
 
 HARD RULES:
-- Coordinates are metres. Keep objects roughly in a 10×10×10 volume around the origin.
+- Coordinates are metres. Default layout is a SURROUNDING courtyard: a back row of 4 panels (z ≈ -2.2) plus east/west wings (yaw ±90°) so panels wrap the cleaning robot. A single row along X is fine when the user asks for a row.
+- Each module is ~1.7m wide × 1.0m tall, tilted about -28° on X.
 - Every mesh needs a material { color (hex), metalness 0-1, roughness 0-1 }.
-- Include a ground plane, a key light, and a fill light.
-- Give objects human names ("Desk", "Sun").
+- Include a ground plane, a sun (directional light), and a fill light.
+- Give objects human names ("Panel 1", "Cleaning robot", "Guide rail").
 - Rotation is Euler degrees. Scale is 1 = 1 metre on that axis.
-- 8–22 objects is plenty.
+- For a cleaning pass, keyframe the cleaner, brush, and nozzles along the rail.
+- solarPanel params: { width, height, thickness, cellsX, cellsY }. rail: { length }. brush: { radius, length }. tank: { radius, height }.
+- 10–28 objects is plenty.
 
 Respond with ONLY:
 {
   "title": string,
   "description": string,
   "scene": {
-    "background": "#161412",
+    "background": "#1a222c",
     "fps": 24,
     "duration": 96,
     "grid": true,
-    "camera": { "position": {"x":6,"y":4.5,"z":7}, "target": {"x":0,"y":0.8,"z":0}, "fov": 50 },
+    "camera": { "position": {"x":8,"y":5,"z":9}, "target": {"x":0,"y":1.1,"z":0}, "fov": 46 },
     "objects": [
       {
         "id": "o1",
-        "name": "Cube",
-        "type": "cube|sphere|cylinder|cone|plane|torus|ico|light|camera|empty",
+        "name": "Solar panel",
+        "type": "solarPanel|mount|rail|cleaner|brush|nozzle|tank|cube|sphere|cylinder|cone|plane|torus|ico|light|camera|empty",
         "visible": true,
         "locked": false,
-        "position": {"x":0,"y":0.75,"z":0},
-        "rotation": {"x":0,"y":0,"z":0},
+        "position": {"x":0,"y":1.15,"z":0},
+        "rotation": {"x":-28,"y":0,"z":0},
         "scale": {"x":1,"y":1,"z":1},
-        "material": { "color": "#c8c4bc", "metalness": 0.15, "roughness": 0.45 },
+        "params": { "width": 1.7, "height": 1.0, "cellsX": 6, "cellsY": 10 },
+        "material": { "color": "#1b3358", "metalness": 0.68, "roughness": 0.14 },
         "light": { "kind": "directional|point|spot|ambient", "intensity": 1.2, "color": "#fff4e0" }
       }
     ],
@@ -221,7 +225,7 @@ Respond with ONLY:
 }
 
 export function modelEditSystemPrompt(): string {
-  return `You edit a 3D scene in Injaz Studio (Blender-like). You receive the current scene JSON and a request.
+  return `You edit a 3D scene in Injaz Studio. The usual subject is a solar self-cleaning system: a surrounding courtyard of PV modules, tilt mounts, guide rails, a cleaning robot, brush roller, spray nozzles, and a water tank. You receive the current scene JSON and a request.
 
 Respond with ONLY:
 {
@@ -237,5 +241,6 @@ RULES:
 - Keep ids stable when editing an existing object.
 - New objects need new short ids.
 - If the user is chatting (not requesting a change), put the answer in summary and return empty upsert/deleteIds.
-- Lights use type "light" plus a light { kind, intensity, color }.`;
+- Lights use type "light" plus a light { kind, intensity, color }.
+- Prefer solar kit types (solarPanel, mount, rail, cleaner, brush, nozzle, tank) when adding hardware.`;
 }

@@ -5,6 +5,7 @@
 import { extractJson, repairPresentation, repairSlide } from "../src/lib/validate";
 import { layoutSlide } from "../src/lib/layouts";
 import { inferProjectKind, ThemeSchema } from "../src/lib/schema";
+import { sceneFromPrompt } from "../src/lib/model-scene";
 
 let passed = 0;
 let failed = 0;
@@ -177,6 +178,28 @@ test("empty model scene gets a studio fallback", () => {
     updatedAt: now,
   });
   expect((p.scene?.objects.length ?? 0) > 0, "fallback studio scene");
+  const panels = p.scene?.objects.filter((o) => o.type === "solarPanel") ?? [];
+  expect(panels.length >= 6, "fallback surrounds the yard with panels");
+  expect(p.scene?.objects.some((o) => o.type === "cleaner") === true, "fallback includes the cleaner");
+  expect(panels.some((o) => o.rotation.y !== 0), "fallback has wing panels");
+});
+
+test("solar prompt builds a surrounding self-cleaning array", () => {
+  const scene = sceneFromPrompt("surrounding solar array with a cleaning robot");
+  expect(scene.objects.filter((o) => o.type === "solarPanel").length >= 6, "has a surrounding array");
+  expect(scene.objects.some((o) => o.type === "cleaner"), "has cleaner");
+  expect(scene.objects.some((o) => o.type === "rail"), "has rails");
+  expect(scene.objects.some((o) => o.type === "tank"), "has water tank");
+  expect(scene.keyframes.length > 0, "cleaner is keyframed");
+});
+
+test("solar row prompt builds a cleaning row", () => {
+  const scene = sceneFromPrompt("solar self-cleaning row with a rail robot");
+  const panels = scene.objects.filter((o) => o.type === "solarPanel");
+  expect(panels.length === 4, "row has four panels");
+  expect(panels.every((o) => o.rotation.y === 0), "row panels face the same way");
+  expect(scene.objects.some((o) => o.type === "cleaner"), "has cleaner");
+  expect(scene.keyframes.length > 0, "cleaner is keyframed");
 });
 
 console.log("\nlayoutSlide:");
@@ -256,6 +279,15 @@ test("blender prompt infers a model", () => {
 });
 test("3d model prompt infers a model", () => {
   expect(inferProjectKind("create a 3d model of a product studio", "presentation") === "model", "should infer model");
+});
+test("solar self-cleaning prompt infers a model", () => {
+  expect(inferProjectKind("solar self-cleaning row with a rail robot", "chat") === "model", "should infer model");
+});
+test("photovoltaic prompt infers a model", () => {
+  expect(inferProjectKind("photovoltaic array with a cleaning gantry", "presentation") === "model", "should infer model");
+});
+test("surrounding solar prompt infers a model", () => {
+  expect(inferProjectKind("surrounding solar array with a self-cleaning robot", "chat") === "model", "should infer model");
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

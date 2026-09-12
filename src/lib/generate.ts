@@ -580,7 +580,7 @@ export async function generateModelProject(
   } catch {
     onStage({ stage: "designing", detail: "Using the local studio fallback" });
     parsed = {
-      title: prompt.slice(0, 48) || "Untitled model",
+      title: prompt.slice(0, 48) || "Solar self-cleaning system",
       description: "Generated in the local studio.",
       scene: sceneFromPrompt(prompt),
     };

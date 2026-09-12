@@ -432,6 +432,13 @@ export const ModelObjectTypeSchema = z.enum([
   "light",
   "camera",
   "empty",
+  "solarPanel",
+  "mount",
+  "rail",
+  "cleaner",
+  "brush",
+  "nozzle",
+  "tank",
 ]);
 export type ModelObjectType = z.infer<typeof ModelObjectTypeSchema>;
 
@@ -585,7 +592,8 @@ export function inferProjectKind(
   const wantsModel =
     /\b(3d|three[- ]d|blender|sculpt(ing)?)\b/.test(t) ||
     /\b(3d model|product render|isometric room|mesh scene)\b/.test(t) ||
-    /\b(make|build|create|model)\b.{0,40}\b(3d|scene|mesh)\b/.test(t);
+    /\b(make|build|create|model)\b.{0,40}\b(3d|scene|mesh)\b/.test(t) ||
+    /\b(solar panels?|solar array|solar row|solar farm|surrounding (solar|array|panels?)|photovoltaic|pv (module|array|farm)|self[- ]clean(?:ing)?|soiling|cleaning (robot|gantry|brush))\b/.test(t);
   if (wantsDeck && !wantsGame && !wantsSite && !wantsApp && !wantsModel) return "presentation";
   if (wantsModel) return "model";
   if (wantsGame) return "game";

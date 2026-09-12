@@ -4,6 +4,7 @@ import { TransformControls } from "three/addons/controls/TransformControls.js";
 import { GLTFExporter } from "three/addons/exporters/GLTFExporter.js";
 import { sampleObjectAtFrame } from "@/lib/model-scene";
 import type { ModelObject, ModelObjectType, ModelScene, Vec3 } from "@/lib/schema";
+import { buildSolarPart, isSolarMeshType } from "./solar-meshes";
 
 export type TransformMode = "select" | "translate" | "rotate" | "scale";
 export type ShadingMode = "wire" | "solid" | "material";
@@ -218,6 +219,9 @@ export class StudioEngine {
       group.add(helper);
     } else if (src.type === "empty") {
       group.add(new THREE.AxesHelper(0.4));
+    } else if (isSolarMeshType(src.type)) {
+      buildSolarPart(group, src, this.shading);
+      group.userData.params = src.params ?? {};
     } else {
       const geo = geometryFor(src.type, src.params);
       const mat = new THREE.MeshStandardMaterial({
@@ -270,9 +274,14 @@ export class StudioEngine {
     const prevIds = [...this.nodes.keys()].sort().join(",");
     const nextIds = model.objects.map((o) => o.id).sort().join(",");
     const typeChanged = model.objects.some((o) => this.nodes.get(o.id)?.userData.type !== o.type);
+    const paramsChanged = model.objects.some((o) => {
+      const node = this.nodes.get(o.id);
+      return !!node && JSON.stringify(node.userData.params ?? null) !== JSON.stringify(o.params ?? null);
+    });
     const structureChanged =
       prevIds !== nextIds ||
       typeChanged ||
+      paramsChanged ||
       this.model.background !== model.background ||
       this.model.grid !== model.grid;
     this.model = model;
@@ -288,7 +297,9 @@ export class StudioEngine {
       if (!draggingThis) {
         applyTransform(node, sampleObjectAtFrame(obj, model.keyframes, this.frame));
       }
-      const mesh = node.children.find((c): c is THREE.Mesh => c instanceof THREE.Mesh && !c.userData.helper);
+      const mesh =
+        node.children.find((c): c is THREE.Mesh => c instanceof THREE.Mesh && c.userData.primary) ??
+        node.children.find((c): c is THREE.Mesh => c instanceof THREE.Mesh && !c.userData.helper);
       if (mesh && mesh.material instanceof THREE.MeshStandardMaterial && obj.material) {
         mesh.material.color.set(obj.material.color);
         mesh.material.metalness = obj.material.metalness;

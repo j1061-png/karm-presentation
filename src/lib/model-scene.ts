@@ -5,102 +5,23 @@ import {
   ModelSceneSchema,
   type ModelKeyframe,
   type ModelObject,
-  type ModelObjectType,
   type ModelScene,
   type Vec3,
 } from "./schema";
+import { createModelObject, defaultMaterial, emptyModelScene, vec } from "./model-object";
+import { solarCleaningScene, solarSurroundScene } from "./solar-kit";
 
-export function vec(x = 0, y = 0, z = 0): Vec3 {
-  return { x, y, z };
-}
+export { createModelObject, defaultMaterial, emptyModelScene, vec };
+export {
+  insertSolarCleaningKit,
+  insertSolarSurroundKit,
+  solarCleaningScene,
+  solarSurroundScene,
+} from "./solar-kit";
 
-export function defaultMaterial(color = "#c8c4bc") {
-  return {
-    color,
-    metalness: 0.15,
-    roughness: 0.45,
-    emissive: "#000000",
-    emissiveIntensity: 0,
-    opacity: 1,
-    wireframe: false,
-  };
-}
-
-export function createModelObject(
-  type: ModelObjectType,
-  extras: Partial<ModelObject> = {}
-): ModelObject {
-  const names: Record<ModelObjectType, string> = {
-    cube: "Cube",
-    sphere: "Sphere",
-    cylinder: "Cylinder",
-    cone: "Cone",
-    plane: "Plane",
-    torus: "Torus",
-    ico: "Ico Sphere",
-    light: "Light",
-    camera: "Camera",
-    empty: "Empty",
-  };
-  const base: ModelObject = {
-    id: nanoid(8),
-    name: extras.name ?? names[type],
-    type,
-    visible: true,
-    locked: false,
-    position: extras.position ?? (type === "plane" ? vec(0, 0, 0) : vec(0, type === "light" ? 5 : 0.75, 0)),
-    rotation: extras.rotation ?? (type === "plane" ? vec(-90, 0, 0) : vec()),
-    scale: extras.scale ?? (type === "plane" ? vec(8, 8, 1) : vec(1, 1, 1)),
-    params: extras.params,
-    material: type === "light" || type === "camera" || type === "empty" ? undefined : extras.material ?? defaultMaterial(),
-    light:
-      type === "light"
-        ? extras.light ?? { kind: "directional", intensity: 1.4, color: "#fff4e0" }
-        : extras.light,
-  };
-  return ModelObjectSchema.parse(base);
-}
-
-export function emptyModelScene(): ModelScene {
-  return ModelSceneSchema.parse({
-    background: "#161412",
-    objects: [],
-    keyframes: [],
-    fps: 24,
-    duration: 96,
-    grid: true,
-    camera: { position: vec(6, 4.5, 7), target: vec(0, 0.8, 0), fov: 50 },
-  });
-}
-
-/** A small product-studio scene so a blank model is immediately useful. */
+/** Blank models start as a surrounding solar array with a self-cleaning robot. */
 export function defaultStudioScene(): ModelScene {
-  const scene = emptyModelScene();
-  scene.objects = [
-    createModelObject("plane", { name: "Ground", material: defaultMaterial("#2a2723") }),
-    createModelObject("cube", {
-      name: "Cube",
-      position: vec(-1.1, 0.75, 0),
-      material: defaultMaterial("#d4c4a8"),
-    }),
-    createModelObject("sphere", {
-      name: "Sphere",
-      position: vec(1.15, 0.75, 0.2),
-      material: { ...defaultMaterial("#8fa4b8"), metalness: 0.55, roughness: 0.25 },
-    }),
-    createModelObject("light", {
-      name: "Sun",
-      position: vec(4, 7, 3),
-      light: { kind: "directional", intensity: 1.6, color: "#fff4e0" },
-    }),
-    createModelObject("light", {
-      name: "Fill",
-      position: vec(-3, 3, -2),
-      light: { kind: "point", intensity: 0.55, color: "#c5d4ff" },
-    }),
-    createModelObject("camera", { name: "Camera", position: vec(6, 4.5, 7) }),
-  ];
-  return scene;
+  return solarSurroundScene();
 }
 
 /** Deterministic scene when the AI is unavailable. */
@@ -181,7 +102,15 @@ export function sceneFromPrompt(prompt: string): ModelScene {
         material: defaultMaterial("#222"),
       })
     );
-  } else if (/\b(planet|solar|space|orbit)\b/.test(t)) {
+  } else if (/\b(solar row|cleaning row|self[- ]clean(?:ing)? row)\b/.test(t)) {
+    return solarCleaningScene();
+  } else if (
+    /\b(solar panels?|solar array|solar farm|surrounding (solar|array|panels?)|photovoltaic|pv (module|array|farm)|self[- ]clean(?:ing)?|soiling|cleaning (robot|gantry|brush))\b/.test(
+      t
+    )
+  ) {
+    return solarSurroundScene();
+  } else if (/\b(planet|solar system|outer space|galaxy|orbit)\b/.test(t)) {
     scene.grid = false;
     scene.background = "#07080c";
     scene.objects = [

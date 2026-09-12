@@ -85,6 +85,81 @@ export function ModelProperties({
         <div className="text-[11px] font-medium text-text-tertiary uppercase tracking-wide mb-1.5">Scale</div>
         <VecFields value={object.scale} onChange={(scale) => onChange({ scale })} />
       </div>
+      {object.type === "solarPanel" && (
+        <div className="flex flex-col gap-2">
+          <div className="text-[11px] font-medium text-text-tertiary uppercase tracking-wide">PV module</div>
+          <Num
+            label="W"
+            value={object.params?.width ?? 1.7}
+            onChange={(width) => onChange({ params: { ...object.params, width } })}
+          />
+          <Num
+            label="H"
+            value={object.params?.height ?? 1.0}
+            onChange={(height) => onChange({ params: { ...object.params, height } })}
+          />
+          <Num
+            label="CX"
+            value={object.params?.cellsX ?? 6}
+            step={1}
+            onChange={(cellsX) => onChange({ params: { ...object.params, cellsX } })}
+          />
+          <Num
+            label="CY"
+            value={object.params?.cellsY ?? 10}
+            step={1}
+            onChange={(cellsY) => onChange({ params: { ...object.params, cellsY } })}
+          />
+        </div>
+      )}
+      {(object.type === "rail" || object.type === "mount" || object.type === "brush" || object.type === "tank") && (
+        <div className="flex flex-col gap-2">
+          <div className="text-[11px] font-medium text-text-tertiary uppercase tracking-wide">Part</div>
+          {object.type === "rail" && (
+            <Num
+              label="L"
+              value={object.params?.length ?? 8}
+              onChange={(length) => onChange({ params: { ...object.params, length } })}
+            />
+          )}
+          {object.type === "mount" && (
+            <Num
+              label="H"
+              value={object.params?.height ?? 1.05}
+              onChange={(height) => onChange({ params: { ...object.params, height } })}
+            />
+          )}
+          {object.type === "brush" && (
+            <>
+              <Num
+                label="R"
+                value={object.params?.radius ?? 0.08}
+                step={0.01}
+                onChange={(radius) => onChange({ params: { ...object.params, radius } })}
+              />
+              <Num
+                label="L"
+                value={object.params?.length ?? 1.05}
+                onChange={(length) => onChange({ params: { ...object.params, length } })}
+              />
+            </>
+          )}
+          {object.type === "tank" && (
+            <>
+              <Num
+                label="R"
+                value={object.params?.radius ?? 0.38}
+                onChange={(radius) => onChange({ params: { ...object.params, radius } })}
+              />
+              <Num
+                label="H"
+                value={object.params?.height ?? 0.72}
+                onChange={(height) => onChange({ params: { ...object.params, height } })}
+              />
+            </>
+          )}
+        </div>
+      )}
       {object.type === "light" && (
         <div className="flex flex-col gap-2">
           <div className="text-[11px] font-medium text-text-tertiary uppercase tracking-wide">Light</div>

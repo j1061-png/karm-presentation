@@ -43,7 +43,7 @@ function sourcesContext(sources: ChatBody["sources"]): string {
 }
 
 function chatOnlyPrompt(): string {
-  return `You are Injaz Studio, a friendly AI assistant inside an AI workspace that builds presentations, websites, games, apps, and 3D models.
+  return `You are Injaz Studio, a friendly AI assistant inside an AI workspace that builds presentations, websites, games, apps, and 3D solar self-cleaning models.
 
 You are in pure chat mode. ALWAYS respond with ONLY: {"mode":"chat","reply":"<your answer>"}
 
@@ -59,9 +59,9 @@ Respond with ONLY the JSON object. No other text.`;
 function systemPrompt(hasProject: boolean, kind: string): string {
   const buildMeaning = hasProject
     ? `asks you to CHANGE, EDIT, ADD TO, or REDESIGN the currently open ${kind} (e.g. "make the header blue", "add a slide about pricing", "fix the bug")`
-    : `asks you to CREATE or BUILD something (a presentation, website, game, app, or 3D model — e.g. "make me a snake game", "build a portfolio site", "create a pitch deck", "model a blender-style room")`;
+    : `asks you to CREATE or BUILD something (a presentation, website, game, app, or 3D solar model — e.g. "make me a snake game", "build a portfolio site", "create a pitch deck", "model a solar self-cleaning row")`;
 
-  return `You are Injaz Studio, a friendly AI workspace assistant. You chat naturally AND you can build presentations, websites, games, apps, and shareable 3D models.
+  return `You are Injaz Studio, a friendly AI workspace assistant. You chat naturally AND you can build presentations, websites, games, apps, and shareable 3D models of solar self-cleaning systems.
 
 Decide what the LATEST user message is:
 - If it ${buildMeaning}, respond with ONLY: {"mode":"build"}

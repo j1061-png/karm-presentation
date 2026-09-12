@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft, Box, Camera, Circle, Copy, Cylinder, Download, Focus, Lamp, Plus, Trash2,
-  Triangle, Move3d, RotateCcw, Scaling, MousePointer2, BoxSelect,
+  Triangle, Move3d, RotateCcw, Scaling, MousePointer2, BoxSelect, Sun, Bot, Droplets, Columns2, Minus,
 } from "lucide-react";
 import { BrandMark } from "@/components/brand/BrandLogo";
 import { ShareButton } from "@/components/share/ShareButton";
@@ -15,6 +15,8 @@ import {
   createModelObject,
   duplicateModelObject,
   insertKeyframe,
+  insertSolarCleaningKit,
+  insertSolarSurroundKit,
   repairScene,
 } from "@/lib/model-scene";
 import type { ModelObject, ModelObjectType, ModelScene, Presentation, Vec3 } from "@/lib/schema";
@@ -26,7 +28,17 @@ import type { ShadingMode, StudioEngine, TransformMode } from "./studio-engine";
 
 type SaveState = "saved" | "saving" | "dirty" | "error";
 
-const ADD: { type: ModelObjectType; label: string; icon: typeof Box }[] = [
+const SOLAR_ADD: { type: ModelObjectType; label: string; icon: typeof Box }[] = [
+  { type: "solarPanel", label: "Solar panel", icon: Sun },
+  { type: "mount", label: "Tilt mount", icon: Columns2 },
+  { type: "rail", label: "Guide rail", icon: Minus },
+  { type: "cleaner", label: "Cleaning robot", icon: Bot },
+  { type: "brush", label: "Brush roller", icon: Cylinder },
+  { type: "nozzle", label: "Spray nozzle", icon: Droplets },
+  { type: "tank", label: "Water tank", icon: Box },
+];
+
+const PRIMITIVE_ADD: { type: ModelObjectType; label: string; icon: typeof Box }[] = [
   { type: "cube", label: "Cube", icon: Box },
   { type: "sphere", label: "Sphere", icon: Circle },
   { type: "cylinder", label: "Cylinder", icon: Cylinder },
@@ -111,6 +123,16 @@ export function ModelStudioShell({
     const obj = createModelObject(type);
     updateScene((s) => ({ ...s, objects: [...s.objects, obj] }));
     setSelectedId(obj.id);
+    setAddOpen(false);
+  }
+
+  function addCleaningRow() {
+    updateScene((s) => insertSolarCleaningKit(s));
+    setAddOpen(false);
+  }
+
+  function addSurroundingArray() {
+    updateScene((s) => insertSolarSurroundKit(s));
     setAddOpen(false);
   }
 
@@ -278,8 +300,38 @@ export function ModelStudioShell({
             <Plus size={14} /> Add
           </button>
           {addOpen && (
-            <div className="absolute top-full left-0 mt-1 z-30 w-44 bg-surface border border-border rounded-xl py-1 shadow-lg">
-              {ADD.map((item) => (
+            <div className="absolute top-full left-0 mt-1 z-30 w-56 bg-surface border border-border rounded-xl py-1 shadow-lg max-h-[70vh] overflow-y-auto">
+              <div className="px-3 pt-1.5 pb-1 text-[10.5px] font-medium uppercase tracking-wide text-text-tertiary">
+                Solar kit
+              </div>
+              <button
+                type="button"
+                onClick={addSurroundingArray}
+                className="w-full flex items-center gap-2 px-3 py-1.5 text-[12.5px] hover:bg-surface-2"
+              >
+                <Sun size={13} /> Surrounding array
+              </button>
+              <button
+                type="button"
+                onClick={addCleaningRow}
+                className="w-full flex items-center gap-2 px-3 py-1.5 text-[12.5px] hover:bg-surface-2"
+              >
+                <Minus size={13} /> Cleaning row
+              </button>
+              {SOLAR_ADD.map((item) => (
+                <button
+                  key={item.type}
+                  type="button"
+                  onClick={() => addObject(item.type)}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 text-[12.5px] hover:bg-surface-2"
+                >
+                  <item.icon size={13} /> {item.label}
+                </button>
+              ))}
+              <div className="px-3 pt-2 pb-1 text-[10.5px] font-medium uppercase tracking-wide text-text-tertiary">
+                Primitives
+              </div>
+              {PRIMITIVE_ADD.map((item) => (
                 <button
                   key={item.type}
                   type="button"
@@ -312,7 +364,7 @@ export function ModelStudioShell({
           <input
             value={aiText}
             onChange={(e) => setAiText(e.target.value)}
-            placeholder="Ask Injaz to change the scene…"
+            placeholder="Ask Injaz to surround the yard with panels or add a cleaning pass…"
             className="flex-1 bg-surface-2 border border-border rounded-lg px-3 py-1.5 text-[13px] outline-none"
           />
           <button type="submit" disabled={aiBusy || !aiText.trim()} className="text-[12.5px] px-3 py-1.5 rounded-lg bg-text text-bg disabled:opacity-30">

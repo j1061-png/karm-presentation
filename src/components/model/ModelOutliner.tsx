@@ -1,6 +1,6 @@
 "use client";
 
-import { Box, Camera, Circle, Cylinder, Eye, EyeOff, Lamp, Lock, Unlock, Minus } from "lucide-react";
+import { Box, Bot, Camera, Circle, Columns2, Cylinder, Droplets, Eye, EyeOff, Lamp, Lock, Unlock, Minus, Sun } from "lucide-react";
 import type { ModelObject, ModelObjectType } from "@/lib/schema";
 
 const ICONS: Partial<Record<ModelObjectType, typeof Box>> = {
@@ -9,6 +9,13 @@ const ICONS: Partial<Record<ModelObjectType, typeof Box>> = {
   cylinder: Cylinder,
   light: Lamp,
   camera: Camera,
+  solarPanel: Sun,
+  mount: Columns2,
+  rail: Minus,
+  cleaner: Bot,
+  brush: Cylinder,
+  nozzle: Droplets,
+  tank: Box,
 };
 
 export function ModelOutliner({

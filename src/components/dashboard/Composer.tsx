@@ -48,7 +48,7 @@ const KIND_PLACEHOLDER: Record<ComposerMode, string> = {
   website: "Chat, or describe the website you want to build...",
   game: "Chat, or describe the game you want to play...",
   app: "Chat, or describe the app you want to build...",
-  model: "Chat, or describe the 3D scene you want to model...",
+  model: "Chat, or describe the solar array or self-cleaning rig…",
 };
 
 const SUGGESTIONS: Record<ComposerMode, string[]> = {
@@ -83,10 +83,10 @@ const SUGGESTIONS: Record<ComposerMode, string[]> = {
     "Markdown notes app",
   ],
   model: [
-    "Product studio with a cube and sphere",
-    "Isometric room with a desk",
-    "Low-poly car on a ground plane",
-    "Orbiting planet scene",
+    "Surrounding solar array with a self-cleaning robot",
+    "Solar self-cleaning row with a rail robot",
+    "Single PV module on a tilt mount",
+    "Water tank and brush gantry over four panels",
   ],
 };
 
