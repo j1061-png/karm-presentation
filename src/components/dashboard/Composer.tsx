@@ -84,9 +84,9 @@ const SUGGESTIONS: Record<ComposerMode, string[]> = {
   ],
   model: [
     "Single solar panel with a self-cleaning robot",
+    "Steel lattice pavilion",
     "Solar self-cleaning row with a rail robot",
-    "Surrounding solar array with a cleaning robot",
-    "Water tank and brush gantry over one panel",
+    "Metal fence and gantry over one panel",
   ],
 };
 

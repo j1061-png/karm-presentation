@@ -4,6 +4,7 @@ import { TransformControls } from "three/addons/controls/TransformControls.js";
 import { GLTFExporter } from "three/addons/exporters/GLTFExporter.js";
 import { sampleObjectAtFrame } from "@/lib/model-scene";
 import type { ModelObject, ModelObjectType, ModelScene, Vec3 } from "@/lib/schema";
+import { buildLattice, isLatticeMeshType } from "./lattice-meshes";
 import { buildSolarPart, isSolarMeshType } from "./solar-meshes";
 
 export type TransformMode = "select" | "translate" | "rotate" | "scale";
@@ -221,6 +222,9 @@ export class StudioEngine {
       group.add(new THREE.AxesHelper(0.4));
     } else if (isSolarMeshType(src.type)) {
       buildSolarPart(group, src, this.shading);
+      group.userData.params = src.params ?? {};
+    } else if (isLatticeMeshType(src.type)) {
+      buildLattice(group, src, this.shading);
       group.userData.params = src.params ?? {};
     } else {
       const geo = geometryFor(src.type, src.params);

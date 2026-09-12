@@ -71,6 +71,15 @@ function solarObjectDefaults(type: ModelObjectType): Partial<ModelObject> {
   }
 }
 
+function structureDefaults(type: ModelObjectType): Partial<ModelObject> {
+  if (type !== "lattice") return {};
+  return {
+    position: vec(0, 0.9, 0),
+    material: { ...defaultMaterial("#9aa3ab"), metalness: 0.88, roughness: 0.32 },
+    params: { width: 2.4, height: 1.8, depth: 2.4, cellsX: 3, cellsY: 2, cellsZ: 3, bar: 0.045, diagonals: 0 },
+  };
+}
+
 export function createModelObject(
   type: ModelObjectType,
   extras: Partial<ModelObject> = {}
@@ -93,22 +102,23 @@ export function createModelObject(
     brush: "Brush roller",
     nozzle: "Spray nozzle",
     tank: "Water tank",
+    lattice: "Metal lattice",
   };
-  const solarDefaults = solarObjectDefaults(type);
+  const typedDefaults = { ...solarObjectDefaults(type), ...structureDefaults(type) };
   const base: ModelObject = {
     id: nanoid(8),
     name: extras.name ?? names[type],
     type,
     visible: true,
     locked: false,
-    position: extras.position ?? solarDefaults.position ?? (type === "plane" ? vec(0, 0, 0) : vec(0, type === "light" ? 5 : 0.75, 0)),
-    rotation: extras.rotation ?? solarDefaults.rotation ?? (type === "plane" ? vec(-90, 0, 0) : vec()),
+    position: extras.position ?? typedDefaults.position ?? (type === "plane" ? vec(0, 0, 0) : vec(0, type === "light" ? 5 : 0.75, 0)),
+    rotation: extras.rotation ?? typedDefaults.rotation ?? (type === "plane" ? vec(-90, 0, 0) : vec()),
     scale: extras.scale ?? (type === "plane" ? vec(8, 8, 1) : vec(1, 1, 1)),
-    params: extras.params ?? solarDefaults.params,
+    params: extras.params ?? typedDefaults.params,
     material:
       type === "light" || type === "camera" || type === "empty"
         ? undefined
-        : extras.material ?? solarDefaults.material ?? defaultMaterial(),
+        : extras.material ?? typedDefaults.material ?? defaultMaterial(),
     light:
       type === "light"
         ? extras.light ?? { kind: "directional", intensity: 1.4, color: "#fff4e0" }

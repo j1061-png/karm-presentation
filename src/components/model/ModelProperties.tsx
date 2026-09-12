@@ -112,6 +112,60 @@ export function ModelProperties({
           />
         </div>
       )}
+      {object.type === "lattice" && (
+        <div className="flex flex-col gap-2">
+          <div className="text-[11px] font-medium text-text-tertiary uppercase tracking-wide">Lattice</div>
+          <Num
+            label="W"
+            value={object.params?.width ?? 2.4}
+            onChange={(width) => onChange({ params: { ...object.params, width } })}
+          />
+          <Num
+            label="H"
+            value={object.params?.height ?? 1.8}
+            onChange={(height) => onChange({ params: { ...object.params, height } })}
+          />
+          <Num
+            label="D"
+            value={object.params?.depth ?? 2.4}
+            onChange={(depth) => onChange({ params: { ...object.params, depth } })}
+          />
+          <Num
+            label="CX"
+            value={object.params?.cellsX ?? 3}
+            step={1}
+            onChange={(cellsX) => onChange({ params: { ...object.params, cellsX } })}
+          />
+          <Num
+            label="CY"
+            value={object.params?.cellsY ?? 2}
+            step={1}
+            onChange={(cellsY) => onChange({ params: { ...object.params, cellsY } })}
+          />
+          <Num
+            label="CZ"
+            value={object.params?.cellsZ ?? 3}
+            step={1}
+            onChange={(cellsZ) => onChange({ params: { ...object.params, cellsZ } })}
+          />
+          <Num
+            label="Bar"
+            value={object.params?.bar ?? 0.045}
+            step={0.005}
+            onChange={(bar) => onChange({ params: { ...object.params, bar } })}
+          />
+          <label className="text-[12px] flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={(object.params?.diagonals ?? 0) >= 1}
+              onChange={(e) =>
+                onChange({ params: { ...object.params, diagonals: e.target.checked ? 1 : 0 } })
+              }
+            />
+            Diagonals
+          </label>
+        </div>
+      )}
       {(object.type === "rail" || object.type === "mount" || object.type === "brush" || object.type === "tank") && (
         <div className="flex flex-col gap-2">
           <div className="text-[11px] font-medium text-text-tertiary uppercase tracking-wide">Part</div>
