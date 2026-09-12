@@ -133,11 +133,11 @@ function LoginContent() {
             Watch it built on the right.
           </h1>
           <p className="mt-5 text-[15px] text-text-secondary max-w-sm leading-relaxed">
-            webo is an AI workspace for presentations, websites, games, and apps — closer to a
-            partner than a chat box.
+            Injaz Studio is an AI workspace for presentations, websites, games, apps, and 3D
+            models — closer to a partner than a chat box.
           </p>
         </div>
-        <p className="text-[12px] text-text-tertiary">Presentations · Sites · Games · Apps</p>
+        <p className="text-[12px] text-text-tertiary">Presentations · Sites · Games · Apps · Models</p>
       </section>
 
       <section className="flex flex-col min-h-screen">
@@ -171,7 +171,7 @@ function LoginContent() {
               <p className="text-[13.5px] text-text-secondary mb-7 text-center">
                 {view === "signin"
                   ? "Sign in to continue."
-                  : "Build presentations, sites, games, and apps with AI."}
+                  : "Build presentations, sites, games, apps, and 3D models with AI."}
               </p>
 
               <button

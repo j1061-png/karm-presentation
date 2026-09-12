@@ -10,11 +10,14 @@ import {
   slidesSystemPrompt,
   webEditSystemPrompt,
   webSystemPrompt,
+  modelSystemPrompt,
+  modelEditSystemPrompt,
 } from "./prompts";
 import {
   PlanSchema,
   isWebKind,
   type AIEditResponse,
+  type ModelScene,
   type Plan,
   type Presentation,
   type ProjectFile,
@@ -30,6 +33,7 @@ import {
   repairTheme,
   sanitizeFilePath,
 } from "./validate";
+import { applyModelEdit, repairScene, sceneFromPrompt, type ModelEditResponse } from "./model-scene";
 
 export type GenerationStage =
   | { stage: "analysing"; detail?: string }
@@ -534,6 +538,115 @@ export function applyWebEdit(p: Presentation, response: WebEditResponse): Presen
       ? "index.html"
       : merged[0].path;
   return { ...p, files: merged, entry, updatedAt: new Date().toISOString() };
+}
+
+function parseModelSceneResponse(raw: unknown): { title: string; description: string; scene: ModelScene } {
+  const obj = typeof raw === "object" && raw !== null ? (raw as Record<string, unknown>) : {};
+  return {
+    title: typeof obj.title === "string" && obj.title.trim() ? obj.title.trim() : "Untitled model",
+    description: typeof obj.description === "string" ? obj.description : "",
+    scene: repairScene(obj.scene),
+  };
+}
+
+export async function generateModelProject(
+  prompt: string,
+  files: SourceFile[],
+  onStage: (s: GenerationStage) => void,
+  effortInput?: unknown
+): Promise<Presentation> {
+  const effort = parseEffort(effortInput);
+  const cfg = EFFORT[effort];
+  onStage({ stage: "analysing", detail: "Reading the brief" });
+  onStage({ stage: "planning", detail: "Blocking out the scene" });
+  onStage({ stage: "designing", detail: "Placing objects and lights" });
+
+  let parsed: { title: string; description: string; scene: ModelScene };
+  try {
+    parsed = await chatJson(
+      [
+        { role: "system", content: modelSystemPrompt() },
+        { role: "user", content: `Build this 3D scene:\n\n"${prompt}"${sourceContext(files)}` },
+      ],
+      (raw) => parseModelSceneResponse(extractJson(raw)),
+      {
+        maxTokens: cfg.thinking ? 12000 : 6000,
+        temperature: cfg.temperature,
+        model: cfg.model,
+        thinking: cfg.thinking,
+        json: true,
+      }
+    );
+  } catch {
+    onStage({ stage: "designing", detail: "Using the local studio fallback" });
+    parsed = {
+      title: prompt.slice(0, 48) || "Untitled model",
+      description: "Generated in the local studio.",
+      scene: sceneFromPrompt(prompt),
+    };
+  }
+
+  onStage({ stage: "finalising", detail: "Saving the model" });
+  const now = new Date().toISOString();
+  return repairPresentation(
+    {
+      id: nanoid(12),
+      title: parsed.title,
+      description: parsed.description,
+      kind: "model",
+      slides: [],
+      scene: parsed.scene,
+      createdAt: now,
+      updatedAt: now,
+      chatThread: [
+        { id: nanoid(8), role: "user", text: prompt },
+        {
+          id: nanoid(8),
+          role: "assistant",
+          text: "Built your 3D scene. Orbit, grab, rotate, keyframe — then share it.",
+          kind: "result",
+        },
+      ],
+    },
+    {}
+  );
+}
+
+function parseModelEditResponse(raw: unknown): ModelEditResponse {
+  const obj = typeof raw === "object" && raw !== null ? (raw as Record<string, unknown>) : {};
+  return {
+    summary: typeof obj.summary === "string" && obj.summary.trim() ? obj.summary.trim() : "Updated the scene.",
+    upsert: Array.isArray(obj.upsert) ? obj.upsert : [],
+    deleteIds: Array.isArray(obj.deleteIds) ? obj.deleteIds.filter((x): x is string => typeof x === "string") : [],
+    keyframes: Array.isArray(obj.keyframes) ? obj.keyframes : undefined,
+    background: typeof obj.background === "string" ? obj.background : undefined,
+  };
+}
+
+export async function generateModelEdit(
+  presentation: Presentation,
+  instruction: string,
+  files: SourceFile[] = []
+): Promise<{ summary: string; scene: ModelScene; changed: boolean }> {
+  const scene = repairScene(presentation.scene);
+  try {
+    const edit = await chatJson(
+      [
+        { role: "system", content: modelEditSystemPrompt() },
+        {
+          role: "user",
+          content: `SCENE "${presentation.title}"\n\n${JSON.stringify(scene)}\n\nUSER REQUEST: "${instruction}"${sourceContext(files)}`,
+        },
+      ],
+      (raw) => parseModelEditResponse(extractJson(raw)),
+      { maxTokens: 8000, temperature: 0.3, json: true }
+    );
+    const next = applyModelEdit(scene, edit);
+    const changed = JSON.stringify(next) !== JSON.stringify(scene);
+    return { summary: edit.summary, scene: next, changed };
+  } catch {
+    return { summary: "Could not apply that edit. Try a more specific object change.", scene, changed: false };
+  }
 }
 
 function presentationContext(p: Presentation, selectedSlideId?: string, selectedElementId?: string): string {

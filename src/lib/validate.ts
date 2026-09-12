@@ -1,4 +1,5 @@
 import { nanoid } from "nanoid";
+import { repairScene } from "./model-scene";
 import {
   ChatTurnSchema,
   ElementSchema,
@@ -7,6 +8,7 @@ import {
   SlideSchema,
   ThemeSchema,
   isWebKind,
+  isModelKind,
   type ChatTurn,
   type Presentation,
   type ProjectFile,
@@ -290,6 +292,7 @@ export function repairPresentation(input: unknown, existing?: Partial<Presentati
   const kindParsed = ProjectKindSchema.safeParse(raw.kind);
   const kind = kindParsed.success ? kindParsed.data : existing?.kind ?? "presentation";
   const web = isWebKind(kind);
+  const model = isModelKind(kind);
 
   const rawSlides = Array.isArray(raw.slides) ? raw.slides : [];
   const slides = rawSlides
@@ -298,8 +301,9 @@ export function repairPresentation(input: unknown, existing?: Partial<Presentati
 
   const files = repairFiles(raw.files);
   const fallbackFiles = files.length > 0 ? files : existing?.files ?? [];
+  const scene = model ? repairScene(raw.scene ?? existing?.scene) : undefined;
 
-  if (!web && slides.length === 0) {
+  if (!web && !model && slides.length === 0) {
     throw new Error("The AI response contained no valid slides.");
   }
   if (web && fallbackFiles.length === 0) {
@@ -316,12 +320,13 @@ export function repairPresentation(input: unknown, existing?: Partial<Presentati
     title:
       typeof raw.title === "string" && raw.title.trim()
         ? raw.title.trim()
-        : existing?.title ?? "Untitled presentation",
+        : existing?.title ?? (model ? "Untitled model" : "Untitled presentation"),
     description: typeof raw.description === "string" ? raw.description : "",
     kind,
     theme: repairTheme(raw.theme ?? existing?.theme),
-    slides,
+    slides: model ? [] : slides,
     files: web ? fallbackFiles : undefined,
+    scene,
     entry,
     version: 1,
     createdAt: existing?.createdAt ?? now,

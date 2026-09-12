@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { isWebKind, type Presentation } from "@/lib/schema";
+import { isModelKind, isWebKind, type Presentation } from "@/lib/schema";
 import { Player } from "@/components/present/Player";
 import { assemblePreviewHtml } from "@/lib/web-preview";
 import { ShareModal } from "@/components/share/ShareModal";
 import { ShareButton } from "@/components/share/ShareButton";
+import { ModelViewer } from "@/components/model/ModelViewer";
 
 export function StandalonePlayer({
   presentation,
@@ -17,6 +18,24 @@ export function StandalonePlayer({
   canShare?: boolean;
 }) {
   const [shareOpen, setShareOpen] = useState(false);
+
+  if (isModelKind(presentation.kind)) {
+    return (
+      <div className="fixed inset-0">
+        <ModelViewer presentation={presentation} />
+        {canShare && (
+          <div className="absolute top-3 right-3 z-20">
+            <ShareButton
+              presentationId={presentation.id}
+              title={presentation.title}
+              isOwner={isOwner}
+              variant="accent"
+            />
+          </div>
+        )}
+      </div>
+    );
+  }
 
   if (isWebKind(presentation.kind)) {
     return (

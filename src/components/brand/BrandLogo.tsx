@@ -1,13 +1,15 @@
 "use client";
 
 /**
- * Product brand: the browser / code mark plus the word "webo".
+ * Product brand: Injaz Studio — an isometric cube mark plus the wordmark.
  */
 
-export const PRODUCT_NAME = "webo";
-export const BRAND_BLUE = "#2B7FFF";
+export const PRODUCT_NAME = "Injaz Studio";
+export const PRODUCT_SHORT = "Injaz";
+export const BRAND_GOLD = "#C4A265";
+export const BRAND_INK = "#1C1915";
 
-/** The user-provided mark: a rounded browser window with a </> glyph. */
+/** Isometric studio cube — 3D, not the old browser/code mark. */
 export function BrandMark({
   size = 24,
   className = "",
@@ -24,44 +26,21 @@ export function BrandMark({
       aria-label={PRODUCT_NAME}
       className={`flex-shrink-0 select-none ${className}`}
     >
-      <rect
-        x="3.2"
-        y="3.2"
-        width="25.6"
-        height="25.6"
-        rx="6.4"
-        stroke={BRAND_BLUE}
-        strokeWidth="2.25"
-      />
-      <path d="M3.2 11.15h25.6" stroke={BRAND_BLUE} strokeWidth="2.25" />
-      <circle cx="8.35" cy="7.2" r="1.12" fill={BRAND_BLUE} />
-      <circle cx="12.15" cy="7.2" r="1.12" fill={BRAND_BLUE} />
-      <circle cx="15.95" cy="7.2" r="1.12" fill={BRAND_BLUE} />
       <path
-        d="M10.1 16.15 7.35 20.05l2.75 3.9"
-        stroke={BRAND_BLUE}
-        strokeWidth="2.25"
-        strokeLinecap="round"
+        d="M16 4.2 27.2 10.4v11.2L16 27.8 4.8 21.6V10.4L16 4.2Z"
+        stroke={BRAND_GOLD}
+        strokeWidth="1.9"
         strokeLinejoin="round"
       />
-      <path
-        d="M14.35 24.2 17.85 15.85"
-        stroke={BRAND_BLUE}
-        strokeWidth="2.25"
-        strokeLinecap="round"
-      />
-      <path
-        d="M21.9 16.15 24.65 20.05l-2.75 3.9"
-        stroke={BRAND_BLUE}
-        strokeWidth="2.25"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      <path d="M16 4.2v12.3" stroke={BRAND_GOLD} strokeWidth="1.7" />
+      <path d="M16 16.5 27.2 10.4" stroke={BRAND_GOLD} strokeWidth="1.7" />
+      <path d="M16 16.5 4.8 10.4" stroke={BRAND_GOLD} strokeWidth="1.7" />
+      <path d="M16 16.5 16 27.8" stroke={BRAND_GOLD} strokeWidth="1.7" opacity="0.55" />
     </svg>
   );
 }
 
-/** Wordmark: mark + webo. */
+/** Wordmark: cube + Injaz Studio. */
 export function BrandWordmark({
   height = 28,
   className = "",
@@ -77,11 +56,19 @@ export function BrandWordmark({
       style={{ height: Math.max(height, mark) }}
     >
       <BrandMark size={mark} />
-      <span
-        className="font-semibold tracking-tight"
-        style={{ fontSize: Math.round(height * 0.68), lineHeight: 1 }}
-      >
-        {PRODUCT_NAME}
+      <span className="leading-none tracking-tight">
+        <span
+          className="font-semibold"
+          style={{ fontSize: Math.round(height * 0.62) }}
+        >
+          Injaz
+        </span>
+        <span
+          className="font-medium text-text-secondary"
+          style={{ fontSize: Math.round(height * 0.62), marginLeft: 5 }}
+        >
+          Studio
+        </span>
       </span>
     </span>
   );

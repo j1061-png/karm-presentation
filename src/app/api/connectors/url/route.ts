@@ -75,7 +75,7 @@ export async function POST(request: Request) {
     const res = await fetch(url.toString(), {
       redirect: "follow",
       headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; WeboBot/1.0; +https://webo.app)",
+        "User-Agent": "Mozilla/5.0 (compatible; InjazStudioBot/1.0)",
         Accept: "text/html,application/xhtml+xml,text/plain,application/json;q=0.8,*/*;q=0.5",
       },
       signal: AbortSignal.timeout(15_000),

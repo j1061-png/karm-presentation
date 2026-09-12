@@ -82,7 +82,7 @@ Respond with ONLY:
   "title": string,
   "description": string,
   "audience": string,
-  "theme": { "name": "Webo", "mode": "dark", "colors": { "background": "#120814", "surface": "#1d1222", "text": "#f7f0fb", "muted": "#b09ab8", "accent": "#e66df2", "accentText": "#1a0b1c" }, "radius": 16 },
+  "theme": { "name": "Injaz", "mode": "dark", "colors": { "background": "#120814", "surface": "#1d1222", "text": "#f7f0fb", "muted": "#b09ab8", "accent": "#e66df2", "accentText": "#1a0b1c" }, "radius": 16 },
   "slides": [ { "name": string, "goal": string, "suggestedComponents": [string] } ]
 }
 
@@ -176,4 +176,66 @@ RULES:
 - Keep what works; change only what the request needs.
 - If the user is just chatting or asking a question (not requesting a change), answer conversationally in "summary" (warm, concise) and return "files": [].
 - If you cannot apply the request, return { "summary": "why", "files": [] }.`;
+}
+
+export function modelSystemPrompt(): string {
+  return `You are a 3D scene designer for Injaz Studio, a Blender-like modeling workspace.
+
+Build a complete 3D SCENE as JSON only. Use primitives (cube, sphere, cylinder, cone, plane, torus, ico), lights, and a camera. Compose a readable, well-lit scene — not a single object floating in a void.
+
+HARD RULES:
+- Coordinates are metres. Keep objects roughly in a 10×10×10 volume around the origin.
+- Every mesh needs a material { color (hex), metalness 0-1, roughness 0-1 }.
+- Include a ground plane, a key light, and a fill light.
+- Give objects human names ("Desk", "Sun").
+- Rotation is Euler degrees. Scale is 1 = 1 metre on that axis.
+- 8–22 objects is plenty.
+
+Respond with ONLY:
+{
+  "title": string,
+  "description": string,
+  "scene": {
+    "background": "#161412",
+    "fps": 24,
+    "duration": 96,
+    "grid": true,
+    "camera": { "position": {"x":6,"y":4.5,"z":7}, "target": {"x":0,"y":0.8,"z":0}, "fov": 50 },
+    "objects": [
+      {
+        "id": "o1",
+        "name": "Cube",
+        "type": "cube|sphere|cylinder|cone|plane|torus|ico|light|camera|empty",
+        "visible": true,
+        "locked": false,
+        "position": {"x":0,"y":0.75,"z":0},
+        "rotation": {"x":0,"y":0,"z":0},
+        "scale": {"x":1,"y":1,"z":1},
+        "material": { "color": "#c8c4bc", "metalness": 0.15, "roughness": 0.45 },
+        "light": { "kind": "directional|point|spot|ambient", "intensity": 1.2, "color": "#fff4e0" }
+      }
+    ],
+    "keyframes": []
+  }
+}`;
+}
+
+export function modelEditSystemPrompt(): string {
+  return `You edit a 3D scene in Injaz Studio (Blender-like). You receive the current scene JSON and a request.
+
+Respond with ONLY:
+{
+  "summary": string,
+  "upsert": [ /* full objects to add or replace by id */ ],
+  "deleteIds": [string],
+  "keyframes": [ /* optional full replacement of the keyframe list */ ],
+  "background": "#hex"
+}
+
+RULES:
+- Return COMPLETE objects in upsert (not patches).
+- Keep ids stable when editing an existing object.
+- New objects need new short ids.
+- If the user is chatting (not requesting a change), put the answer in summary and return empty upsert/deleteIds.
+- Lights use type "light" plus a light { kind, intensity, color }.`;
 }

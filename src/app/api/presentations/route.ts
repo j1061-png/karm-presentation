@@ -4,6 +4,7 @@ import { getUser } from "@/lib/supabase/server";
 import { savePresentation } from "@/lib/store";
 import { listAccessiblePresentations, registerDirectory } from "@/lib/collab";
 import { profileFromUser } from "@/lib/profile";
+import { defaultStudioScene } from "@/lib/model-scene";
 import { repairPresentation } from "@/lib/validate";
 import type { Presentation } from "@/lib/schema";
 
@@ -33,6 +34,19 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+  } else if (body.kind === "model") {
+    presentation = repairPresentation(
+      {
+        id: nanoid(12),
+        title: typeof body.title === "string" && body.title.trim() ? body.title : "Untitled model",
+        kind: "model",
+        slides: [],
+        scene: defaultStudioScene(),
+        createdAt: now,
+        updatedAt: now,
+      },
+      {}
+    );
   } else {
     presentation = repairPresentation(
       {

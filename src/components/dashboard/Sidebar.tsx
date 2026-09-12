@@ -7,7 +7,7 @@ import { useTheme } from "@/components/theme/useTheme";
 import {
   Plus, House, Layers, Settings, PanelLeft,
   LogOut, Moon, SunMedium, FileText, Download,
-  Globe, Gamepad2, AppWindow,
+  Globe, Gamepad2, AppWindow, Box,
 } from "lucide-react";
 import { BrandLockup, BrandMark } from "@/components/brand/BrandLogo";
 import { usePwa } from "@/components/pwa/PwaProvider";
@@ -30,6 +30,7 @@ function kindIcon(kind?: ProjectKind) {
   if (kind === "website") return Globe;
   if (kind === "game") return Gamepad2;
   if (kind === "app") return AppWindow;
+  if (kind === "model") return Box;
   return FileText;
 }
 

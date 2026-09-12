@@ -2,10 +2,11 @@ import { getUser } from "@/lib/supabase/server";
 import {
   generatePresentation,
   generateWebProject,
+  generateModelProject,
   type GenerationStage,
   type SourceFile,
 } from "@/lib/generate";
-import { inferProjectKind, isWebKind } from "@/lib/schema";
+import { inferProjectKind, isModelKind, isWebKind } from "@/lib/schema";
 import { savePresentation } from "@/lib/store";
 import { publicAiError } from "@/lib/public-error";
 
@@ -42,6 +43,7 @@ export async function POST(request: Request) {
     body?.kind === "game" ||
     body?.kind === "app" ||
     body?.kind === "presentation" ||
+    body?.kind === "model" ||
     body?.kind === "chat"
       ? body.kind
       : undefined;
@@ -62,12 +64,19 @@ export async function POST(request: Request) {
               send,
               body?.effort
             )
-          : await generatePresentation(
-              prompt || "A presentation based on the attached source material.",
-              files,
-              send,
-              body?.effort
-            );
+          : isModelKind(kind)
+            ? await generateModelProject(
+                prompt || "A 3D scene based on the attached source material.",
+                files,
+                send,
+                body?.effort
+              )
+            : await generatePresentation(
+                prompt || "A presentation based on the attached source material.",
+                files,
+                send,
+                body?.effort
+              );
         await savePresentation(user.id, presentation);
         send({ stage: "complete", presentationId: presentation.id });
       } catch (e) {

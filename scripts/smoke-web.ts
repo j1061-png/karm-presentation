@@ -51,6 +51,18 @@ try {
 }
 check("presentation with no slides throws", threw);
 
+const model = repairPresentation({
+  id: "modelabc12345",
+  title: "Studio",
+  kind: "model",
+  slides: [],
+  scene: { objects: [{ id: "c1", name: "Cube", type: "cube" }] },
+  createdAt: now,
+  updatedAt: now,
+});
+check("model kind keeps scene", model.kind === "model" && (model.scene?.objects.length ?? 0) >= 1);
+check("model kind allows zero slides", model.slides.length === 0);
+
 // assemblePreviewHtml inlines assets
 const html = assemblePreviewHtml(
   [

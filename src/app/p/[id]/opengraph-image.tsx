@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 import { getPublished } from "@/lib/store";
 
 export const runtime = "nodejs";
-export const alt = "webo project";
+export const alt = "Injaz Studio project";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -25,6 +25,17 @@ export default async function OpenGraphImage({ params }: { params: Promise<{ id:
       ? published.presentation.title
       : "Interactive presentation";
   const slideCount = published?.presentation.slides.length ?? 0;
+  const objectCount = published?.presentation.scene?.objects.length ?? 0;
+  const kind = published?.presentation.kind ?? "presentation";
+  const footer =
+    kind === "model"
+      ? `${objectCount} object${objectCount === 1 ? "" : "s"} · 3D model`
+      : slideCount > 0
+        ? `${slideCount} interactive slides`
+        : kind === "website" || kind === "game" || kind === "app"
+          ? `Interactive ${kind}`
+          : "Interactive presentation";
+  const cta = kind === "model" ? "View model →" : kind === "website" || kind === "game" || kind === "app" ? `Open ${kind} →` : "View presentation →";
 
   return new ImageResponse(
     (
@@ -59,28 +70,18 @@ export default async function OpenGraphImage({ params }: { params: Promise<{ id:
         {/* Brand */}
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <svg width="52" height="52" viewBox="0 0 32 32" fill="none">
-            <rect x="3.2" y="3.2" width="25.6" height="25.6" rx="6.4" stroke="#2B7FFF" strokeWidth="2.25" />
-            <path d="M3.2 11.15h25.6" stroke="#2B7FFF" strokeWidth="2.25" />
-            <circle cx="8.35" cy="7.2" r="1.12" fill="#2B7FFF" />
-            <circle cx="12.15" cy="7.2" r="1.12" fill="#2B7FFF" />
-            <circle cx="15.95" cy="7.2" r="1.12" fill="#2B7FFF" />
             <path
-              d="M10.1 16.15 7.35 20.05l2.75 3.9"
-              stroke="#2B7FFF"
-              strokeWidth="2.25"
-              strokeLinecap="round"
+              d="M16 4.2 27.2 10.4v11.2L16 27.8 4.8 21.6V10.4L16 4.2Z"
+              stroke="#C4A265"
+              strokeWidth="1.9"
               strokeLinejoin="round"
             />
-            <path d="M14.35 24.2 17.85 15.85" stroke="#2B7FFF" strokeWidth="2.25" strokeLinecap="round" />
-            <path
-              d="M21.9 16.15 24.65 20.05l-2.75 3.9"
-              stroke="#2B7FFF"
-              strokeWidth="2.25"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
+            <path d="M16 4.2v12.3" stroke="#C4A265" strokeWidth="1.7" />
+            <path d="M16 16.5 27.2 10.4" stroke="#C4A265" strokeWidth="1.7" />
+            <path d="M16 16.5 4.8 10.4" stroke="#C4A265" strokeWidth="1.7" />
+            <path d="M16 16.5 16 27.8" stroke="#C4A265" strokeWidth="1.7" opacity="0.55" />
           </svg>
-          <div style={{ display: "flex", fontSize: 30, fontWeight: 600, color: text }}>webo</div>
+          <div style={{ display: "flex", fontSize: 30, fontWeight: 600, color: text }}>Injaz Studio</div>
         </div>
 
         {/* Title */}
@@ -112,7 +113,7 @@ export default async function OpenGraphImage({ params }: { params: Promise<{ id:
         {/* Footer */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", fontSize: 26, color: muted }}>
-            {slideCount > 0 ? `${slideCount} interactive slides` : "Interactive presentation"}
+            {footer}
           </div>
           <div
             style={{
@@ -125,7 +126,7 @@ export default async function OpenGraphImage({ params }: { params: Promise<{ id:
               fontWeight: 600,
             }}
           >
-            View presentation →
+            {cta}
           </div>
         </div>
       </div>

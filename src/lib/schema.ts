@@ -14,7 +14,7 @@ import { z } from "zod";
 // ---------------------------------------------------------------------------
 
 export const ThemeSchema = z.object({
-  name: z.string().default("Webo Dark"),
+  name: z.string().default("Injaz Dark"),
   mode: z.enum(["dark", "light"]).default("dark"),
   colors: z
     .object({
@@ -408,11 +408,91 @@ export const ChatTurnSchema = z.object({
 export type ChatTurn = z.infer<typeof ChatTurnSchema>;
 
 // ---------------------------------------------------------------------------
-// Project kinds — a project is a presentation OR a web artifact (site/game/app)
+// Project kinds — deck, web artifact, or a 3D model scene
 // ---------------------------------------------------------------------------
 
-export const ProjectKindSchema = z.enum(["presentation", "website", "game", "app"]);
+export const ProjectKindSchema = z.enum(["presentation", "website", "game", "app", "model"]);
 export type ProjectKind = z.infer<typeof ProjectKindSchema>;
+
+export const Vec3Schema = z.object({
+  x: z.number().default(0),
+  y: z.number().default(0),
+  z: z.number().default(0),
+});
+export type Vec3 = z.infer<typeof Vec3Schema>;
+
+export const ModelObjectTypeSchema = z.enum([
+  "cube",
+  "sphere",
+  "cylinder",
+  "cone",
+  "plane",
+  "torus",
+  "ico",
+  "light",
+  "camera",
+  "empty",
+]);
+export type ModelObjectType = z.infer<typeof ModelObjectTypeSchema>;
+
+export const ModelMaterialSchema = z.object({
+  color: z.string().default("#c8c4bc"),
+  metalness: z.number().min(0).max(1).default(0.15),
+  roughness: z.number().min(0).max(1).default(0.45),
+  emissive: z.string().default("#000000"),
+  emissiveIntensity: z.number().min(0).max(8).default(0),
+  opacity: z.number().min(0).max(1).default(1),
+  wireframe: z.boolean().default(false),
+});
+export type ModelMaterial = z.infer<typeof ModelMaterialSchema>;
+
+export const ModelObjectSchema = z.object({
+  id: z.string(),
+  name: z.string().default("Object"),
+  type: ModelObjectTypeSchema,
+  visible: z.boolean().default(true),
+  locked: z.boolean().default(false),
+  position: Vec3Schema.default({ x: 0, y: 0, z: 0 }),
+  rotation: Vec3Schema.default({ x: 0, y: 0, z: 0 }),
+  scale: Vec3Schema.default({ x: 1, y: 1, z: 1 }),
+  params: z.record(z.number()).optional(),
+  material: ModelMaterialSchema.optional(),
+  light: z
+    .object({
+      kind: z.enum(["directional", "point", "spot", "ambient"]).default("directional"),
+      intensity: z.number().default(1.2),
+      color: z.string().default("#fff4e0"),
+    })
+    .optional(),
+});
+export type ModelObject = z.infer<typeof ModelObjectSchema>;
+
+export const ModelKeyframeSchema = z.object({
+  id: z.string(),
+  objectId: z.string(),
+  frame: z.number().int().min(0),
+  position: Vec3Schema.optional(),
+  rotation: Vec3Schema.optional(),
+  scale: Vec3Schema.optional(),
+});
+export type ModelKeyframe = z.infer<typeof ModelKeyframeSchema>;
+
+export const ModelSceneSchema = z.object({
+  background: z.string().default("#161412"),
+  objects: z.array(ModelObjectSchema).default([]),
+  keyframes: z.array(ModelKeyframeSchema).default([]),
+  fps: z.number().int().min(1).max(60).default(24),
+  duration: z.number().int().min(1).max(3600).default(96),
+  grid: z.boolean().default(true),
+  camera: z
+    .object({
+      position: Vec3Schema.default({ x: 6, y: 4.5, z: 7 }),
+      target: Vec3Schema.default({ x: 0, y: 0.8, z: 0 }),
+      fov: z.number().default(50),
+    })
+    .default({}),
+});
+export type ModelScene = z.infer<typeof ModelSceneSchema>;
 
 /** A single file in a web artifact (website / game / app). */
 export const ProjectFileSchema = z.object({
@@ -431,6 +511,8 @@ export const PresentationSchema = z.object({
   slides: z.array(SlideSchema).default([]),
   /** File tree for website / game / app projects. */
   files: z.array(ProjectFileSchema).max(40).optional(),
+  /** 3D scene for model projects. */
+  scene: ModelSceneSchema.optional(),
   /** Entry file served at the project root. */
   entry: z.string().default("index.html"),
   version: z.number().int().default(1),
@@ -447,11 +529,16 @@ export function isWebKind(
   return kind === "website" || kind === "game" || kind === "app";
 }
 
+export function isModelKind(kind: ProjectKind | undefined): kind is "model" {
+  return kind === "model";
+}
+
 /** Lowercase noun for UI copy. */
 export function kindNoun(kind?: ProjectKind | "chat"): string {
   if (kind === "website") return "website";
   if (kind === "game") return "game";
   if (kind === "app") return "app";
+  if (kind === "model") return "3D model";
   return "presentation";
 }
 
@@ -460,11 +547,19 @@ export function kindLabel(kind?: ProjectKind): string {
   if (kind === "website") return "Website";
   if (kind === "game") return "Game";
   if (kind === "app") return "App";
+  if (kind === "model") return "Model";
   return "Presentation";
 }
 
+/** Primary action on a project card or canvas chrome. */
+export function viewActionLabel(kind?: ProjectKind): string {
+  if (isWebKind(kind)) return "Open";
+  if (isModelKind(kind)) return "View";
+  return "Present";
+}
+
 /**
- * Resolve what to build. An explicit Website/Game/App picker always wins.
+ * Resolve what to build. An explicit Website/Game/App/Model picker always wins.
  * Otherwise the prompt can override a Presentation/Chat default so
  * "make a snake game" does not become a slide deck.
  */
@@ -472,11 +567,12 @@ export function inferProjectKind(
   prompt: string,
   picker?: ProjectKind | "chat"
 ): ProjectKind {
-  if (picker === "website" || picker === "game" || picker === "app") return picker;
+  if (picker === "website" || picker === "game" || picker === "app" || picker === "model") {
+    return picker;
+  }
   const t = prompt.toLowerCase();
   const wantsDeck =
     /\b(presentation|slide decks?|pitch decks?|slides|deck about)\b/.test(t);
-  // Require a real game request. "game-changing" / "game plan" must not match.
   const wantsGame =
     /\b(snake|tetris|pong|breakout|platformer|arcade|quiz game|memory (card )?game|card game)\b/.test(t) ||
     /\b(make|build|create|play)\b.{0,40}\bgames?\b(?!-)/.test(t);
@@ -486,7 +582,12 @@ export function inferProjectKind(
     /\b(todo app|habit tracker|pomodoro|expense splitter|notes app|markdown notes|web app)\b/.test(t) ||
     /\b(make|build|create)\b.{0,40}\bapps?\b/.test(t) ||
     /\ban app\b/.test(t);
-  if (wantsDeck && !wantsGame && !wantsSite && !wantsApp) return "presentation";
+  const wantsModel =
+    /\b(3d|three[- ]d|blender|sculpt(ing)?)\b/.test(t) ||
+    /\b(3d model|product render|isometric room|mesh scene)\b/.test(t) ||
+    /\b(make|build|create|model)\b.{0,40}\b(3d|scene|mesh)\b/.test(t);
+  if (wantsDeck && !wantsGame && !wantsSite && !wantsApp && !wantsModel) return "presentation";
+  if (wantsModel) return "model";
   if (wantsGame) return "game";
   if (wantsSite) return "website";
   if (wantsApp) return "app";

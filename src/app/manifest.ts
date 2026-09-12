@@ -2,15 +2,15 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "webo",
-    short_name: "webo",
-    description: "AI workspace for presentations, sites, games, and apps",
+    name: "Injaz Studio",
+    short_name: "Injaz",
+    description: "AI workspace for presentations, sites, games, apps, and 3D models",
     start_url: "/dashboard",
     scope: "/",
     display: "standalone",
     orientation: "any",
     background_color: "#171717",
-    theme_color: "#2B7FFF",
+    theme_color: "#C4A265",
     icons: [
       {
         src: "/icons/icon-192.png",
