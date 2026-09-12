@@ -1,8 +1,9 @@
 import { nanoid } from "nanoid";
-import { createAdminClient } from "./supabase/admin";
+import { createAdminClient, hasSupabaseAdmin } from "./supabase/admin";
 import type { Presentation, PresentationMeta } from "./schema";
 import { getPresentation, listPresentations, savePresentation, toMeta } from "./store";
 import { PRESENTATIONS_BUCKET } from "./store";
+import { downloadJson, removeObjects, uploadJson } from "./object-store";
 import type { UserProfile } from "./profile";
 
 export type InviteStatus = "pending" | "accepted" | "declined";
@@ -60,28 +61,15 @@ function directoryPath(email: string) {
 }
 
 async function download(path: string): Promise<unknown | null> {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase.storage.from(PRESENTATIONS_BUCKET).download(path);
-  if (error || !data) return null;
-  try {
-    return JSON.parse(await data.text());
-  } catch {
-    return null;
-  }
+  return downloadJson(PRESENTATIONS_BUCKET, path);
 }
 
 async function upload(path: string, body: unknown): Promise<void> {
-  const supabase = createAdminClient();
-  const { error } = await supabase.storage
-    .from(PRESENTATIONS_BUCKET)
-    .upload(path, JSON.stringify(body), { contentType: "application/json", upsert: true });
-  if (error) throw new Error(`Failed to save: ${error.message}`);
+  await uploadJson(PRESENTATIONS_BUCKET, path, body);
 }
 
 async function remove(paths: string[]): Promise<void> {
-  if (paths.length === 0) return;
-  const supabase = createAdminClient();
-  await supabase.storage.from(PRESENTATIONS_BUCKET).remove(paths);
+  await removeObjects(PRESENTATIONS_BUCKET, paths);
 }
 
 export async function registerDirectory(profile: UserProfile): Promise<void> {
@@ -106,6 +94,7 @@ export async function findUserByEmail(email: string): Promise<UserProfile | null
     /* fall through to admin lookup */
   }
 
+  if (!hasSupabaseAdmin()) return null;
   const supabase = createAdminClient();
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const secret = process.env.SUPABASE_SECRET_KEY;
@@ -405,7 +394,6 @@ export async function cleanupShare(id: string): Promise<void> {
 
 export async function deleteAccountData(userId: string, email: string): Promise<void> {
   const metas = await listPresentations(userId);
-  const supabase = createAdminClient();
   const paths = [
     `${userId}/index.json`,
     `${userId}/inbox.json`,
@@ -430,5 +418,5 @@ export async function deleteAccountData(userId: string, email: string): Promise<
       /* ignore */
     }
   }
-  await supabase.storage.from(PRESENTATIONS_BUCKET).remove(paths);
+  await remove(paths);
 }

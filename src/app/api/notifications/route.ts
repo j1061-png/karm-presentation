@@ -11,9 +11,14 @@ import {
 export async function GET() {
   const user = await getUser();
   if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  await registerDirectory(profileFromUser(user));
-  const notifications = await listNotifications(user.id);
-  return NextResponse.json({ notifications });
+  try {
+    await registerDirectory(profileFromUser(user));
+    const notifications = await listNotifications(user.id);
+    return NextResponse.json({ notifications });
+  } catch (e) {
+    console.error("[notifications]", e);
+    return NextResponse.json({ notifications: [] });
+  }
 }
 
 export async function POST(request: Request) {

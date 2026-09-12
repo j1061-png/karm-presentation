@@ -8,6 +8,7 @@ import { extractMessageContent } from "../src/lib/deepseek";
 import { applyOperations } from "../src/lib/generate";
 import { parseSseData } from "../src/lib/sse";
 import { repairPresentation } from "../src/lib/validate";
+import { publicAiError } from "../src/lib/public-error";
 
 let passed = 0;
 let failed = 0;
@@ -124,6 +125,18 @@ test("never throws on a mixed bag of ops", () => {
     ],
   });
   expect(next.title === "Still here", "survived mixed ops");
+});
+
+console.log("\npublicAiError:");
+
+test("does not call a storage failure an AI outage", () => {
+  const msg = publicAiError(new Error("Storage is not configured."));
+  expect(msg.includes("save") && !/AI is not available/i.test(msg), "storage mapping");
+});
+
+test("maps a missing DeepSeek key to the AI outage copy", () => {
+  const msg = publicAiError(new Error("DEEPSEEK_API_KEY is not configured."));
+  expect(/AI is not available/i.test(msg), "deepseek mapping");
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);
