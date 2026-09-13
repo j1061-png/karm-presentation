@@ -5,10 +5,10 @@ import type { ProjectFile } from "./schema";
  * cannot read the app session. Games/apps that call localStorage then throw
  * unless we install an in-memory stand-in first.
  */
-export const PREVIEW_STORAGE_SHIM = `<script>(function(){function mem(){var s={};return{getItem:function(k){return Object.prototype.hasOwnProperty.call(s,k)?s[k]:null},setItem:function(k,v){s[String(k)]=String(v)},removeItem:function(k){delete s[k]},clear:function(){s={}},key:function(i){return Object.keys(s)[i]||null},get length(){return Object.keys(s).length}}}function needsShim(store){try{store.setItem("__injaz","1");store.removeItem("__injaz");return false}catch(e){return true}}var fallback=mem();if(typeof localStorage==="undefined"||needsShim(localStorage)){try{Object.defineProperty(window,"localStorage",{value:fallback})}catch(e){window.localStorage=fallback}}if(typeof sessionStorage==="undefined"||needsShim(sessionStorage)){try{Object.defineProperty(window,"sessionStorage",{value:mem()})}catch(e){window.sessionStorage=mem()}}})()</script>`;
+export const PREVIEW_STORAGE_SHIM = `<script data-injaz-storage-shim>(function(){function mem(){var s={};return{getItem:function(k){return Object.prototype.hasOwnProperty.call(s,k)?s[k]:null},setItem:function(k,v){s[String(k)]=String(v)},removeItem:function(k){delete s[k]},clear:function(){s={}},key:function(i){return Object.keys(s)[i]||null},get length(){return Object.keys(s).length}}}function install(name){try{Object.defineProperty(window,name,{configurable:true,enumerable:true,value:mem()})}catch(e){}}install("localStorage");install("sessionStorage")})()</script>`;
 
 function injectStorageShim(html: string): string {
-  if (html.includes("__injaz")) return html;
+  if (html.includes("data-injaz-storage-shim")) return html;
   if (/<head[\s>]/i.test(html)) {
     return html.replace(/<head([^>]*)>/i, `<head$1>${PREVIEW_STORAGE_SHIM}`);
   }
