@@ -22,15 +22,19 @@ const CONTENT_TYPES: Record<string, string> = {
   ico: "image/x-icon",
 };
 
-/** Self-contained sites only: no external calls except Google Fonts. */
+/** Generated sites often load fonts, images, and APIs. Keep XSS-ish
+ *  defaults (no object/plugin) but allow the network surfaces a real
+ *  website / game / app needs after publish. */
 const CSP = [
-  "default-src 'none'",
-  "style-src 'unsafe-inline' https://fonts.googleapis.com",
-  "font-src https://fonts.gstatic.com data:",
-  "script-src 'unsafe-inline' 'unsafe-eval'",
-  "img-src 'self' data: blob:",
-  "media-src data: blob:",
-  "connect-src 'self'",
+  "default-src 'self' https: data: blob:",
+  "style-src 'unsafe-inline' 'self' https:",
+  "font-src https: data:",
+  "script-src 'unsafe-inline' 'unsafe-eval' 'self' https: blob:",
+  "img-src * data: blob:",
+  "media-src * data: blob:",
+  "connect-src *",
+  "worker-src 'self' blob:",
+  "frame-src https: data: blob:",
   "frame-ancestors *",
 ].join("; ");
 

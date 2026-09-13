@@ -1,6 +1,7 @@
 /* Ad-hoc smoke test for web-kind validation, preview assembly, and domains. */
 import { repairPresentation, repairFiles, sanitizeFilePath } from "../src/lib/validate";
-import { assemblePreviewHtml } from "../src/lib/web-preview";
+import { assemblePreviewHtml, PREVIEW_STORAGE_SHIM } from "../src/lib/web-preview";
+import { blankWebFiles } from "../src/lib/blank-project";
 import { normalizeHostname } from "../src/lib/domains";
 import { applyWebEdit } from "../src/lib/generate";
 
@@ -74,7 +75,13 @@ const html = assemblePreviewHtml(
 );
 check("inlines css", html.includes("<style>\nbody{color:red}\n</style>"));
 check("inlines js", html.includes("console.log('hi')"));
-check("no leftover link tag", !html.includes("styles.css"));
+check("no leftover link tag", !html.includes('href="styles.css"'));
+check("injects storage shim", html.includes(PREVIEW_STORAGE_SHIM));
+
+const starter = blankWebFiles("app");
+check("blank app has notes storage", starter.some((f) => f.path === "app.js" && f.content.includes("localStorage")));
+check("blank website has index", blankWebFiles("website").some((f) => f.path === "index.html"));
+check("blank game has canvas", blankWebFiles("game").some((f) => f.content.includes("canvas")));
 
 // applyWebEdit merge semantics
 const edited = applyWebEdit(web, {

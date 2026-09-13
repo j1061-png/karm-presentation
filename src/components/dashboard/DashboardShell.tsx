@@ -11,8 +11,9 @@ import { PresentationItem } from "./PresentationItem";
 import { NotificationsBell } from "./NotificationsBell";
 import { SettingsPanel } from "./SettingsPanel";
 import {
-  Search, Plus, Box, Presentation,
+  Search, Plus, Box, Presentation, Globe, Gamepad2, AppWindow, ChevronDown,
 } from "lucide-react";
+import type { ProjectKind } from "@/lib/schema";
 
 type SortKey = "updated" | "created" | "title";
 
@@ -31,6 +32,7 @@ export function DashboardShell({
   const [threadActive, setThreadActive] = useState(false);
   const [openChatId, setOpenChatId] = useState<string | null>(null);
   const [chatEpoch, setChatEpoch] = useState(0);
+  const [newOpen, setNewOpen] = useState(false);
 
   function openInChat(id: string) {
     setView("home");
@@ -57,6 +59,16 @@ export function DashboardShell({
     return () => clearTimeout(t);
   }, [toast]);
 
+  useEffect(() => {
+    if (!newOpen) return;
+    const onPointer = () => setNewOpen(false);
+    const timer = window.setTimeout(() => window.addEventListener("click", onPointer), 0);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("click", onPointer);
+    };
+  }, [newOpen]);
+
   const filtered = useMemo(() => {
     if (!metas) return null;
     let list = metas;
@@ -80,12 +92,20 @@ export function DashboardShell({
     setThreadActive(false);
   }
 
-  async function handleNewModel() {
+  async function handleNewProject(kind: ProjectKind) {
+    setNewOpen(false);
+    const titles: Record<ProjectKind, string> = {
+      presentation: "Untitled presentation",
+      website: "Untitled website",
+      game: "Untitled game",
+      app: "Untitled app",
+      model: "Untitled model",
+    };
     try {
-      const doc = await api.createPresentation({ title: "Untitled model", kind: "model" });
+      const doc = await api.createPresentation({ title: titles[kind], kind });
       router.push(`/editor/${doc.id}`);
     } catch {
-      setToast("Could not create a model.");
+      setToast(`Could not create a ${kind}.`);
     }
   }
 
@@ -259,13 +279,44 @@ export function DashboardShell({
                   <option value="created">Newest</option>
                   <option value="title">A–Z</option>
                 </select>
-                <button
-                  onClick={() => void handleNewModel()}
-                  className="flex items-center gap-1.5 text-[13px] font-medium border border-border rounded-lg px-3 py-1.5 hover:bg-surface-2 transition-colors cursor-pointer"
-                >
-                  <Box size={13} />
-                  New model
-                </button>
+                <div className="relative">
+                  <button
+                    onClick={() => setNewOpen((v) => !v)}
+                    className="flex items-center gap-1.5 text-[13px] font-medium border border-border rounded-lg px-3 py-1.5 hover:bg-surface-2 transition-colors cursor-pointer"
+                    aria-expanded={newOpen}
+                    aria-haspopup="menu"
+                  >
+                    <Plus size={13} />
+                    New project
+                    <ChevronDown size={12} />
+                  </button>
+                  {newOpen && (
+                    <div
+                      role="menu"
+                      className="absolute right-0 top-full mt-1 z-20 w-48 bg-surface border border-border rounded-xl py-1 shadow-lg"
+                    >
+                      {(
+                        [
+                          { kind: "presentation" as const, label: "Presentation", icon: Presentation },
+                          { kind: "website" as const, label: "Website", icon: Globe },
+                          { kind: "game" as const, label: "Game", icon: Gamepad2 },
+                          { kind: "app" as const, label: "App", icon: AppWindow },
+                          { kind: "model" as const, label: "Model", icon: Box },
+                        ] as const
+                      ).map((item) => (
+                        <button
+                          key={item.kind}
+                          type="button"
+                          role="menuitem"
+                          onClick={() => void handleNewProject(item.kind)}
+                          className="w-full flex items-center gap-2 px-3 py-1.5 text-[12.5px] hover:bg-surface-2 cursor-pointer"
+                        >
+                          <item.icon size={13} /> {item.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <button
                   onClick={handleNewChat}
                   className="flex items-center gap-1.5 text-[13px] font-medium bg-accent text-accent-text rounded-lg px-3 py-1.5 hover:bg-accent-hover transition-colors cursor-pointer"
@@ -307,7 +358,7 @@ export function DashboardShell({
                 <div className="text-[13px] text-text-secondary mb-5 max-w-xs">
                   {query
                     ? "Try a different search term."
-                    : "Create your first presentation, website, game, or app."}
+                    : "Create your first presentation, website, game, app, or 3D model."}
                 </div>
                 {!query && (
                   <button

@@ -31,3 +31,26 @@ export function parseChatDecision(raw: string): ChatDecision {
   if (/^\s*\{\s*"mode"\s*:\s*"build"/i.test(text)) return { mode: "build", reply: "" };
   return { mode: "chat", reply: text.slice(0, 2000) };
 }
+
+/**
+ * True when the user is asking a question / giving feedback, not requesting
+ * a generate or edit. Used so "what do you think?" on an open project stays
+ * conversational instead of kicking off /api/ai-edit.
+ */
+export function looksLikeConversation(text: string): boolean {
+  const t = (text ?? "").trim();
+  if (!t || t.length > 400) return false;
+  if (/^(hi|hello|hey|thanks|thank you|thx|ok|okay|cool|nice|great|got it|cheers)[\s!.]*$/i.test(t)) {
+    return true;
+  }
+  const question =
+    /\?$/.test(t) ||
+    /^(what|why|how|who|when|where|which|whose|whom)\b/i.test(t) ||
+    /^(can|could|would|will) you (explain|tell|describe|summarize|walk me|help me understand)/i.test(t) ||
+    /\b(what do you think|do you think|your (thoughts|opinion|feedback)|explain|summarize)\b/i.test(t);
+  const editIntent =
+    /\b(add|remove|delete|change|fix|update|replace|move|redesign|rebuild|insert|rename|recolor|resize|rotate|scale|generate|create|build|make me|make a|make the|make it)\b/i.test(
+      t
+    );
+  return question && !editIntent;
+}

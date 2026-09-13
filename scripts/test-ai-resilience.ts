@@ -3,7 +3,7 @@
  * payloads, and follow-up edits that must never throw.
  * Run: npx tsx scripts/test-ai-resilience.ts
  */
-import { parseChatDecision } from "../src/lib/chat-decision";
+import { looksLikeConversation, parseChatDecision } from "../src/lib/chat-decision";
 import { extractMessageContent } from "../src/lib/deepseek";
 import { applyOperations } from "../src/lib/generate";
 import { parseSseData } from "../src/lib/sse";
@@ -53,6 +53,24 @@ test("treats prose as a chat reply instead of crashing", () => {
 test("still detects a truncated build object", () => {
   const d = parseChatDecision('{ "mode": "build"');
   expect(d.mode === "build", "truncated build");
+});
+
+console.log("\nlooksLikeConversation:");
+
+test("treats feedback questions as chat", () => {
+  expect(looksLikeConversation("what do you think?"), "feedback");
+});
+
+test("treats greetings as chat", () => {
+  expect(looksLikeConversation("thanks!"), "thanks");
+});
+
+test("does not treat an edit request as chat", () => {
+  expect(!looksLikeConversation("make the header blue"), "edit");
+});
+
+test("does not treat add-a-slide as chat", () => {
+  expect(!looksLikeConversation("can you add a slide about pricing?"), "edit question");
 });
 
 console.log("\nextractMessageContent:");

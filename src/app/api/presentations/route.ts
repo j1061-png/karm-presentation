@@ -5,8 +5,9 @@ import { savePresentation } from "@/lib/store";
 import { listAccessiblePresentations, registerDirectory } from "@/lib/collab";
 import { profileFromUser } from "@/lib/profile";
 import { defaultStudioScene } from "@/lib/model-scene";
+import { blankWebFiles } from "@/lib/blank-project";
 import { repairPresentation } from "@/lib/validate";
-import type { Presentation } from "@/lib/schema";
+import { isWebKind, type Presentation } from "@/lib/schema";
 
 export async function GET() {
   const user = await getUser();
@@ -52,11 +53,34 @@ export async function POST(request: Request) {
       },
       {}
     );
+  } else if (isWebKind(body.kind)) {
+    const files = blankWebFiles(body.kind);
+    presentation = repairPresentation(
+      {
+        id: nanoid(12),
+        title:
+          typeof body.title === "string" && body.title.trim()
+            ? body.title
+            : body.kind === "game"
+              ? "Untitled game"
+              : body.kind === "app"
+                ? "Untitled app"
+                : "Untitled website",
+        kind: body.kind,
+        slides: [],
+        files,
+        entry: "index.html",
+        createdAt: now,
+        updatedAt: now,
+      },
+      {}
+    );
   } else {
     presentation = repairPresentation(
       {
         id: nanoid(12),
         title: typeof body.title === "string" && body.title.trim() ? body.title : "Untitled presentation",
+        kind: "presentation",
         slides: [
           {
             id: nanoid(8),

@@ -629,24 +629,20 @@ export async function generateModelEdit(
   files: SourceFile[] = []
 ): Promise<{ summary: string; scene: ModelScene; changed: boolean }> {
   const scene = repairScene(presentation.scene);
-  try {
-    const edit = await chatJson(
-      [
-        { role: "system", content: modelEditSystemPrompt() },
-        {
-          role: "user",
-          content: `SCENE "${presentation.title}"\n\n${JSON.stringify(scene)}\n\nUSER REQUEST: "${instruction}"${sourceContext(files)}`,
-        },
-      ],
-      (raw) => parseModelEditResponse(extractJson(raw)),
-      { maxTokens: 8000, temperature: 0.3, json: true }
-    );
-    const next = applyModelEdit(scene, edit);
-    const changed = JSON.stringify(next) !== JSON.stringify(scene);
-    return { summary: edit.summary, scene: next, changed };
-  } catch {
-    return { summary: "Could not apply that edit. Try a more specific object change.", scene, changed: false };
-  }
+  const edit = await chatJson(
+    [
+      { role: "system", content: modelEditSystemPrompt() },
+      {
+        role: "user",
+        content: `SCENE "${presentation.title}"\n\n${JSON.stringify(scene)}\n\nUSER REQUEST: "${instruction}"${sourceContext(files)}`,
+      },
+    ],
+    (raw) => parseModelEditResponse(extractJson(raw)),
+    { maxTokens: 8000, temperature: 0.3, json: true }
+  );
+  const next = applyModelEdit(scene, edit);
+  const changed = JSON.stringify(next) !== JSON.stringify(scene);
+  return { summary: edit.summary, scene: next, changed };
 }
 
 function presentationContext(p: Presentation, selectedSlideId?: string, selectedElementId?: string): string {
