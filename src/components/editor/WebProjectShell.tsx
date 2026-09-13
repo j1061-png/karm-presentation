@@ -300,7 +300,7 @@ export function WebProjectShell({
           <iframe
             key={`${doc.updatedAt}-${reloadKey}`}
             srcDoc={html}
-            sandbox="allow-scripts allow-forms allow-pointer-lock allow-modals"
+            sandbox="allow-scripts allow-forms allow-pointer-lock allow-modals allow-popups"
             className="flex-1 w-full border-0 bg-white"
             title={doc.title}
           />

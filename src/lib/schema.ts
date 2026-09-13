@@ -567,15 +567,22 @@ export function viewActionLabel(kind?: ProjectKind): string {
 }
 
 /**
- * Resolve what to build. An explicit Website/Game/App/Model picker always wins.
- * Otherwise the prompt can override a Presentation/Chat default so
- * "make a snake game" does not become a slide deck.
+ * Resolve what to build. An explicit project picker always wins — if someone
+ * chose Presentation they get a deck, even if the prompt mentions a game.
+ * Only Chat (or no picker) infers kind from the prompt so "make a snake game"
+ * from the default composer still becomes a game.
  */
 export function inferProjectKind(
   prompt: string,
   picker?: ProjectKind | "chat"
 ): ProjectKind {
-  if (picker === "website" || picker === "game" || picker === "app" || picker === "model") {
+  if (
+    picker === "website" ||
+    picker === "game" ||
+    picker === "app" ||
+    picker === "model" ||
+    picker === "presentation"
+  ) {
     return picker;
   }
   const t = prompt.toLowerCase();

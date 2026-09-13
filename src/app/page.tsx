@@ -27,7 +27,11 @@ function LoginContent() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState<"google" | "email" | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(() =>
+    searchParams.get("error") === "auth"
+      ? "Google sign-in did not finish. Use email and password below — that path works without extra Google setup."
+      : null
+  );
   const [notice, setNotice] = useState<string | null>(null);
 
   const next = searchParams.get("next") ?? "/dashboard";

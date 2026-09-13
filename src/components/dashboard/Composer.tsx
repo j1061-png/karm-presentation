@@ -13,6 +13,7 @@ import { EffortPicker } from "@/components/chat/EffortPicker";
 import { FileChips } from "@/components/chat/FileChips";
 import { WorkspaceCanvas } from "./WorkspaceCanvas";
 import { ResizeHandle, beginPanelResize } from "@/components/ui/ResizeHandle";
+import { looksLikeConversation } from "@/lib/chat-decision";
 import { inferProjectKind, isModelKind, isWebKind, kindLabel, kindNoun, type ChatTurn, type Presentation, type ProjectKind } from "@/lib/schema";
 
 interface GenProgress {
@@ -48,7 +49,7 @@ const KIND_PLACEHOLDER: Record<ComposerMode, string> = {
   website: "Chat, or describe the website you want to build...",
   game: "Chat, or describe the game you want to play...",
   app: "Chat, or describe the app you want to build...",
-  model: "Chat, or describe the solar panel and self-cleaning rig…",
+  model: "Chat, or describe the 3D scene you want — solar, lattice, or anything else…",
 };
 
 const SUGGESTIONS: Record<ComposerMode, string[]> = {
@@ -542,10 +543,10 @@ export function Composer({
 
   function send() {
     if (!canSend) return;
-    const chatMode = kind === "chat" && !activeDoc;
-    // Attached files mean "build/edit with these" — except in pure chat mode,
+    const wantChat = kind === "chat";
+    // Attached files mean "build/edit with these" — except in Chat mode,
     // where they become conversation sources.
-    if (readySources.length > 0 && !chatMode) {
+    if (readySources.length > 0 && !wantChat) {
       if (activeDoc) void editDeck();
       else void generate();
       return;
@@ -555,16 +556,16 @@ export function Composer({
 
   /** Let the assistant decide: answer conversationally, or kick off a build/edit. */
   async function routeMessage() {
-    const chatMode = kind === "chat" && !activeDoc;
+    const wantChat = kind === "chat";
     const text =
-      prompt.trim() || (chatMode && readySources.length > 0 ? "What do you make of these files?" : "");
+      prompt.trim() || (wantChat && readySources.length > 0 ? "What do you make of these files?" : "");
     if (!text) return;
-    const sources = chatMode ? readySources : undefined;
-    const attachedNames = chatMode
+    const sources = wantChat ? readySources : undefined;
+    const attachedNames = wantChat
       ? files.filter((f) => f.status === "done").map((f) => f.name)
       : [];
     setPrompt("");
-    if (chatMode) clearFiles();
+    if (wantChat) clearFiles();
     if (textareaRef.current) textareaRef.current.style.height = "auto";
     pushUser(text, attachedNames);
     const myRun = ++runId.current;
@@ -576,6 +577,8 @@ export function Composer({
       else if (m.kind === "edit" || m.kind === "error") history.push({ role: "assistant", text: m.text });
     }
 
+    const forceChat = wantChat || (!!activeDoc && looksLikeConversation(text));
+
     let decision: { mode: "chat" | "build"; reply: string };
     try {
       decision = await chatWithAI({
@@ -583,10 +586,11 @@ export function Composer({
         hasProject: !!activeDoc,
         kind: activeDoc?.kind ?? (kind === "chat" ? undefined : kind),
         sources,
+        forceChat,
       });
     } catch (e) {
       if (myRun !== runId.current) return;
-      if (chatMode || activeDoc) {
+      if (wantChat || activeDoc) {
         // Don't kick off a rebuild/edit when the router itself failed — that
         // is what made follow-ups look like the AI crashed.
         setChatting(false);
@@ -790,7 +794,7 @@ export function Composer({
 
   const chatFooter = (
     <div className="px-3 pb-3 pt-1 flex-shrink-0">
-      {!activeDoc && !generating && <div className="mb-2">{kindChips}</div>}
+      {!generating && <div className="mb-2">{kindChips}</div>}
       {composerBox}
     </div>
   );

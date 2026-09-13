@@ -266,14 +266,14 @@ console.log("\ninferProjectKind:");
 test("picker website wins over a deck-like prompt", () => {
   expect(inferProjectKind("pitch deck for our launch", "website") === "website", "picker should win");
 });
-test("snake game is a game even if picker is presentation", () => {
-  expect(inferProjectKind("Make me a snake game", "presentation") === "game", "should infer game");
+test("presentation picker stays a deck even for a snake prompt", () => {
+  expect(inferProjectKind("Make me a snake game", "presentation") === "presentation", "picker should win");
 });
 test("portfolio site is a website", () => {
   expect(inferProjectKind("Build a personal portfolio website", "chat") === "website", "should infer website");
 });
-test("pomodoro is an app", () => {
-  expect(inferProjectKind("create a pomodoro timer with tasks", "presentation") === "app", "should infer app");
+test("pomodoro stays a deck when Presentation is picked", () => {
+  expect(inferProjectKind("create a pomodoro timer with tasks", "presentation") === "presentation", "picker should win");
 });
 test("pitch deck stays a presentation", () => {
   expect(inferProjectKind("Q3 performance review pitch deck", "presentation") === "presentation", "should stay presentation");
@@ -296,14 +296,17 @@ test("model picker wins", () => {
 test("blender prompt infers a model", () => {
   expect(inferProjectKind("make a blender-style isometric room", "chat") === "model", "should infer model");
 });
-test("3d model prompt infers a model", () => {
-  expect(inferProjectKind("create a 3d model of a product studio", "presentation") === "model", "should infer model");
+test("3d model prompt infers a model from chat", () => {
+  expect(inferProjectKind("create a 3d model of a product studio", "chat") === "model", "should infer model");
+});
+test("presentation picker wins over a 3d prompt", () => {
+  expect(inferProjectKind("create a 3d model of a product studio", "presentation") === "presentation", "picker should win");
 });
 test("solar self-cleaning prompt infers a model", () => {
   expect(inferProjectKind("solar self-cleaning row with a rail robot", "chat") === "model", "should infer model");
 });
-test("photovoltaic prompt infers a model", () => {
-  expect(inferProjectKind("photovoltaic array with a cleaning gantry", "presentation") === "model", "should infer model");
+test("photovoltaic prompt infers a model from chat", () => {
+  expect(inferProjectKind("photovoltaic array with a cleaning gantry", "chat") === "model", "should infer model");
 });
 test("surrounding solar prompt infers a model", () => {
   expect(inferProjectKind("surrounding solar array with a self-cleaning robot", "chat") === "model", "should infer model");

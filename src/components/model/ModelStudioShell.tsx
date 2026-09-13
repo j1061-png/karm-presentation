@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
-  ArrowLeft, Box, Camera, Circle, Copy, Cylinder, Download, Focus, Lamp, Plus, Trash2,
-  Triangle, Move3d, RotateCcw, Scaling, MousePointer2, BoxSelect, Sun, Bot, Droplets, Columns2, Minus,
+  AlertCircle, ArrowLeft, Box, Camera, Circle, Copy, Cylinder, Download, Focus, Lamp, Plus, Redo2, Trash2,
+  Triangle, Move3d, RotateCcw, Scaling, MousePointer2, BoxSelect, Sun, Bot, Droplets, Columns2, Minus, Undo2,
 } from "lucide-react";
 import { BrandMark } from "@/components/brand/BrandLogo";
 import { ShareButton } from "@/components/share/ShareButton";
@@ -80,11 +80,21 @@ export function ModelStudioShell({
   const [rightW, setRightW] = useState(260);
   const [aiText, setAiText] = useState("");
   const [aiBusy, setAiBusy] = useState(false);
+  const [notice, setNotice] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
   const engineRef = useRef<StudioEngine | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const undoStack = useRef<ModelScene[]>([]);
+  const redoStack = useRef<ModelScene[]>([]);
   const latest = useRef(doc);
   latest.current = doc;
   const scene = doc.scene ?? repairScene(undefined);
+
+  function markHistory() {
+    setCanUndo(undoStack.current.length > 0);
+    setCanRedo(redoStack.current.length > 0);
+  }
 
   const persist = useCallback(async (next: Presentation) => {
     setSaveState("saving");
@@ -99,9 +109,12 @@ export function ModelStudioShell({
   const updateScene = useCallback(
     (fn: (s: ModelScene) => ModelScene) => {
       setDoc((prev) => {
+        const current = prev.scene ?? repairScene(undefined);
+        undoStack.current = [...undoStack.current.slice(-49), structuredClone(current)];
+        redoStack.current = [];
         const next: Presentation = {
           ...prev,
-          scene: fn(prev.scene ?? repairScene(undefined)),
+          scene: fn(current),
           updatedAt: new Date().toISOString(),
         };
         latest.current = next;
@@ -110,9 +123,43 @@ export function ModelStudioShell({
         saveTimer.current = setTimeout(() => void persist(latest.current), 900);
         return next;
       });
+      markHistory();
     },
     [persist]
   );
+
+  const applyHistoricScene = useCallback(
+    (nextScene: ModelScene) => {
+      setDoc((prev) => {
+        const next: Presentation = {
+          ...prev,
+          scene: nextScene,
+          updatedAt: new Date().toISOString(),
+        };
+        latest.current = next;
+        setSaveState("dirty");
+        if (saveTimer.current) clearTimeout(saveTimer.current);
+        saveTimer.current = setTimeout(() => void persist(latest.current), 900);
+        return next;
+      });
+      markHistory();
+    },
+    [persist]
+  );
+
+  const undoScene = useCallback(() => {
+    const prev = undoStack.current.pop();
+    if (!prev) return;
+    redoStack.current.push(structuredClone(latest.current.scene ?? repairScene(undefined)));
+    applyHistoricScene(prev);
+  }, [applyHistoricScene]);
+
+  const redoScene = useCallback(() => {
+    const next = redoStack.current.pop();
+    if (!next) return;
+    undoStack.current.push(structuredClone(latest.current.scene ?? repairScene(undefined)));
+    applyHistoricScene(next);
+  }, [applyHistoricScene]);
 
   useEffect(() => () => {
     if (saveTimer.current) clearTimeout(saveTimer.current);
@@ -189,7 +236,9 @@ export function ModelStudioShell({
         e.preventDefault();
         setPlaying((p) => !p);
       } else if (k === "z" && (e.metaKey || e.ctrlKey)) {
-        /* reserved */
+        e.preventDefault();
+        if (e.shiftKey) redoScene();
+        else undoScene();
       }
     };
     window.addEventListener("keydown", onKey);
@@ -201,29 +250,57 @@ export function ModelStudioShell({
     if (!instruction || aiBusy) return;
     setAiText("");
     setAiBusy(true);
+    setNotice(null);
     try {
+      const before = latest.current.scene ?? repairScene(undefined);
       const result = await aiEdit({
         presentationId: doc.id,
         instruction,
         presentation: latest.current,
       });
       if (result.changed) {
+        undoStack.current = [...undoStack.current.slice(-49), structuredClone(before)];
+        redoStack.current = [];
+        markHistory();
         setDoc(result.presentation);
         latest.current = result.presentation;
       }
+      setNotice({
+        tone: result.changed ? "ok" : "ok",
+        text: result.summary || (result.changed ? "Updated the scene." : "No scene changes for that request."),
+      });
+    } catch (e) {
+      setNotice({
+        tone: "error",
+        text: e instanceof Error ? e.message : "Could not apply that edit.",
+      });
     } finally {
       setAiBusy(false);
     }
   }
 
   async function exportGlb() {
-    const blob = await engineRef.current?.exportGLB();
-    if (!blob) return;
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `${doc.title.replace(/[^\w-]+/g, "-") || "model"}.glb`;
-    a.click();
-    URL.revokeObjectURL(a.href);
+    try {
+      const blob = await engineRef.current?.exportGLB();
+      if (!blob) {
+        setNotice({
+          tone: "error",
+          text: "3D view is not ready yet. Wait a second and try Export again.",
+        });
+        return;
+      }
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `${doc.title.replace(/[^\w-]+/g, "-") || "model"}.glb`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      setNotice({ tone: "ok", text: "Downloaded glTF file." });
+    } catch (e) {
+      setNotice({
+        tone: "error",
+        text: e instanceof Error ? e.message : "Export failed.",
+      });
+    }
   }
 
   const selected = scene.objects.find((o) => o.id === selectedId) ?? null;
@@ -362,6 +439,24 @@ export function ModelStudioShell({
             </div>
           )}
         </div>
+        <button
+          type="button"
+          onClick={undoScene}
+          disabled={!canUndo}
+          className="p-2 rounded-lg text-text-secondary hover:bg-surface-2 disabled:opacity-30"
+          title="Undo (⌘Z)"
+        >
+          <Undo2 size={14} />
+        </button>
+        <button
+          type="button"
+          onClick={redoScene}
+          disabled={!canRedo}
+          className="p-2 rounded-lg text-text-secondary hover:bg-surface-2 disabled:opacity-30"
+          title="Redo (⌘⇧Z)"
+        >
+          <Redo2 size={14} />
+        </button>
         <button type="button" onClick={duplicateSelected} className="p-2 rounded-lg text-text-secondary hover:bg-surface-2" title="Duplicate (⇧D)">
           <Copy size={14} />
         </button>
@@ -390,6 +485,19 @@ export function ModelStudioShell({
           </button>
         </form>
       </div>
+      {notice && (
+        <div
+          className={`flex items-start gap-2 px-3 py-1.5 text-[12.5px] border-b border-border ${
+            notice.tone === "error" ? "bg-danger/8 text-danger" : "bg-surface-2 text-text-secondary"
+          }`}
+        >
+          {notice.tone === "error" && <AlertCircle size={13} className="mt-0.5 flex-shrink-0" />}
+          <span className="flex-1 min-w-0">{notice.text}</span>
+          <button type="button" onClick={() => setNotice(null)} className="text-text-tertiary hover:text-text">
+            Dismiss
+          </button>
+        </div>
+      )}
 
       <div className="flex-1 flex min-h-0">
         <aside className="flex-shrink-0 flex flex-col min-h-0 bg-sidebar" style={{ width: leftW }}>

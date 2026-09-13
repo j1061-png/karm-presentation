@@ -139,7 +139,7 @@ export function WorkspaceCanvas({
             <iframe
               key={doc.updatedAt}
               srcDoc={assemblePreviewHtml(doc.files, doc.entry)}
-              sandbox="allow-scripts allow-forms allow-pointer-lock allow-modals"
+              sandbox="allow-scripts allow-forms allow-pointer-lock allow-modals allow-popups"
               className="absolute inset-0 w-full h-full border-0 bg-white"
               title={doc.title}
             />
